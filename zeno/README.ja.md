@@ -72,13 +72,55 @@ let name = "Zeno"
 println("Hello, " + name + "!") // 文字列結合（+が文字列に対して機能すると仮定）
 ```
 
-## ビルド方法 (プレースホルダー)
-詳細なビルド手順は、コンパイラドライバー（`src/main.rs`）が完成次第追加されます。
-コンパイラプロジェクト自体（Rustプロジェクト）をビルドするには：
+## Zenoコンパイラの使用 (CLI)
+
+Zenoコンパイラを使用するには、まずソースからビルドする必要があります。
+
+### コンパイラのビルド
+1.  Zenoプロジェクトのルートディレクトリ（`zeno/` ディレクトリ）に移動します。
+2.  次のCargoコマンドを実行します:
+    ```bash
+    cargo build --release
+    ```
+3.  コンパイラの実行可能ファイルは `target/release/zeno`（Windowsの場合は `target\release\zeno.exe`）に配置されます。
+
+### コマンドラインインターフェース
+基本的なコマンド構造は次のとおりです:
 ```bash
-# (zenoディレクトリにいない場合は移動してください)
-cargo build
+./target/release/zeno <SOURCE_FILE.zeno> [OPTIONS]
 ```
+
+**一般的な操作と例:**
+
+1.  **Zenoファイルをコンパイルして生成されたRustコードを表示する:**
+    これにより、翻訳されたRustコードが含まれる `output.rs`（`-o` が使用されない場合はデフォルトで `<SOURCE_FILE>.rs`）が作成されます。
+    ```bash
+    ./target/release/zeno examples/hello.zeno --output-rust-file output.rs --keep-rs
+    # またはデフォルトの .rs 出力名を使用する場合 (例: examples/hello.rs):
+    ./target/release/zeno examples/hello.zeno --keep-rs
+    ```
+
+2.  **Zenoファイルを直接実行可能ファイルにコンパイルする:**
+    これによりRustコードが生成され、`rustc` を使用してコンパイルされ、実行可能ファイル（例: `my_program`）が作成されます。
+    ```bash
+    ./target/release/zeno examples/variables.zeno --compile --output-executable-file my_program
+    ```
+    `--output-executable-file` が省略された場合、実行可能ファイルはソースファイルと同じ名前になります（拡張子なし、例: `examples/variables`）。
+
+3.  **Zenoファイルをコンパイルして即座に実行する:**
+    これは簡単なテストに便利です。中間的なRustファイルは、`--keep-rs` が指定されない限り、デフォルトで削除されます。
+    ```bash
+    ./target/release/zeno examples/controlflow.zeno --compile --run
+    ```
+
+**重要なフラグ:**
+-   `<source_file>`: (必須) Zenoソースファイルへのパス (例: `examples/hello.zeno`)。
+-   `--output-rust-file <path>`, `-o <path>`: 生成されたRustコードの出力ファイルを指定します。
+-   `--output-executable-file <path>`, `-O <path>`: コンパイルされた実行可能ファイルの出力ファイル名を指定します。
+-   `--compile`, `-c`: 生成されたRustコードを `rustc` を使用して実行可能ファイルにコンパイルします。
+-   `--run`, `-r`: コンパイルされた実行可能ファイルを実行します。`--compile` が必要です。
+-   `--keep-rs`: コンパイル後に中間的な `.rs` ファイルの削除を防ぎます。
+-   `--help`: CLI引数に関するヘルプ情報を表示します。
 
 ## コントリビューション
 コントリビューションを歓迎します！貢献できる分野については `TODO.md` を参照してください。

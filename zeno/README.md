@@ -72,13 +72,55 @@ let name = "Zeno"
 println("Hello, " + name + "!") // String concatenation (assuming + works for strings)
 ```
 
-## Building (Placeholder)
-Detailed build instructions will be added once the compiler driver (`src/main.rs`) is complete.
-To build the compiler project itself (the Rust project):
+## Using the Zeno Compiler (CLI)
+
+To use the Zeno compiler, you first need to build it from source.
+
+### Building the Compiler
+1.  Navigate to the root directory of the Zeno project (the `zeno/` directory).
+2.  Run the following Cargo command:
+    ```bash
+    cargo build --release
+    ```
+3.  The compiler executable will be located at `target/release/zeno` (or `target\release\zeno.exe` on Windows).
+
+### Command-Line Interface
+The basic command structure is:
 ```bash
-# (Navigate to the zeno directory if not already there)
-cargo build
+./target/release/zeno <SOURCE_FILE.zeno> [OPTIONS]
 ```
+
+**Common Operations & Examples:**
+
+1.  **Compile a Zeno file to view the generated Rust code:**
+    This will create `output.rs` (or `<SOURCE_FILE>.rs` by default if `-o` is not used) with the translated Rust code.
+    ```bash
+    ./target/release/zeno examples/hello.zeno --output-rust-file output.rs --keep-rs
+    # Or to use the default .rs output name (e.g., examples/hello.rs):
+    ./target/release/zeno examples/hello.zeno --keep-rs
+    ```
+
+2.  **Compile a Zeno file directly to an executable:**
+    This generates the Rust code, compiles it using `rustc`, and creates an executable (e.g., `my_program`).
+    ```bash
+    ./target/release/zeno examples/variables.zeno --compile --output-executable-file my_program
+    ```
+    If `--output-executable-file` is omitted, the executable will have the same name as the source file (without extension, e.g., `examples/variables`).
+
+3.  **Compile and immediately run a Zeno file:**
+    This is useful for quick testing. The intermediate Rust file is deleted by default unless `--keep-rs` is specified.
+    ```bash
+    ./target/release/zeno examples/controlflow.zeno --compile --run
+    ```
+
+**Important Flags:**
+-   `<source_file>`: (Required) Path to the Zeno source file (e.g., `examples/hello.zeno`).
+-   `--output-rust-file <path>`, `-o <path>`: Specifies the output file for the generated Rust code.
+-   `--output-executable-file <path>`, `-O <path>`: Specifies the output file name for the compiled executable.
+-   `--compile`, `-c`: Compiles the generated Rust code to an executable using `rustc`.
+-   `--run`, `-r`: Runs the compiled executable. Requires `--compile`.
+-   `--keep-rs`: Prevents the deletion of the intermediate `.rs` file after compilation.
+-   `--help`: Displays help information about the CLI arguments.
 
 ## Contributing
 Contributions are welcome! Please see `TODO.md` for areas where you can help.
