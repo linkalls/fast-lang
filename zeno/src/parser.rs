@@ -520,10 +520,21 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_float_literal(&mut self) -> Option<Expr> {
-        // current_token is Float
-        match self.current_token {
-            Token::Float(val) => Some(Expr::Float(val)),
-            _ => None,
+        // current_token is Token::Float(String)
+        match &self.current_token {
+            Token::Float(s_val) => {
+                match s_val.parse::<f64>() {
+                    Ok(f_val) => Some(Expr::Float(f_val)),
+                    Err(_) => {
+                        self.errors.push(format!("Could not parse float string '{}'", s_val));
+                        None
+                    }
+                }
+            }
+            _ => { // Should not happen if called on Token::Float
+                self.errors.push(format!("Expected float literal, got {:?}", self.current_token));
+                None
+            }
         }
     }
     
@@ -680,18 +691,16 @@ mod tests {
     #[test]
     fn test_let_statements() {
         let inputs = vec![
-            "let x = 5;", 
-            "let y = 10.5", // No semicolon
-            "let z = true;",
-            "let s = \"hello\"", // No semicolon
-            "let mut m = 0;",
+            ("let x = 5;", Statement::LetDecl { name: "x".to_string(), type_ann: None, mutable: false, value_expr: Expr::Integer(5) }),
+            ("let y = 10.5", Statement::LetDecl { name: "y".to_string(), type_ann: None, mutable: false, value_expr: Expr::Float(10.5_f64) }),
+            ("let z = true;", Statement::LetDecl { name: "z".to_string(), type_ann: None, mutable: false, value_expr: Expr::Boolean(true) }),
+            ("let s = \"hello\"", Statement::LetDecl { name: "s".to_string(), type_ann: None, mutable: false, value_expr: Expr::StringLiteral("hello".to_string()) }),
+            ("let mut m = 0;", Statement::LetDecl { name: "m".to_string(), type_ann: None, mutable: true, value_expr: Expr::Integer(0) }),
         ];
-        for input in inputs {
-            let program = run_parser_test(input, 1, 0); // Each is one statement
-             match &program.statements[0] {
-                Statement::LetDecl {..} => {}, // Correct type
-                _ => panic!("Expected LetDecl for input: {}", input),
-            }
+        for (input_str, expected_stmt_ast_partial) in inputs {
+            let program = run_parser_test(input_str, 1, 0);
+            // Basic check for the first statement, more detailed checks can be added if needed
+            assert_eq!(program.statements[0], expected_stmt_ast_partial, "Mismatch for input: {}", input_str);
         }
         // Test sequence
         let full_input = "let a = 1\nlet b = 2;";
@@ -701,7 +710,13 @@ mod tests {
     #[test]
     fn test_let_statement_with_type() {
         run_parser_test("let x: int = 5", 1, 0);
-        run_parser_test("let y: float = 3.14;", 1, 0);
+        let program = run_parser_test("let y: float = 3.14;", 1, 0);
+        match &program.statements[0] {
+            Statement::LetDecl { value_expr, .. } => {
+                assert_eq!(value_expr, &Expr::Float(3.14_f64));
+            }
+            _ => panic!("Expected LetDecl"),
+        }
     }
 
     #[test]
@@ -725,21 +740,36 @@ mod tests {
         run_parser_test("5", 1, 0);
         run_parser_test("true;", 1, 0);
         run_parser_test("\"test_string\"", 1, 0);
+        let program = run_parser_test("3.14", 1, 0); // Test float literal expression
+        assert_eq!(program.statements[0], Statement::ExprStatement { expr: Expr::Float(3.14_f64) });
         let full_input = "3.14\nfalse";
         run_parser_test(full_input, 2, 0);
-
     }
     
     #[test]
     fn test_prefix_expressions() {
         run_parser_test("!true", 1, 0);
-        run_parser_test("-15.5;", 1, 0);
+        let program = run_parser_test("-15.5", 1, 0); // Test prefix float
+         match &program.statements[0] {
+            Statement::ExprStatement{expr: Expr::UnaryOp{op: UnaryOperator::Negate, expr: inner_expr}} => {
+                assert_eq!(**inner_expr, Expr::Float(15.5_f64));
+            }
+            _ => panic!("Not a prefix negation of float. Got {:?}", program.statements[0]),
+        }
     }
 
     #[test]
     fn test_infix_expressions_simple_arithmetic() {
         run_parser_test("5 + 5", 1, 0);
-        run_parser_test("10 - 2.0;", 1, 0);
+        let program = run_parser_test("10 - 2.0", 1, 0); // Test infix with float
+        match &program.statements[0] {
+            Statement::ExprStatement{expr: Expr::BinaryOp{left, op, right}} => {
+                 assert_eq!(**left, Expr::Integer(10));
+                 assert_eq!(*op, BinaryOperator::Minus);
+                 assert_eq!(**right, Expr::Float(2.0_f64));
+            }
+            _ => panic!("Not a binary op with float. Got {:?}", program.statements[0]),
+        }
         run_parser_test("3 * 8", 1, 0);
     }
     
@@ -764,10 +794,47 @@ mod tests {
     
     #[test]
     fn test_call_expression_parsing() {
-        run_parser_test("myFunction(arg1, 2.5, arg3 + 4)", 1, 0);
+        let program = run_parser_test("myFunction(arg1, 2.5, arg3 + 4)", 1, 0);
+         match &program.statements[0] {
+            Statement::ExprStatement{ expr: Expr::Call{callee, args} } => {
+                assert_eq!(callee, "myFunction");
+                assert_eq!(args.len(), 3);
+                assert!(matches!(args[0], Expr::Identifier(id) if id == "arg1"));
+                assert_eq!(args[1], Expr::Float(2.5_f64)); // Check float arg
+                assert!(matches!(args[2], Expr::BinaryOp{op: BinaryOperator::Plus, ..}));
+            }
+            _ => panic!("Not a call expression statement. Got {:?}", program.statements[0])
+        }
         run_parser_test("anotherCall();", 1, 0);
     }
     
+    #[test]
+    fn test_parse_malformed_float_string() {
+        // This test assumes the lexer might produce a Float(String) that is not a valid f64.
+        // e.g. if lexer's read_number was less strict.
+        // For now, our lexer's read_number for floats is already quite strict (digits.digits).
+        // But if it were "1.2.3", this test would be relevant.
+        // Let's simulate a bad token that the lexer *shouldn't* produce but tests parser robustness.
+        
+        // To test this properly, we'd need to manually create a Parser with a custom token stream,
+        // or modify the lexer to produce such a token (which is counter-productive).
+        // The current `run_parser_test` uses the actual lexer.
+        // So, we'll rely on the fact that `s_val.parse::<f64>()` handles errors.
+        // An input like "let x = 1.2.3;" would be caught by the lexer producing something like:
+        // Let, Ident("x"), Assign, Float("1.2"), Illegal('.'), Integer(3), Semicolon
+        // So the parser would likely error out before even calling parse_float_literal on "1.2.3".
+        
+        // If we force a Token::Float("not-a-float") into the parser:
+        let mut lexer = Lexer::new(""); // Dummy lexer
+        let mut parser = Parser::new(lexer);
+        parser.current_token = Token::Float("not-a-float".to_string()); // Manually set current token
+        
+        let expr_result = parser.parse_float_literal();
+        assert!(expr_result.is_none());
+        assert_eq!(parser.errors.len(), 1);
+        assert!(parser.errors[0].contains("Could not parse float string 'not-a-float'"));
+    }
+
     #[test]
     fn test_if_statement_no_else() {
         // Semicolons inside the block are also optional now.

@@ -97,7 +97,8 @@ fn generate_statement(statement: &Statement, writer: &mut String, indent_level: 
         }
         Statement::For { initializer, condition, increment, body_block } => {
             // Outer scope for the initializer if it's a LetDecl
-            let needs_outer_scope = matches!(initializer, Some(box Statement::LetDecl{..}));
+            // Corrected line:
+            let needs_outer_scope = matches!(initializer.as_deref(), Some(Statement::LetDecl{..}));
             if needs_outer_scope {
                 // This creates a slight oddity if the initializer isn't a let decl,
                 // but is required if `let` is used in the initializer part of a C-style for.
