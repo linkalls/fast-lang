@@ -1,0 +1,42 @@
+// Example: Control Flow
+let number = 75
+
+if number > 100 {
+    println("Number is large")
+} else if number > 50 {
+    println("Number is medium")
+} else {
+    println("Number is small")
+}
+
+println("Loop example:")
+mut i = 0
+loop {
+    print(i)
+    i = i + 1
+    if i == 5 {
+        break
+    }
+    print(", ")
+}
+println("") // Newline after loop
+
+println("While loop example:")
+mut k = 0
+while k < 3 {
+    print(k)
+    k = k + 1
+    if k < 3 {
+        print(" - ")
+    }
+}
+println("")
+
+println("For loop example:")
+for let j = 0; j < 4; j = j + 1 {
+    print(j)
+    if j < 3 {
+        print(" | ")
+    }
+}
+println("")
