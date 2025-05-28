@@ -439,27 +439,8 @@ impl<'a> Lexer<'a> {
     }
 }
 
-// Helper for keyword matching (used within next_token)
-fn keyword(ident: &str) -> Option<Token> {
-    match ident {
-        "let" => Some(Token::Let),
-        "mut" => Some(Token::Mut),
-        "if" => Some(Token::If),
-        "else" => Some(Token::Else),
-        "loop" => Some(Token::Loop),
-        "while" => Some(Token::While),
-        "for" => Some(Token::For),
-        "fn" => Some(Token::Fn),
-        "return" => Some(Token::Return),
-        "true" => Some(Token::True),
-        "false" => Some(Token::False),
-        "print" => Some(Token::Print),
-        "println" => Some(Token::Println),
-        "break" => Some(Token::Break),
-        "continue" => Some(Token::Continue),
-        _ => None,
-    }
-}
+// The 'keyword' function was here but is removed as it's unused.
+// Keyword matching is handled directly in `next_token` when an identifier is read.
 
 impl Iterator for Lexer<'_> {
     type Item = Token;

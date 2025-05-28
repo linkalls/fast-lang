@@ -136,6 +136,10 @@ impl<'a> Parser<'a> {
         }
     }
 
+    pub fn errors(&self) -> &Vec<String> {
+        &self.errors
+    }
+
     fn parse_statement(&mut self) -> Option<Statement> {
         let stmt = match self.current_token {
             Token::Let => self.parse_let_statement(),
