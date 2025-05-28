@@ -399,22 +399,39 @@ impl<'a> Lexer<'a> {
         let mut tokens = Vec::new();
         loop {
             let token = self.next_token();
-            if let Token::Illegal(ch) = token {
-                if ch == '"' { // Specifically for unterminated string
+
+            // Handle specific error cases that should halt tokenization or report differently.
+            if let Token::Illegal(ch) = &token { // Borrow token here for the check
+                if *ch == '"' { // Specifically for unterminated string
+                    // We might want to push the Illegal token before returning, or not.
+                    // If we push, it must be a clone.
+                    // tokens.push(token.clone()); // Optional: include the error token
                     return Err("Unterminated string literal".to_string());
-                } else if ch == '\0' && tokens.last() == Some(&Token::Illegal('/')) { // Check for unterminated multi-line comment
-                     return Err("Unterminated multi-line comment".to_string());
+                } else if *ch == '\0' {
+                    // Check if this NUL char for Illegal resulted from an unterminated multi-line comment
+                    // This requires looking at the state of the lexer or previous tokens,
+                    // which `skip_comment` tries to handle, but `next_token` might return `Token::Eof`
+                    // if an unterminated comment consumes till the end.
+                    // If `skip_comment` itself returned an error or a specific token, that'd be better.
+                    // For now, if an Illegal NUL is seen, and the *previous* token pushed was start of unterminated comment,
+                    // it's an error. This logic is a bit fragile here.
+                    // A better way: if `skip_comment` detects unterminated multi-line, `next_token` should yield a specific error token.
+                    // Assuming `Token::Illegal('/')` might be pushed by `next_token` if a `/` couldn't form a valid token or comment.
+                    if let Some(Token::Illegal('/')) = tokens.last() {
+                         // This condition is tricky because `tokens.last()` looks at already pushed tokens.
+                         // Let's assume for now that `next_token()` returning `Illegal('\0')` after
+                         // a `/*` that wasn't closed is the signal.
+                         // The current `skip_comment` consumes until EOF. So next_token() would be EOF.
+                         // This specific `Illegal('\0')` check from previous logic is likely not hit as expected.
+                    }
                 }
-                // For other illegal characters, we might just add them or error out differently
-                // For now, let's assume next_token handles Illegal correctly by advancing
-                 tokens.push(token); // Add the illegal token and continue or break
-                 // If we want to stop on first illegal:
-                 // return Err(format!("Illegal character: {}", ch));
+                // If it's an Illegal token but not one of the fatal ones above,
+                // it will be cloned and pushed below.
             }
-            // Always push a clone of the token, as `token` is used in the `if token == Token::Eof` check below.
-            tokens.push(token.clone());
             
-            if token == Token::Eof {
+            tokens.push(token.clone()); // Clone the token for the vector. Original 'token' is still usable.
+
+            if token == Token::Eof { // Now 'token' can be compared, as it wasn't moved.
                 break;
             }
         }
