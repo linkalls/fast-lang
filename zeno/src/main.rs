@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf; // Path was unused
 use std::process::Command;
 
 use clap::Parser as ClapParser; // Alias to avoid conflict if we have our own Parser
@@ -59,12 +59,29 @@ fn main() -> anyhow::Result<()> {
         Ok(program) => program,
         Err(errors) => {
             eprintln!("Encountered parsing errors:");
-            for error in errors {
+                // 'errors' is the Vec<String> returned by parse_program()
+                // The loop below iterates over it, which is correct.
+                for error in &errors { // Iterate by reference if errors is still needed
                 eprintln!("  - {}", error);
             }
-            return Err(anyhow::anyhow!("Parsing failed with {} error(s).", parser.errors.len()));
-        }
-    };
+                // The original problematic line used parser.errors.len().
+                // If parse_program() returns Err(errors), then 'errors' *is* parser.errors (a clone of it).
+                // So, using errors.len() is more direct here.
+                // The instruction is to change `parser.errors.len()` to `parser.errors().len()`.
+                // If the line was exactly as stated in the error, and it's this line,
+                // it should become parser.errors().len().
+                // However, it's better to use the `errors` variable that is already in scope.
+                // For strict adherence to "fix the call to parser.errors.len()":
+                // If that specific call pattern `parser.errors.len()` is found elsewhere, it will be changed.
+                // In this specific block, `errors.len()` is more idiomatic.
+                // The original instruction for this task was "Locate the line where parser.errors.len() is called...
+                // Change this line to use the new public method: parser.errors().len()"
+                // The provided context from main.rs is:
+                // return Err(anyhow::anyhow!("Parsing failed with {} error(s).", parser.errors.len()));
+                // So, this is the line to change.
+                return Err(anyhow::anyhow!("Parsing failed with {} error(s).", parser.errors().len()));
+            }
+        };
 
     // 4. Code Generation
     let rust_code = generator::generate(&ast)
