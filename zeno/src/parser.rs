@@ -7,7 +7,7 @@ use std::sync::LazyLock; // Import LazyLock
 #[derive(PartialEq, PartialOrd, Debug, Clone, Copy)]
 enum Precedence {
     LOWEST,
-    ASSIGN,      // = (Note: In SimpleLang, '=' is for statements, not expressions directly)
+    // ASSIGN, // Removed: Assignment is a statement, not an expression precedence.
     OR,          // ||
     AND,         // &&
     EQUALS,      // ==, !=
@@ -23,7 +23,8 @@ enum Precedence {
 
 static PRECEDENCES: LazyLock<HashMap<Token, Precedence>> = LazyLock::new(|| {
     let mut m = HashMap::new();
-    // m.insert(Token::Assign, Precedence::ASSIGN); // Assignment is a statement, not an expression operator here
+    // The line for Token::Assign mapping to Precedence::ASSIGN is confirmed to be already commented out or absent.
+    // m.insert(Token::Assign, Precedence::ASSIGN); // This line should remain commented or absent.
     m.insert(Token::Or, Precedence::OR);
     m.insert(Token::And, Precedence::AND);
     m.insert(Token::Eq, Precedence::EQUALS);
@@ -142,7 +143,7 @@ impl<'a> Parser<'a> {
 
     fn parse_statement(&mut self) -> Option<Statement> {
         let stmt = match self.current_token {
-            Token::Let => self.parse_let_statement(),
+            Token::Let | Token::Mut => self.parse_let_or_mut_statement(), // Updated dispatch
             Token::If => self.parse_if_statement(),
             Token::Loop => self.parse_loop_statement(),
             Token::While => self.parse_while_statement(),
@@ -150,14 +151,28 @@ impl<'a> Parser<'a> {
             Token::Print | Token::Println => self.parse_print_statement(),
             Token::Break => self.parse_break_statement(),
             Token::Continue => self.parse_continue_statement(),
-            Token::Identifier(_) => {
+            Token::Identifier(ident_name) => { // Capture ident_name directly
                 if self.peek_token_is(&Token::Assign) {
-                    self.parse_assignment_statement()
+                    // This is an Assignment statement
+                    let name = ident_name.clone(); // Clone the captured name
+                    self.next_token(); // Consume Identifier, current_token is now Assign
+                    self.next_token(); // Consume Assign, current_token is now the start of the RHS expression
+                    
+                    match self.parse_expression(Precedence::LOWEST) {
+                        Some(value_expr) => Some(Statement::Assignment { name, value_expr }),
+                        None => {
+                            self.errors.push(format!("Expected expression after '=' for assignment to '{}'", name));
+                            None
+                        }
+                    }
                 } else {
+                    // Not an assignment, so it's a regular expression statement (e.g. function call or just an expression)
+                    // parse_expression_statement expects current_token to be the start of the expression.
+                    // Since current_token is already the Identifier, this is correct.
                     self.parse_expression_statement()
                 }
             }
-            Token::Semicolon => { // Empty statement, consume the semicolon.
+            Token::Semicolon => { // Empty statement
                 // self.next_token(); // The main loop will advance.
                 return None; 
             }
@@ -188,72 +203,78 @@ impl<'a> Parser<'a> {
         stmt
     }
 
-    fn parse_let_statement(&mut self) -> Option<Statement> {
-        // current_token is Let
-        let mutable = if self.peek_token_is(&Token::Mut) {
-            self.next_token(); // consume 'mut'
-            true
-        } else {
-            false
+    // Renamed from parse_let_statement to handle both 'let' and 'mut'
+    fn parse_let_or_mut_statement(&mut self) -> Option<Statement> {
+        let is_mutable = match self.current_token {
+            Token::Mut => true,
+            Token::Let => false,
+            _ => { // Should not be called if current_token is not Let or Mut
+                self.errors.push(format!("parse_let_or_mut_statement called with unexpected token {:?}", self.current_token));
+                return None;
+            }
         };
+        // The dispatcher (parse_statement) has already identified 'let' or 'mut'.
+        // We now expect an identifier for the variable name.
+        // So, we look at peek_token.
 
         if !matches!(self.peek_token, Token::Identifier(_)) {
-            self.peek_error(&Token::Identifier("IDENTIFIER".to_string()));
+            self.peek_error(&Token::Identifier("IDENTIFIER_NAME".to_string()));
             return None;
         }
-        self.next_token(); // consume identifier token (e.g. 'x')
+        self.next_token(); // Consume the identifier token
         let name = match &self.current_token {
             Token::Identifier(n) => n.clone(),
-            _ => return None, 
+            _ => return None, // Unlikely due to the check above
         };
 
-        let type_ann = if self.peek_token_is(&Token::Colon) {
-            self.next_token(); // consume ':'
+        // Optional Type Annotation
+        let mut type_annotation: Option<String> = None;
+        if self.peek_token_is(&Token::Colon) {
+            self.next_token(); // Consume ':'
+            
             if !matches!(self.peek_token, Token::Identifier(_)) {
-                self.errors.push(format!("Expected type annotation (identifier) after ':', got {:?}", self.peek_token));
+                 self.peek_error(&Token::Identifier("TYPE_NAME".to_string()));
+                 // Decide if this is a fatal error for the statement or if we can proceed without type_ann
+                 // For now, let's make it fatal for the type annotation part.
+                 return None; 
+            }
+            self.next_token(); // Consume the type identifier
+            match &self.current_token {
+                 Token::Identifier(type_name_str) => {
+                    type_annotation = Some(type_name_str.clone());
+                }
+                _ => return None, // Unlikely
+            }
+        }
+
+        // Assignment Operator
+        if !self.expect_peek(Token::Assign) {
+            // peek_error already called by expect_peek
+            return None;
+        }
+        // current_token is now '='
+        self.next_token(); // Consume '=', move to the start of the expression
+
+        // Value Expression
+        let value_expr = match self.parse_expression(Precedence::LOWEST) {
+            Some(expr) => expr,
+            None => {
+                self.errors.push(format!("Expected expression after '=' for variable '{}'", name));
                 return None;
             }
-            self.next_token(); // consume type identifier (e.g. 'int')
-            match &self.current_token {
-                Token::Identifier(t) => Some(t.clone()),
-                _ => return None,
-            }
-        } else {
-            None
         };
         
-        if !self.expect_peek(Token::Assign) { // current is name/type, peek should be '='
-            return None;
-        }
-        // current_token is now '='
-        self.next_token(); // consume '=', move to the expression's first token
+        // Optional semicolon is handled by the main parse_statement function's suffix logic.
 
-        let value_expr = self.parse_expression(Precedence::LOWEST)?;
-        // Semicolon is now optional, will be handled by parse_statement's suffix check.
-        Some(Statement::LetDecl { name, type_ann, mutable, value_expr })
+        Some(Statement::LetDecl {
+            name,
+            mutable: is_mutable,
+            type_ann: type_annotation,
+            value_expr,
+        })
     }
 
-    fn parse_assignment_statement(&mut self) -> Option<Statement> {
-        // current_token is Identifier
-        let name = match &self.current_token {
-            Token::Identifier(n) => n.clone(),
-            _ => {
-                self.errors.push(format!("Expected identifier for assignment, got {:?}", self.current_token));
-                return None;
-            }
-        };
-
-        // expect_peek consumes Token::Assign, so current_token becomes '='
-        if !self.expect_peek(Token::Assign) { 
-            return None;
-        }
-        // current_token is now '='
-        self.next_token(); // Consume '=', move to expression's first token
-
-        let value_expr = self.parse_expression(Precedence::LOWEST)?;
-        // Semicolon is now optional, will be handled by parse_statement's suffix check.
-        Some(Statement::Assignment { name, value_expr })
-    }
+    // Removed parse_assignment_statement as its logic is now in parse_statement's Identifier arm.
 
     fn parse_expression_statement(&mut self) -> Option<Statement> {
         // current_token is the beginning of an expression
@@ -263,83 +284,85 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_block_statement(&mut self) -> Option<Block> {
-        // Expects current_token to be LBrace when called.
-        if !self.current_token_is(&Token::LBrace) {
-            self.errors.push(format!(
-                "Expected '{{' to start a block, got {:?}, peek: {:?}",
-                self.current_token, self.peek_token
-            ));
-            return None;
-        }
-        // Caller (if, while, etc.) is responsible for current_token being LBrace.
-        // Caller also handles consuming the final RBrace via the main parse_program loop's next_token().
+        // Expects self.current_token to be LBrace (ensured by caller using expect_peek).
+        // No, the plan was for THIS function to consume it, or rather, expect_peek in caller consumes it.
+        // Let's stick to: caller uses expect_peek, so current_token *is* LBrace when this is called.
+        // Then this function consumes it to move to the content of the block.
+
+        // self.next_token(); // Consume '{', current_token is now the first token of the block or '}'
 
         let mut statements = Vec::new();
-        self.next_token(); // Consume '{', move to the first token inside the block or '}'.
+        // Current token is LBRACE. Consume it and move to the first statement or RBRACE
+        self.next_token(); 
 
         while !self.current_token_is(&Token::RBrace) && !self.current_token_is(&Token::Eof) {
-            // If the token is a Semicolon, it's an empty statement; consume and continue.
-            if self.current_token_is(&Token::Semicolon) {
-                self.next_token(); // Consume the empty statement's semicolon.
-                continue;
+            // parse_statement parses one statement.
+            // The optional semicolon logic is handled within parse_statement itself.
+            // The main loop in parse_program calls next_token() after parse_statement().
+            // We replicate that pattern here for statements within a block.
+            match self.parse_statement() {
+                Some(statement) => statements.push(statement),
+                None => {
+                    // If parse_statement returns None (e.g., for an empty ';' or a parsing error for that statement),
+                    // we still need to advance to avoid getting stuck, unless it's already EOF or RBrace.
+                }
             }
-            
-            if let Some(stmt) = self.parse_statement() { // parse_statement now handles optional semicolons
-                statements.push(stmt);
-            }
-            // parse_statement will leave current_token on the last token of the statement,
-            // or on the semicolon if it was present and consumed by parse_statement's new logic.
-            // We must advance to the next token that starts a new statement or the closing brace.
-            if !self.current_token_is(&Token::RBrace) && !self.current_token_is(&Token::Eof) {
-                 // If parse_statement consumed a semicolon, current_token is that semicolon.
-                 // If it didn't (semicolon was optional and absent), current_token is the last token of the statement.
-                 // In either case, we need to advance to the *next* token for the loop condition or next statement.
-                self.next_token();
-            }
+            // Crucially, advance the token to prepare for the next statement or the end of the block.
+            // This is similar to how parse_program's loop works.
+            // If current_token is already RBrace or Eof, the loop condition will handle it.
+            self.next_token();
         }
 
         if !self.current_token_is(&Token::RBrace) {
-            self.errors.push(format!(
-                "Expected '}}' to end a block, got {:?}, peek: {:?}",
-                self.current_token, self.peek_token
-            ));
+            self.errors.push(format!("Unterminated block: expected '}}', got {:?}", self.current_token));
             return None;
         }
-        // current_token is RBrace. The caller (if, loop, etc.) relies on the main
-        // parse_program loop to call next_token() to advance past this RBrace.
+        // Do NOT consume the RBrace here.
+        // The current_token is now RBrace. The caller (e.g. parse_if_statement)
+        // will finish, and the main parse_program loop's next_token() will consume the RBrace.
         Some(Block { statements })
     }
 
     fn parse_if_statement(&mut self) -> Option<Statement> {
-        // current_token is If
-        if !self.expect_peek(Token::LParen) { return None; } 
-        self.next_token(); // consume '(', current is start of condition
+        // current_token is If. No opening parenthesis expected.
+        self.next_token(); // Consume 'if', current is start of condition
 
-        let condition = self.parse_expression(Precedence::LOWEST)?; 
+        let condition = self.parse_expression(Precedence::LOWEST)?;
+        // After parse_expression, current_token is the last token of the condition.
+        // We now expect LBrace for the 'then' block.
 
-        if !self.expect_peek(Token::RParen) { return None; } 
-        if !self.expect_peek(Token::LBrace) { return None; } // current is now '{'
-
-        let then_block = self.parse_block_statement()?; 
+        if !self.expect_peek(Token::LBrace) { // Expects peek to be LBrace, then consumes it.
+            self.errors.push(format!("Expected '{{' after if condition, got {:?}", self.current_token));
+            return None;
+        }
+        // current_token is now LBrace
+        let then_block = self.parse_block_statement()?;
         // after parse_block_statement, current_token is '}'
 
         let mut else_if_blocks = Vec::new();
         let mut else_block = None;
 
+        // current_token is '}' from then_block. Peek for 'else'.
         while self.peek_token_is(&Token::Else) {
-            self.next_token(); // consume '}' or previous 'else if' block's '}', current is 'else'
+            self.next_token(); // Consume '}' (from then_block or previous else-if block), current is 'else'
             
-            if self.peek_token_is(&Token::If) {
+            if self.peek_token_is(&Token::If) { // This is 'else if'
                 self.next_token(); // consume 'else', current is 'if'
-                if !self.expect_peek(Token::LParen) { return None; } 
-                self.next_token(); 
+                self.next_token(); // consume 'if', current is start of else-if-condition
+                
                 let else_if_condition = self.parse_expression(Precedence::LOWEST)?;
-                if !self.expect_peek(Token::RParen) { return None; }
-                if !self.expect_peek(Token::LBrace) { return None; }
+                
+                if !self.expect_peek(Token::LBrace) {
+                    self.errors.push(format!("Expected '{{' after else if condition, got {:?}", self.current_token));
+                    return None;
+                }
                 let else_if_then_block = self.parse_block_statement()?;
                 else_if_blocks.push((else_if_condition, else_if_then_block));
-            } else { 
-                if !self.expect_peek(Token::LBrace) { return None; } 
+            } else { // This is an 'else' block
+                if !self.expect_peek(Token::LBrace) { 
+                    self.errors.push(format!("Expected '{{' for else block, got {:?}", self.current_token));
+                    return None; 
+                }
                 else_block = Some(self.parse_block_statement()?); 
                 break; 
             }
@@ -357,22 +380,27 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_while_statement(&mut self) -> Option<Statement> {
-        if !self.expect_peek(Token::LParen) { return None; } 
-        self.next_token(); 
+        // current_token is While. No opening parenthesis expected.
+        self.next_token(); // Consume 'while', current is start of condition
 
-        let condition = self.parse_expression(Precedence::LOWEST)?; 
+        let condition = self.parse_expression(Precedence::LOWEST)?;
+        // After parse_expression, current_token is the last token of the condition.
+        // We now expect LBrace for the loop body.
 
-        if !self.expect_peek(Token::RParen) { return None; } 
-        if !self.expect_peek(Token::LBrace) { return None; } 
-        
-        let body_block = self.parse_block_statement()?; 
+        if !self.expect_peek(Token::LBrace) { // Expects peek to be LBrace, then consumes it.
+            self.errors.push(format!("Expected '{{' after while condition, got {:?}", self.current_token));
+            return None;
+        }
+        // current_token is now LBrace
+        let body_block = self.parse_block_statement()?;
         Some(Statement::While { condition, body_block })
     }
 
     fn parse_for_statement(&mut self) -> Option<Statement> {
-        if !self.expect_peek(Token::LParen) { return None; } 
-        self.next_token(); // Consume '(', current is start of initializer or first ';'
+        // current_token is For. No opening parenthesis expected.
+        self.next_token(); // Consume 'for', current is start of initializer or first ';'
         
+        // 1. Initializer
         let initializer = if self.current_token_is(&Token::Semicolon) {
             None 
         } else {
@@ -419,17 +447,21 @@ impl<'a> Parser<'a> {
         };
         
         // After parsing increment, current_token is the last token of the increment expression.
-        // We expect the next token to be RParen.
-        if !self.expect_peek(Token::RParen) { // expect_peek consumes RParen, current is now RParen
-             self.errors.push(format!("Expected ')' after for loop increment, got {:?} (peek: {:?})", self.current_token, self.peek_token));
-            return None;
+        // After parsing increment, current_token is the last token of the increment expression,
+        // OR it's the token that made us decide there's no increment (e.g., LBrace).
+        // No closing parenthesis expected. We directly expect LBrace for the body.
+        
+        if !self.current_token_is(&Token::LBrace) {
+            // If current_token is not LBrace after parsing increment (or deciding there's no increment),
+            // it's an error. parse_expression for increment should leave us on its last token.
+            // So we need to expect_peek for LBrace.
+            if !self.expect_peek(Token::LBrace) {
+                 self.errors.push(format!("Expected '{{' for for-loop body, got {:?} (peek: {:?})", self.current_token, self.peek_token));
+                 return None;
+            }
         }
-
-        if !self.expect_peek(Token::LBrace) { 
-             self.errors.push(format!("Expected '{{' for for-loop body after ')', got {:?} (peek: {:?})", self.current_token, self.peek_token));
-            return None;
-        }
-        let body_block = self.parse_block_statement()?; 
+        // current_token is now LBrace
+        let body_block = self.parse_block_statement()?;
         Some(Statement::For { initializer: initializer.map(Box::new), condition, increment, body_block })
     }
 
@@ -694,41 +726,120 @@ mod tests {
 
     #[test]
     fn test_let_statements() {
-        let inputs = vec![
-            ("let x = 5;", Statement::LetDecl { name: "x".to_string(), type_ann: None, mutable: false, value_expr: Expr::Integer(5) }),
-            ("let y = 10.5", Statement::LetDecl { name: "y".to_string(), type_ann: None, mutable: false, value_expr: Expr::Float(10.5_f64) }),
-            ("let z = true;", Statement::LetDecl { name: "z".to_string(), type_ann: None, mutable: false, value_expr: Expr::Boolean(true) }),
-            ("let s = \"hello\"", Statement::LetDecl { name: "s".to_string(), type_ann: None, mutable: false, value_expr: Expr::StringLiteral("hello".to_string()) }),
-            ("let mut m = 0;", Statement::LetDecl { name: "m".to_string(), type_ann: None, mutable: true, value_expr: Expr::Integer(0) }),
+        let tests = vec![
+            ("let x = 5;", "x", None, false, Expr::Integer(5)),
+            ("let y = 10.5", "y", None, false, Expr::Float(10.5)),
+            ("let z = true", "z", None, false, Expr::Boolean(true)),
+            ("let s = \"hello\";", "s", None, false, Expr::StringLiteral("hello".to_string())),
         ];
-        for (input_str, expected_stmt_ast_partial) in inputs {
-            let program = run_parser_test(input_str, 1, 0);
-            // Basic check for the first statement, more detailed checks can be added if needed
-            assert_eq!(program.statements[0], expected_stmt_ast_partial, "Mismatch for input: {}", input_str);
-        }
-        // Test sequence
-        let full_input = "let a = 1\nlet b = 2;";
-        run_parser_test(full_input, 2, 0);
-    }
-    
-    #[test]
-    fn test_let_statement_with_type() {
-        run_parser_test("let x: int = 5", 1, 0);
-        let program = run_parser_test("let y: float = 3.14;", 1, 0);
-        match &program.statements[0] {
-            Statement::LetDecl { value_expr, .. } => {
-                assert_eq!(value_expr, &Expr::Float(3.14_f64));
+
+        for (input, name, type_ann_opt, mutable_expected, value_expr_expected) in tests {
+            let program = run_parser_test(input, 1, 0);
+            match &program.statements[0] {
+                Statement::LetDecl { name: n, type_ann, mutable, value_expr } => {
+                    assert_eq!(n, name);
+                    assert_eq!(*type_ann, type_ann_opt.map(String::from));
+                    assert_eq!(*mutable, mutable_expected);
+                    assert_eq!(*value_expr, value_expr_expected);
+                }
+                _ => panic!("Expected LetDecl, got {:?}", program.statements[0]),
             }
-            _ => panic!("Expected LetDecl"),
         }
     }
 
     #[test]
+    fn test_mut_statements() {
+        let tests = vec![
+            ("mut x = 5;", "x", None, true, Expr::Integer(5)),
+            ("mut y = 10.5", "y", None, true, Expr::Float(10.5)),
+            ("mut z: bool = true", "z", Some("bool"), true, Expr::Boolean(true)),
+            ("mut s: string = \"hello\";", "s", Some("string"), true, Expr::StringLiteral("hello".to_string())),
+        ];
+
+        for (input, name, type_ann_opt, mutable_expected, value_expr_expected) in tests {
+            let program = run_parser_test(input, 1, 0);
+            match &program.statements[0] {
+                Statement::LetDecl { name: n, type_ann, mutable, value_expr } => {
+                    assert_eq!(n, name);
+                    assert_eq!(*type_ann, type_ann_opt.map(String::from));
+                    assert_eq!(*mutable, mutable_expected);
+                    assert_eq!(*value_expr, value_expr_expected);
+                }
+                _ => panic!("Expected LetDecl (for mut), got {:?}", program.statements[0]),
+            }
+        }
+    }
+    
+    #[test]
+    fn test_let_statement_with_type() {
+        let program = run_parser_test("let x: int = 5", 1, 0);
+         match &program.statements[0] {
+            Statement::LetDecl { name, type_ann, mutable, value_expr } => {
+                assert_eq!(name, "x");
+                assert_eq!(*type_ann, Some("int".to_string()));
+                assert!(!*mutable);
+                assert_eq!(*value_expr, Expr::Integer(5));
+            }
+            _ => panic!("Expected LetDecl"),
+        }
+
+        let program_float = run_parser_test("let y: float = 3.14;", 1, 0);
+        match &program_float.statements[0] {
+            Statement::LetDecl { name, type_ann, mutable, value_expr } => {
+                 assert_eq!(name, "y");
+                 assert_eq!(*type_ann, Some("float".to_string()));
+                 assert!(!*mutable);
+                 assert_eq!(*value_expr, Expr::Float(3.14_f64));
+            }
+            _ => panic!("Expected LetDecl"),
+        }
+    }
+    
+    #[test]
+    fn test_let_statement_errors() {
+        run_parser_test("let = 5;", 0, 1); // Missing identifier
+        run_parser_test("let x 5;", 0, 1); // Missing assign
+        run_parser_test("let x = ;", 0, 1); // Missing value expression
+        run_parser_test("mut y : int = ;", 0, 1); // Missing value expr for mut with type
+        run_parser_test("let z : = 10;", 0, 1); // Missing type name after colon
+        run_parser_test("mut w : float 20.0;", 0, 1); // Missing assign for mut with type
+    }
+
+
+    #[test]
     fn test_assignment_statement() {
-        run_parser_test("val = 100 + 20", 1, 0);
-        run_parser_test("another = \"text\";", 1, 0);
+        let tests = vec![
+            ("val = 100 + 20", "val", Expr::BinaryOp { 
+                left: Box::new(Expr::Integer(100)), 
+                op: BinaryOperator::Plus, 
+                right: Box::new(Expr::Integer(20)) 
+            }),
+            ("another = \"text\";", "another", Expr::StringLiteral("text".to_string())),
+            ("flag = true", "flag", Expr::Boolean(true)),
+        ];
+        for (input, expected_name, expected_expr) in tests {
+            let program = run_parser_test(input, 1, 0);
+            match &program.statements[0] {
+                Statement::Assignment { name, value_expr } => {
+                    assert_eq!(name, expected_name);
+                    assert_eq!(*value_expr, expected_expr);
+                }
+                _ => panic!("Expected Assignment statement for input: {}", input),
+            }
+        }
+        
         let full_input = "val = 1\n a = val";
-        run_parser_test(full_input, 2, 0);
+        let program_seq = run_parser_test(full_input, 2, 0);
+        assert!(matches!(&program_seq.statements[0], Statement::Assignment{..}));
+        assert!(matches!(&program_seq.statements[1], Statement::Assignment{..}));
+    }
+
+    #[test]
+    fn test_assignment_errors() {
+        run_parser_test("x = ;", 0, 1); // Missing expression after =
+        run_parser_test("x = ", 0, 1); // Missing expression, ends with EOF
+        // Note: "let x;" is not an assignment error, it's a LetDecl error if '=' is missing.
+        // Assignment errors primarily revolve around the RHS.
     }
     
     #[test]
@@ -841,27 +952,68 @@ mod tests {
 
     #[test]
     fn test_if_statement_no_else() {
-        // Semicolons inside the block are also optional now.
-        let input = "if (x < y) { x = 1\n print(x) }";
+        let input = "if x < y { x = 1\n print(x) }"; 
+        let program = run_parser_test(input, 1, 0);
+        match &program.statements[0] {
+            Statement::If { condition, then_block, else_if_blocks, else_block } => {
+                assert!(matches!(condition, Expr::BinaryOp {op: BinaryOperator::Lt, ..}));
+                assert_eq!(then_block.statements.len(), 2, "Then block should have 2 statements");
+                assert!(else_if_blocks.is_empty());
+                assert!(else_block.is_none());
+            }
+            _ => panic!("Not an if statement. Got {:?}", program.statements[0])
+        }
+    }
+
+    #[test]
+    fn test_if_empty_block() {
+        let input = "if x {}";
         let program = run_parser_test(input, 1, 0);
         match &program.statements[0] {
             Statement::If { then_block, .. } => {
-                assert_eq!(then_block.statements.len(), 2, "Then block should have 2 statements");
+                assert!(then_block.statements.is_empty(), "Then block should be empty");
             }
-            _ => panic!("Not an if statement. Got {:?}", program.statements[0])
+            _ => panic!("Not an if statement"),
         }
     }
     
     #[test]
     fn test_if_else_statement_parsing() {
-        let input = "if (x > y) { 1 } else { 0; }"; // Mixed optional/present semicolons
-        run_parser_test(input, 1, 0);
+        let input = "if x > y { 1 } else { 0; }"; 
+        let program = run_parser_test(input, 1, 0);
+         match &program.statements[0] {
+            Statement::If { else_block, .. } => {
+                assert!(else_block.is_some());
+                assert_eq!(else_block.as_ref().unwrap().statements.len(), 1);
+            }
+            _ => panic!("Not an if statement. Got {:?}", program.statements[0])
+        }
     }
 
     #[test]
     fn test_if_else_if_else_complex() {
-        let input = "if (a == 1) { print(1) } else if (a == 2) { print(2); } else { print(3) }";
-        run_parser_test(input, 1, 0);
+        let input = "if a == 1 { print(1) } else if a == 2 { print(2); } else { print(3) }"; 
+        let program = run_parser_test(input, 1, 0);
+        match &program.statements[0] {
+            Statement::If { else_if_blocks, else_block, .. } => {
+                assert_eq!(else_if_blocks.len(), 1);
+                assert!(else_block.is_some());
+                 assert_eq!(else_block.as_ref().unwrap().statements.len(), 1);
+            }
+            _ => panic!("Not an if-elseif-else statement. Got {:?}", program.statements[0])
+        }
+    }
+
+    #[test]
+    fn test_if_block_with_semicolons_only() {
+        let input = "if true { ;;; }";
+        let program = run_parser_test(input, 1, 0);
+         match &program.statements[0] {
+            Statement::If { then_block, .. } => {
+                assert!(then_block.statements.is_empty(), "Block with only semicolons should be empty of actual statements.");
+            }
+            _ => panic!("Not an if statement"),
+        }
     }
     
     #[test]
@@ -874,21 +1026,42 @@ mod tests {
             }
             _ => panic!("Not a loop statement. Got {:?}", program.statements[0])
         }
+
+        let empty_loop = "loop {}";
+        let program_empty = run_parser_test(empty_loop, 1, 0);
+        match &program_empty.statements[0] {
+            Statement::Loop { body_block } => {
+                assert!(body_block.statements.is_empty());
+            }
+            _ => panic!("Not an empty loop statement"),
+        }
     }
     
     #[test]
     fn test_while_statement_parsing() {
-        let input = "while (count < 10) { count = count + 1\n continue; }";
-         run_parser_test(input, 1, 0);
+        let input = "while count < 10 { count = count + 1\n continue; }"; 
+         let program = run_parser_test(input, 1, 0);
+         match &program.statements[0] {
+            Statement::While { condition, body_block } => {
+                assert!(matches!(condition, Expr::BinaryOp{op: BinaryOperator::Lt, ..}));
+                assert_eq!(body_block.statements.len(), 2);
+                 assert!(matches!(&body_block.statements[1], Statement::Continue));
+            }
+            _ => panic!("Not a while statement. Got {:?}", program.statements[0])
+        }
     }
 
     #[test]
     fn test_for_statement_complete() {
-        // Note: Semicolons *within* the for (...) control structure are still mandatory.
-        let input = "for (let i = 0; i < 10; i = i + 1) { print(i)\n print(i*2) }";
+        let input = "for let i = 0; i < 10; i = i + 1 { print(i)\n print(i*2) }"; // No parens
         let program = run_parser_test(input, 1, 0);
-         match &program.statements[0] {
-            Statement::For { body_block, .. } => {
+        match &program.statements[0] {
+            Statement::For { initializer, condition, increment, body_block } => {
+                assert!(initializer.is_some());
+                assert!(matches!(initializer.as_ref().unwrap().as_ref(), Statement::LetDecl{..}));
+                assert!(condition.is_some());
+                assert!(matches!(condition.as_ref().unwrap(), Expr::BinaryOp{op: BinaryOperator::Lt, ..}));
+                assert!(increment.is_some());
                 assert_eq!(body_block.statements.len(), 2);
             }
             _ => panic!("Not a for statement. Got {:?}", program.statements[0])
@@ -897,8 +1070,32 @@ mod tests {
 
     #[test]
     fn test_for_statement_minimal() {
-        let input = "for (;;) { break }"; 
-        run_parser_test(input, 1, 0);
+        let input = "for ;; { break }"; // No parens, empty clauses
+        let program = run_parser_test(input, 1, 0);
+         match &program.statements[0] {
+            Statement::For { initializer, condition, increment, body_block } => {
+                assert!(initializer.is_none());
+                assert!(condition.is_none());
+                assert!(increment.is_none());
+                assert_eq!(body_block.statements.len(), 1);
+            }
+            _ => panic!("Not a for statement. Got {:?}", program.statements[0])
+        }
+    }
+
+    #[test]
+    fn test_for_statement_only_condition() {
+        let input = "for ; i < 10 ; { i = i + 1 }"; // No parens
+        let program = run_parser_test(input, 1, 0);
+        match &program.statements[0] {
+            Statement::For { initializer, condition, increment, body_block } => {
+                assert!(initializer.is_none());
+                assert!(condition.is_some());
+                assert!(increment.is_none());
+                assert_eq!(body_block.statements.len(), 1);
+            }
+            _ => panic!("Not a for statement. Got {:?}", program.statements[0])
+        }
     }
     
     #[test]
@@ -936,7 +1133,7 @@ mod tests {
     #[test]
     fn test_statements_in_block_mixed_semicolons() {
         let input = r#"
-        if (true) {
+        if true {
             let a = 1
             print(a);
             let b = 2
@@ -950,6 +1147,14 @@ mod tests {
             }
             _ => panic!("Not an if statement")
         }
+    }
+
+    #[test]
+    fn test_unterminated_block_error() {
+        let input = "if true { let x = 1"; // Missing closing brace
+        run_parser_test(input, 0, 1); // Expect 1 statement parsed (the if), and 1 error for unclosed block.
+                                      // Or 0 statements if parse_if_statement returns None due to block error.
+                                      // Current run_parser_test expects program_result.is_err(), so 0 statements.
     }
     
     // Error tests should remain largely the same, as syntax errors unrelated to semicolons
@@ -968,22 +1173,33 @@ mod tests {
     
     #[test]
     fn test_error_if_missing_condition_parentheses() {
-        let input = "if x < 10 { print(x) }";
-        run_parser_test(input, 0, 1);
+        // This test is no longer relevant as parentheses are not expected.
+        // Instead, an error might occur if a LBrace is not found after the condition.
+        // run_parser_test("if x < 10 { print(x) }", 0, 1); // Original: error for missing (
+        // New: if condition is just "x", then "<" would be unexpected.
+        // If "x < 10" is parsed, then if no "{", that's an error.
+        run_parser_test("if x print(x)", 0, 1); // Expects { after x
     }
 
     #[test]
     fn test_error_if_missing_body_braces() {
-        let input = "if (x < 10) print(x)";
-        run_parser_test(input, 0, 1);
+        let input = "if x < 10 print(x)"; // No parens, no braces
+        run_parser_test(input, 0, 1); // Expects { after condition
     }
     
     #[test]
     fn test_error_for_loop_missing_internal_semicolons() {
-        // Semicolons *inside* the for () are still mandatory
-        let input = "for (let i = 0 i < 10 i = i + 1) {}"; 
+        // Semicolons *inside* the for (init; cond; incr) structure are still mandatory.
+        let input = "for let i = 0 i < 10 i = i + 1 {}"; // No parens, missing semicolons
         run_parser_test(input, 0, 2); 
     }
+    
+    #[test]
+    fn test_for_loop_statement_no_brace() {
+        let input = "for let i = 0; i < 1; i = i + 1 print(i)";
+        run_parser_test(input, 0, 1); // Expects {
+    }
+
 
     #[test]
     fn test_error_unexpected_token_in_statement() {

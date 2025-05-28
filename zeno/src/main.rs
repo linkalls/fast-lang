@@ -53,7 +53,7 @@ fn main() -> anyhow::Result<()> {
     // The parser will call next_token() on its own lexer instance.
 
     // 3. Parsing
-    let mut parser_lexer = Lexer::new(&source_code); 
+    let parser_lexer = Lexer::new(&source_code); // Removed mut
     let mut parser = Parser::new(parser_lexer); 
     let ast: Program = match parser.parse_program() {
         Ok(program) => program,
@@ -152,6 +152,17 @@ fn main() -> anyhow::Result<()> {
              fs::remove_file(&rust_output_path)
                 .map_err(|e| anyhow::anyhow!("Failed to delete temporary .rs file '{}': {}", rust_output_path.display(), e))?;
              println!("Removed temporary Rust file: {}", rust_output_path.display());
+        }
+
+        // New logic for deleting executable:
+        if args.run && args.output_executable_file.is_none() {
+            // If it was run AND no specific output executable name was given,
+            // then delete the executable.
+            if let Err(e) = fs::remove_file(&executable_path) {
+                eprintln!("Warning: Failed to delete temporary executable '{}': {}", executable_path.display(), e);
+            } else {
+                println!("Removed temporary executable: {}", executable_path.display());
+            }
         }
 
     } else if !args.keep_rs && args.output_rust_file.is_none() {
