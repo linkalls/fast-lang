@@ -214,7 +214,7 @@ func indent(level int) string {
 func mapType(zenoType string) string {
 	switch zenoType {
 	case "int":
-		return "int64"
+		return "int"
 	case "float":
 		return "float64"
 	case "bool":
@@ -427,7 +427,7 @@ func (g *Generator) generateStatement(stmt ast.Statement, builder *strings.Build
 func (g *Generator) generateExpression(expr ast.Expression, builder *strings.Builder) error {
 	switch e := expr.(type) {
 	case *ast.IntegerLiteral:
-		builder.WriteString(strconv.FormatInt(e.Value, 10))
+		builder.WriteString(strconv.Itoa(e.Value))
 
 	case *ast.StringLiteral:
 		// Escape the string for Go

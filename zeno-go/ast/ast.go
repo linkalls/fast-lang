@@ -143,7 +143,7 @@ func (es *ExpressionStatement) String() string {
 
 // IntegerLiteral represents integer literals
 type IntegerLiteral struct {
-	Value int64
+	Value int
 }
 
 func (il *IntegerLiteral) expressionNode() {}

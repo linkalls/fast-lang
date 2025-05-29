@@ -156,7 +156,7 @@ func TestGenerateTypeAnnotations(t *testing.T) {
 		t.Fatalf("Failed to generate code: %v", err)
 	}
 
-	if !strings.Contains(code, "var x int64 = 42") {
+	if !strings.Contains(code, "var x int = 42") {
 		t.Errorf("Generated code should contain type annotation, got:\n%s", code)
 	}
 }
