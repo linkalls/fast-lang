@@ -1,6 +1,0 @@
-// Simple binary expressions test
-let sum = 10 + 5;
-let product = 4 * 3;
-let complex = 2 * 3 + 1;
-mut counter = 0;
-let message = "Binary expressions work!";

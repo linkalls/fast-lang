@@ -2,10 +2,14 @@ package generator
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/linkalls/zeno-lang/ast"
+	"github.com/linkalls/zeno-lang/lexer"
+	"github.com/linkalls/zeno-lang/parser"
 )
 
 // GenerationError represents errors during code generation
@@ -22,9 +26,12 @@ type Generator struct {
 	imports      map[string][]string          // module -> imported identifiers
 	declaredVars map[string]bool              // variable name -> declared
 	usedVars     map[string]bool              // variable name -> used
-	declaredFns  map[string]bool              // function name -> declared
+	declaredFns  map[string]string            // function name -> go function name
 	usedFns      map[string]bool              // function name -> used
+	userModules  map[string]map[string]string // user module -> function -> go equivalent
+	moduleASTs   map[string]*ast.Program      // user module -> parsed AST
 	standardLibs map[string]map[string]string // module -> function -> go equivalent
+	currentDir   string                       // directory of the current file being compiled
 	showJapanese bool                         // whether to show Japanese error messages
 }
 
@@ -34,8 +41,10 @@ func NewGenerator() *Generator {
 		imports:      make(map[string][]string),
 		declaredVars: make(map[string]bool),
 		usedVars:     make(map[string]bool),
-		declaredFns:  make(map[string]bool),
+		declaredFns:  make(map[string]string),
 		usedFns:      make(map[string]bool),
+		userModules:  make(map[string]map[string]string),
+		moduleASTs:   make(map[string]*ast.Program),
 		standardLibs: make(map[string]map[string]string),
 	}
 
@@ -55,8 +64,14 @@ func Generate(program *ast.Program) (string, error) {
 
 // GenerateWithOptions generates Go code from the AST with options
 func GenerateWithOptions(program *ast.Program, showJapanese bool) (string, error) {
+	return GenerateWithFile(program, "", showJapanese)
+}
+
+// GenerateWithFile generates Go code from the AST with source file path for module resolution
+func GenerateWithFile(program *ast.Program, sourceFile string, showJapanese bool) (string, error) {
 	g := NewGenerator()
 	g.showJapanese = showJapanese
+	g.currentDir = sourceFile
 	return g.generateProgram(program)
 }
 
@@ -92,6 +107,26 @@ func (g *Generator) generateProgram(program *ast.Program) (string, error) {
 		} else if _, ok := stmt.(*ast.ImportStatement); !ok {
 			// Skip import statements as they're handled above
 			otherStmts = append(otherStmts, stmt)
+		}
+	}
+
+	// Generate imported user module functions first
+	for modulePath, moduleAST := range g.moduleASTs {
+		if importedFuncs, exists := g.imports[modulePath]; exists {
+			for _, stmt := range moduleAST.Statements {
+				if funcDef, ok := stmt.(*ast.FunctionDefinition); ok && funcDef.IsPublic {
+					// Check if this function is actually imported
+					for _, importedFunc := range importedFuncs {
+						if importedFunc == funcDef.Name {
+							if err := g.generateStatement(funcDef, &builder, 0); err != nil {
+								return "", err
+							}
+							builder.WriteString("\n")
+							break
+						}
+					}
+				}
+			}
 		}
 	}
 
@@ -317,7 +352,29 @@ func (g *Generator) generateExpression(expr ast.Expression, builder *strings.Bui
 		builder.WriteString(")")
 
 	case *ast.FunctionCall:
-		builder.WriteString(e.Name)
+		// First check if this is a function defined in the current file
+		functionName := e.Name
+		if goFuncName, exists := g.declaredFns[functionName]; exists {
+			functionName = goFuncName
+		} else {
+			// Check if this is a function from a user-defined module
+			for module, functions := range g.userModules {
+				if goFuncName, exists := functions[functionName]; exists {
+					// Check if this function is imported from this module
+					if importedFuncs, imported := g.imports[module]; imported {
+						for _, importedFunc := range importedFuncs {
+							if importedFunc == functionName {
+								functionName = goFuncName // Use the Go-style function name
+								break
+							}
+						}
+					}
+					break
+				}
+			}
+		}
+		
+		builder.WriteString(functionName)
 		builder.WriteString("(")
 		for i, arg := range e.Arguments {
 			if i > 0 {
@@ -341,6 +398,12 @@ func (g *Generator) collectImportsAndDeclarations(stmt ast.Statement) error {
 	switch s := stmt.(type) {
 	case *ast.ImportStatement:
 		g.imports[s.Module] = s.Imports
+		// If it's a user module (starts with "./" or "../"), process it
+		if strings.HasPrefix(s.Module, "./") || strings.HasPrefix(s.Module, "../") {
+			if err := g.processUserModule(s.Module, s.Imports); err != nil {
+				return err
+			}
+		}
 	case *ast.LetDeclaration:
 		g.declaredVars[s.Name] = true
 		// Also check for variable usage in the value expression
@@ -348,8 +411,13 @@ func (g *Generator) collectImportsAndDeclarations(stmt ast.Statement) error {
 			g.markVariableUsage(s.ValueExpression)
 		}
 	case *ast.FunctionDefinition:
-		// Track function declaration
-		g.declaredFns[s.Name] = true
+		// Track function declaration with Go naming convention
+		goFuncName := s.Name
+		if s.IsPublic {
+			// Public functions start with uppercase
+			goFuncName = strings.ToUpper(s.Name[:1]) + s.Name[1:]
+		}
+		g.declaredFns[s.Name] = goFuncName
 		// Process function body
 		for _, bodyStmt := range s.Body {
 			g.collectImportsAndDeclarations(bodyStmt)
@@ -438,12 +506,15 @@ func (g *Generator) checkUnusedFunctions() error {
 	return nil
 }
 
-// isPublicFunction checks if a function name indicates it's public (starts with uppercase)
+// isPublicFunction checks if a function name indicates it's public (Go function name starts with uppercase)
 func (g *Generator) isPublicFunction(fnName string) bool {
-	if len(fnName) == 0 {
-		return false
+	if goFuncName, exists := g.declaredFns[fnName]; exists {
+		if len(goFuncName) == 0 {
+			return false
+		}
+		return goFuncName[0] >= 'A' && goFuncName[0] <= 'Z'
 	}
-	return fnName[0] >= 'A' && fnName[0] <= 'Z'
+	return false
 }
 
 // validateImports checks that all used functions are properly imported
@@ -466,5 +537,96 @@ func (g *Generator) validateImports(functionName string) error {
 			return GenerationError{Message: msg}
 		}
 	}
+
+	// Check if function is from a user-defined module
+	for module, functions := range g.userModules {
+		if _, exists := functions[functionName]; exists {
+			// Check if this function is imported from the correct module
+			if importedFuncs, imported := g.imports[module]; imported {
+				for _, importedFunc := range importedFuncs {
+					if importedFunc == functionName {
+						return nil // Function is properly imported
+					}
+				}
+			}
+			msg := fmt.Sprintf("Function '%s' is not imported from '%s'", functionName, module)
+			if g.showJapanese {
+				msg += fmt.Sprintf(" / 関数 '%s' は '%s' からimportされていません", functionName, module)
+			}
+			return GenerationError{Message: msg}
+		}
+	}
+
+	return nil
+}
+
+// processUserModule processes a user-defined module and extracts public functions
+func (g *Generator) processUserModule(modulePath string, importedFunctions []string) error {
+	// Convert relative path to absolute path
+	var zenoFilePath string
+	if strings.HasSuffix(modulePath, ".zeno") {
+		zenoFilePath = modulePath
+	} else {
+		zenoFilePath = modulePath + ".zeno"
+	}
+
+	// If it's a relative path and we have a current directory, resolve it
+	if (strings.HasPrefix(zenoFilePath, "./") || strings.HasPrefix(zenoFilePath, "../")) && g.currentDir != "" {
+		// Get the directory of the current source file
+		baseDir := filepath.Dir(g.currentDir)
+		// Resolve the relative path
+		zenoFilePath = filepath.Join(baseDir, zenoFilePath)
+	}
+
+	// Read the module file
+	content, err := os.ReadFile(zenoFilePath)
+	if err != nil {
+		msg := fmt.Sprintf("Failed to read module file '%s': %v", zenoFilePath, err)
+		if g.showJapanese {
+			msg += fmt.Sprintf(" / モジュールファイル '%s' の読み込みに失敗しました: %v", zenoFilePath, err)
+		}
+		return GenerationError{Message: msg}
+	}
+
+	// Parse the module
+	l := lexer.New(string(content))
+	p := parser.New(l)
+	program := p.ParseProgram()
+
+	if len(p.Errors()) > 0 {
+		msg := fmt.Sprintf("Parse errors in module '%s': %v", zenoFilePath, p.Errors())
+		if g.showJapanese {
+			msg += fmt.Sprintf(" / モジュール '%s' の解析エラー: %v", zenoFilePath, p.Errors())
+		}
+		return GenerationError{Message: msg}
+	}
+
+	// Extract public functions from the module
+	publicFunctions := make(map[string]string)
+	for _, stmt := range program.Statements {
+		if funcDef, ok := stmt.(*ast.FunctionDefinition); ok && funcDef.IsPublic {
+			// Convert function name to Go convention (uppercase first letter)
+			goFuncName := funcDef.Name
+			if len(goFuncName) > 0 {
+				goFuncName = strings.ToUpper(string(goFuncName[0])) + goFuncName[1:]
+			}
+			publicFunctions[funcDef.Name] = goFuncName
+		}
+	}
+
+	// Validate that all imported functions exist and are public
+	for _, importedFunc := range importedFunctions {
+		if _, exists := publicFunctions[importedFunc]; !exists {
+			msg := fmt.Sprintf("Function '%s' is not exported from module '%s'", importedFunc, modulePath)
+			if g.showJapanese {
+				msg += fmt.Sprintf(" / 関数 '%s' はモジュール '%s' からexportされていません", importedFunc, modulePath)
+			}
+			return GenerationError{Message: msg}
+		}
+	}
+
+	// Store the module mapping and AST
+	g.userModules[modulePath] = publicFunctions
+	g.moduleASTs[modulePath] = program
 	return nil
 }

@@ -40,9 +40,11 @@ func main() {
 			fmt.Println("Usage: zeno-compiler run <filename.zeno>")
 			os.Exit(1)
 		}
+		fmt.Printf("=== Zeno Run Command ===\n")
 		err := runFile(args[1])
 		if err != nil {
 			fmt.Printf("Run failed: %v\n", err)
+			fmt.Fprintf(os.Stderr, "Run failed: %v\n", err)
 			os.Exit(1)
 		}
 	case "compile":
@@ -94,7 +96,7 @@ func compileFile(filename string) error {
 	}
 
 	// Generate Go code
-	goCode, err := generator.GenerateWithOptions(program, *showJapanese)
+	goCode, err := generator.GenerateWithFile(program, filename, *showJapanese)
 	if err != nil {
 		return fmt.Errorf("generation error: %w", err)
 	}
@@ -131,12 +133,18 @@ func runFile(filename string) error {
 	program := p.ParseProgram()
 
 	if len(p.Errors()) > 0 {
+		fmt.Printf("Parser errors found:\n")
+		for _, err := range p.Errors() {
+			fmt.Printf("  - %s\n", err)
+		}
 		return fmt.Errorf("parser errors: %v", p.Errors())
 	}
 
 	// Generate Go code
-	goCode, err := generator.GenerateWithOptions(program, *showJapanese)
+	fmt.Printf("Generating Go code...\n")
+	goCode, err := generator.GenerateWithFile(program, filename, *showJapanese)
 	if err != nil {
+		fmt.Printf("Generation error details: %v\n", err)
 		return fmt.Errorf("generation error: %w", err)
 	}
 
@@ -164,6 +172,7 @@ func runFile(filename string) error {
 	fmt.Println("\n--- Program Output ---")
 	err = cmd.Run()
 	if err != nil {
+		fmt.Printf("Go command failed: %v\n", err)
 		return fmt.Errorf("failed to run Go program: %w", err)
 	}
 
