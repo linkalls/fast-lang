@@ -33,7 +33,6 @@ type Generator struct {
 	moduleASTs   map[string]*ast.Program      // user module -> parsed AST
 	standardLibs map[string]map[string]string // module -> function -> go equivalent
 	currentDir   string                       // directory of the current file being compiled
-	showJapanese bool                         // whether to show Japanese error messages
 	symbolTable  *types.SymbolTable           // symbol table for type inference
 }
 
@@ -66,18 +65,17 @@ func NewGenerator() *Generator {
 
 // Generate generates Go code from the AST
 func Generate(program *ast.Program) (string, error) {
-	return GenerateWithOptions(program, false)
+	return GenerateWithOptions(program)
 }
 
 // GenerateWithOptions generates Go code from the AST with options
-func GenerateWithOptions(program *ast.Program, showJapanese bool) (string, error) {
-	return GenerateWithFile(program, "", showJapanese)
+func GenerateWithOptions(program *ast.Program) (string, error) {
+	return GenerateWithFile(program, "")
 }
 
 // GenerateWithFile generates Go code from the AST with source file path for module resolution
-func GenerateWithFile(program *ast.Program, sourceFile string, showJapanese bool) (string, error) {
+func GenerateWithFile(program *ast.Program, sourceFile string) (string, error) {
 	g := NewGenerator()
-	g.showJapanese = showJapanese
 	g.currentDir = sourceFile
 	return g.generateProgram(program)
 }
@@ -85,6 +83,11 @@ func GenerateWithFile(program *ast.Program, sourceFile string, showJapanese bool
 // generateProgram generates Go code for the entire program
 func (g *Generator) generateProgram(program *ast.Program) (string, error) {
 	var builder strings.Builder
+
+	// Validate function types first
+	if err := g.validateFunctionTypes(program); err != nil {
+		return "", err
+	}
 
 	// First pass: collect imports and declarations
 	for _, stmt := range program.Statements {
@@ -733,9 +736,6 @@ func (g *Generator) checkUnusedVariables() error {
 
 	if len(unusedVars) > 0 {
 		msg := fmt.Sprintf("Unused variables found: %s", strings.Join(unusedVars, ", "))
-		if g.showJapanese {
-			msg += fmt.Sprintf(" / 未使用の変数があります: %s", strings.Join(unusedVars, ", "))
-		}
 		return GenerationError{Message: msg}
 	}
 
@@ -761,9 +761,6 @@ func (g *Generator) checkUnusedFunctions() error {
 
 	if len(unusedFns) > 0 {
 		msg := fmt.Sprintf("Unused functions found: %s", strings.Join(unusedFns, ", "))
-		if g.showJapanese {
-			msg += fmt.Sprintf(" / 未使用の関数があります: %s", strings.Join(unusedFns, ", "))
-		}
 		return GenerationError{Message: msg}
 	}
 
@@ -805,9 +802,6 @@ func (g *Generator) validateImports(functionName string) error {
 				}
 			}
 			msg := fmt.Sprintf("Function '%s' is not imported from '%s'", functionName, module)
-			if g.showJapanese {
-				msg += fmt.Sprintf(" / 関数 '%s' は '%s' からimportされていません", functionName, module)
-			}
 			return GenerationError{Message: msg}
 		}
 	}
@@ -824,9 +818,6 @@ func (g *Generator) validateImports(functionName string) error {
 				}
 			}
 			msg := fmt.Sprintf("Function '%s' is not imported from '%s'", functionName, module)
-			if g.showJapanese {
-				msg += fmt.Sprintf(" / 関数 '%s' は '%s' からimportされていません", functionName, module)
-			}
 			return GenerationError{Message: msg}
 		}
 	}
@@ -856,9 +847,6 @@ func (g *Generator) processUserModule(modulePath string, importedFunctions []str
 	content, err := os.ReadFile(zenoFilePath)
 	if err != nil {
 		msg := fmt.Sprintf("Failed to read module file '%s': %v", zenoFilePath, err)
-		if g.showJapanese {
-			msg += fmt.Sprintf(" / モジュールファイル '%s' の読み込みに失敗しました: %v", zenoFilePath, err)
-		}
 		return GenerationError{Message: msg}
 	}
 
@@ -869,9 +857,6 @@ func (g *Generator) processUserModule(modulePath string, importedFunctions []str
 
 	if len(p.Errors()) > 0 {
 		msg := fmt.Sprintf("Parse errors in module '%s': %v", zenoFilePath, p.Errors())
-		if g.showJapanese {
-			msg += fmt.Sprintf(" / モジュール '%s' の解析エラー: %v", zenoFilePath, p.Errors())
-		}
 		return GenerationError{Message: msg}
 	}
 
@@ -892,9 +877,6 @@ func (g *Generator) processUserModule(modulePath string, importedFunctions []str
 	for _, importedFunc := range importedFunctions {
 		if _, exists := publicFunctions[importedFunc]; !exists {
 			msg := fmt.Sprintf("Function '%s' is not exported from module '%s'", importedFunc, modulePath)
-			if g.showJapanese {
-				msg += fmt.Sprintf(" / 関数 '%s' はモジュール '%s' からexportされていません", importedFunc, modulePath)
-			}
 			return GenerationError{Message: msg}
 		}
 	}
@@ -969,12 +951,6 @@ func (g *Generator) inferType(expr ast.Expression) types.Type {
 	return types.IntType
 }
 
-// registerVariable registers a variable with its inferred type in the symbol table
-func (g *Generator) registerVariable(name string, expr ast.Expression) {
-	varType := g.inferType(expr)
-	g.symbolTable.Define(name, varType)
-}
-
 // registerVariableWithType registers a variable with a specific type in the symbol table
 func (g *Generator) registerVariableWithType(name string, varType types.Type) {
 	g.symbolTable.Define(name, varType)
@@ -1006,4 +982,58 @@ func (g *Generator) mapASTTypeToType(astType string) types.Type {
 		// Default to int for unknown types
 		return types.IntType
 	}
+}
+
+// validateFunctionTypes validates that non-main functions have explicit return types and parameter types
+func (g *Generator) validateFunctionTypes(program *ast.Program) error {
+	for _, stmt := range program.Statements {
+		if funcDef, ok := stmt.(*ast.FunctionDefinition); ok {
+			// Skip main function - it doesn't need explicit return type
+			if funcDef.Name == "main" {
+				continue
+			}
+
+			// Check that all parameters have explicit types
+			for _, param := range funcDef.Parameters {
+				if param.Type == "" {
+					return GenerationError{Message: fmt.Sprintf("Function '%s': parameter '%s' must have an explicit type", funcDef.Name, param.Name)}
+				}
+			}
+
+			// Only require explicit return type if the function has return statements
+			if g.hasReturnStatement(funcDef.Body) && funcDef.ReturnType == nil {
+				return GenerationError{Message: fmt.Sprintf("Function '%s' contains return statements but has no explicit return type", funcDef.Name)}
+			}
+		}
+	}
+	return nil
+}
+
+// hasReturnStatement checks if a function body contains any return statements
+func (g *Generator) hasReturnStatement(statements []ast.Statement) bool {
+	for _, stmt := range statements {
+		if _, ok := stmt.(*ast.ReturnStatement); ok {
+			return true
+		}
+		// Check for return statements in nested blocks (if, while, etc.)
+		if ifStmt, ok := stmt.(*ast.IfStatement); ok {
+			if g.hasReturnStatement(ifStmt.ThenBlock.Statements) {
+				return true
+			}
+			for _, elseIfClause := range ifStmt.ElseIfClauses {
+				if g.hasReturnStatement(elseIfClause.Block.Statements) {
+					return true
+				}
+			}
+			if ifStmt.ElseBlock != nil && g.hasReturnStatement(ifStmt.ElseBlock.Statements) {
+				return true
+			}
+		}
+		if whileStmt, ok := stmt.(*ast.WhileStatement); ok {
+			if g.hasReturnStatement(whileStmt.Block.Statements) {
+				return true
+			}
+		}
+	}
+	return false
 }

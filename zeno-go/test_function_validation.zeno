@@ -1,0 +1,20 @@
+// Test function with missing return type (should fail)
+fn add(a: int, b: int) {
+    return a + b
+}
+
+// Test function with missing parameter type (should fail)
+fn subtract(x, y: int): int {
+    return x - y
+}
+
+// Test function with proper types (should pass)
+fn multiply(a: int, b: int): int {
+    return a * b
+}
+
+// Main function doesn't need explicit return type
+main() {
+    let result = multiply(3, 4)
+    println(result)
+}

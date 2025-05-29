@@ -1,0 +1,11 @@
+// Simple test with missing return type
+import { println } from "std/fmt"
+
+fn add(a: int, b: int){
+    return a + b
+}
+
+fn main() {
+    let result = add(2, 3)
+    println(result)
+}

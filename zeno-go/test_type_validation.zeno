@@ -1,0 +1,19 @@
+// Test file for function type validation
+
+// Function with all proper types (should pass validation)
+fn multiply(a: int, b: int): int {
+    return a * b
+}
+
+// Function with no return type (should fail validation)
+fn add(a: int, b: int) {
+    return a + b
+}
+
+// Main function doesn't need explicit return type
+fn main() {
+    let result = multiply(3, 4)
+    println(result)
+    let sum = add(5, 6)
+    println(sum)
+}

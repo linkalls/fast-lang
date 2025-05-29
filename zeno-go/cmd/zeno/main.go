@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"os/exec"
@@ -13,16 +12,10 @@ import (
 	"github.com/linkalls/zeno-lang/parser"
 )
 
-var (
-	showJapanese = flag.Bool("jp", false, "Show error messages in Japanese as well")
-)
-
 func main() {
-	flag.Parse()
-
 	fmt.Println("=== Zeno Language Compiler ===")
 
-	args := flag.Args()
+	args := os.Args[1:] // Replace flag.Args() with os.Args[1:]
 	if len(args) < 1 {
 		fmt.Println("Error: No command or file specified")
 		fmt.Println("Usage:")
@@ -45,7 +38,6 @@ func main() {
 		err := runFile(args[1])
 		if err != nil {
 			fmt.Printf("Run failed: %v\n", err)
-			fmt.Fprintf(os.Stderr, "Run failed: %v\n", err)
 			os.Exit(1)
 		}
 	case "compile":
@@ -77,7 +69,6 @@ func main() {
 			err := runFile(command)
 			if err != nil {
 				fmt.Printf("Run failed: %v\n", err)
-				fmt.Fprintf(os.Stderr, "Run failed: %v\n", err)
 				os.Exit(1)
 			}
 		} else {
@@ -111,7 +102,7 @@ func compileFile(filename string) error {
 	}
 
 	// Generate Go code
-	goCode, err := generator.GenerateWithFile(program, filename, *showJapanese)
+	goCode, err := generator.GenerateWithFile(program, filename)
 	if err != nil {
 		return fmt.Errorf("generation error: %w", err)
 	}
@@ -157,7 +148,7 @@ func runFile(filename string) error {
 
 	// Generate Go code
 	fmt.Printf("Generating Go code...\n")
-	goCode, err := generator.GenerateWithFile(program, filename, *showJapanese)
+	goCode, err := generator.GenerateWithFile(program, filename)
 	if err != nil {
 		fmt.Printf("Generation error details: %v\n", err)
 		return fmt.Errorf("generation error: %w", err)
@@ -223,7 +214,7 @@ func buildExecutable(filename string) error {
 
 	// Generate Go code
 	fmt.Printf("Generating Go code...\n")
-	goCode, err := generator.GenerateWithFile(program, filename, *showJapanese)
+	goCode, err := generator.GenerateWithFile(program, filename)
 	if err != nil {
 		fmt.Printf("Generation error details: %v\n", err)
 		return fmt.Errorf("generation error: %w", err)
