@@ -17,7 +17,7 @@ Zeno プログラミング言語から Go への変換を行うコンパイラ�
 
 ```bash
 cd zeno-go
-go build ./cmd/zeno-compiler
+go build ./cmd/zeno
 ```
 
 ## 使用方法
@@ -26,16 +26,16 @@ go build ./cmd/zeno-compiler
 
 ```bash
 # Zenoファイルをコンパイルして実行
-./zeno-compiler run example.zeno
+./zeno run example.zeno
 
 # Zenoファイルをコンパイル（.goファイルを生成）
-./zeno-compiler compile example.zeno
+./zeno compile example.zeno
 
 # 後方互換性：直接ファイル名を指定してコンパイル
-./zeno-compiler example.zeno
+./zeno example.zeno
 
 # 日本語エラーメッセージも表示
-./zeno-compiler -jp run example.zeno
+./zeno -jp run example.zeno
 ```
 
 ### Zeno言語の例
@@ -229,20 +229,20 @@ fn main() {
 
 ```bash
 cd zeno-go
-go build ./cmd/zeno-compiler
+go build ./cmd/zeno
 ```
 
 ### 基本的な使用方法
 
 ```bash
 # Zenoファイルをコンパイルして実行
-./zeno-compiler run example.zeno
+./zeno run example.zeno
 
 # Zenoファイルをコンパイル（.goファイルを生成）
-./zeno-compiler compile example.zeno
+./zeno compile example.zeno
 
 # 日本語エラーメッセージも表示
-./zeno-compiler -jp run example.zeno
+./zeno -jp run example.zeno
 ```
 
 ### テストファイルの例
@@ -268,7 +268,7 @@ go build ./cmd/zeno-compiler
 ### 開発の進め方
 
 1. プロジェクトをクローン
-2. `go build ./cmd/zeno-compiler` でコンパイラをビルド
+2. `go build ./cmd/zeno` でコンパイラをビルド
 3. テストファイルで動作確認
 4. 新機能の実装や改善を行う
 
