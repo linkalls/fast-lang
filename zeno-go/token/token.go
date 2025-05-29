@@ -24,6 +24,8 @@ const (
 	// Keywords
 	LET      TokenType = "LET"
 	MUT      TokenType = "MUT"
+	IMPORT   TokenType = "IMPORT"
+	FROM     TokenType = "FROM"
 	IF       TokenType = "IF"
 	ELSE     TokenType = "ELSE"
 	LOOP     TokenType = "LOOP"
@@ -63,12 +65,16 @@ const (
 	RPAREN    TokenType = ")"
 	LBRACE    TokenType = "{"
 	RBRACE    TokenType = "}"
+	LBRACKET  TokenType = "["
+	RBRACKET  TokenType = "]"
 )
 
 // keywords maps string literals to their token types
 var keywords = map[string]TokenType{
 	"let":      LET,
 	"mut":      MUT,
+	"import":   IMPORT,
+	"from":     FROM,
 	"if":       IF,
 	"else":     ELSE,
 	"loop":     LOOP,

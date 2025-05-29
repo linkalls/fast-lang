@@ -1,0 +1,7 @@
+import {println} from "std/fmt";
+
+let x = 10;
+let y = 20;
+let unused = 42; // この変数は使われていない
+let result = x + y;
+println(result);

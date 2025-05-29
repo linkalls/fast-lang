@@ -1,0 +1,1 @@
+/home/poteto/zeno-lang/zeno/target/release/libzeno.rlib: /home/poteto/zeno-lang/zeno/src/ast.rs /home/poteto/zeno-lang/zeno/src/generator.rs /home/poteto/zeno-lang/zeno/src/lexer.rs /home/poteto/zeno-lang/zeno/src/lib.rs /home/poteto/zeno-lang/zeno/src/parser.rs

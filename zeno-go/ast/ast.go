@@ -189,3 +189,46 @@ func (ue *UnaryExpression) expressionNode() {}
 func (ue *UnaryExpression) String() string {
 	return "(" + ue.Operator.String() + ue.Right.String() + ")"
 }
+
+// ImportStatement represents import statements
+type ImportStatement struct {
+	Imports []string // List of imported identifiers
+	Module  string   // Module name to import from
+}
+
+func (is *ImportStatement) statementNode() {}
+func (is *ImportStatement) String() string {
+	result := "import {"
+	for i, imp := range is.Imports {
+		if i > 0 {
+			result += ", "
+		}
+		result += imp
+	}
+	result += "} from \"" + is.Module + "\";"
+	return result
+}
+
+// PrintStatement represents print and println statements
+type PrintStatement struct {
+	Arguments []Expression // Arguments to print
+	Newline   bool         // true for println, false for print
+}
+
+func (ps *PrintStatement) statementNode() {}
+func (ps *PrintStatement) String() string {
+	var result string
+	if ps.Newline {
+		result = "println("
+	} else {
+		result = "print("
+	}
+	for i, arg := range ps.Arguments {
+		if i > 0 {
+			result += ", "
+		}
+		result += arg.String()
+	}
+	result += ");"
+	return result
+}

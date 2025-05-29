@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"strings"
@@ -10,17 +11,24 @@ import (
 	"github.com/linkalls/zeno-lang/parser"
 )
 
+var (
+	showJapanese = flag.Bool("jp", false, "Show error messages in Japanese as well")
+)
+
 func main() {
+	flag.Parse()
+	
 	fmt.Println("=== Zeno to Go Compiler ===")
 	
-	if len(os.Args) < 2 {
+	args := flag.Args()
+	if len(args) < 1 {
 		// No file provided, run demo tests
 		runDemoTests()
 		return
 	}
 	
 	// File compilation mode
-	filename := os.Args[1]
+	filename := args[0]
 	if !strings.HasSuffix(filename, ".zeno") {
 		fmt.Printf("Error: Expected .zeno file, got: %s\n", filename)
 		os.Exit(1)
@@ -102,7 +110,7 @@ func compileFile(filename string) error {
 	}
 	
 	// Generate Go code
-	goCode, err := generator.Generate(program)
+	goCode, err := generator.GenerateWithOptions(program, *showJapanese)
 	if err != nil {
 		return fmt.Errorf("generation error: %w", err)
 	}

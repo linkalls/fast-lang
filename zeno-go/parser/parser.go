@@ -170,10 +170,16 @@ func (p *Parser) ParseProgram() *ast.Program {
 
 func (p *Parser) parseStatement() ast.Statement {
 	switch p.currentToken.Type {
+	case token.IMPORT:
+		return p.parseImportStatement()
 	case token.LET:
 		return p.parseLetStatement()
 	case token.MUT:
 		return p.parseMutStatement()
+	case token.PRINT:
+		return p.parsePrintStatement(false)
+	case token.PRINTLN:
+		return p.parsePrintStatement(true)
 	default:
 		return p.parseExpressionStatement()
 	}
@@ -335,4 +341,110 @@ func ParseExpression(input string) (ast.Expression, error) {
 		return nil, errors.New(p.errors[0])
 	}
 	return expr, nil
+}
+
+// parseImportStatement parses import {identifier, ...} from "module" syntax
+func (p *Parser) parseImportStatement() *ast.ImportStatement {
+	// Current token is IMPORT
+	if !p.expectPeek(token.LBRACE) {
+		return nil
+	}
+
+	var imports []string
+	
+	// Parse first identifier (accept both IDENT and keywords as identifiers in import context)
+	p.nextToken()
+	if !p.isValidImportIdentifier() {
+		return nil
+	}
+	imports = append(imports, p.currentToken.Literal)
+
+	// Parse additional identifiers separated by commas
+	for p.peekToken.Type == token.COMMA {
+		p.nextToken() // consume comma
+		p.nextToken() // move to next token
+		if !p.isValidImportIdentifier() {
+			return nil
+		}
+		imports = append(imports, p.currentToken.Literal)
+	}
+
+	if !p.expectPeek(token.RBRACE) {
+		return nil
+	}
+
+	if !p.expectPeek(token.FROM) {
+		return nil
+	}
+
+	if !p.expectPeek(token.STRING) {
+		return nil
+	}
+
+	// Remove quotes from string literal
+	module := p.currentToken.Literal
+	if len(module) >= 2 && module[0] == '"' && module[len(module)-1] == '"' {
+		module = module[1 : len(module)-1]
+	}
+
+	if !p.expectPeek(token.SEMICOLON) {
+		return nil
+	}
+
+	return &ast.ImportStatement{
+		Imports: imports,
+		Module:  module,
+	}
+}
+
+// parsePrintStatement parses print(...) and println(...) statements
+func (p *Parser) parsePrintStatement(newline bool) *ast.PrintStatement {
+	// Current token is PRINT or PRINTLN
+	if !p.expectPeek(token.LPAREN) {
+		return nil
+	}
+
+	var arguments []ast.Expression
+
+	// Handle empty argument list
+	if p.peekToken.Type == token.RPAREN {
+		p.nextToken() // consume ')'
+	} else {
+		// Parse first argument
+		p.nextToken()
+		arg := p.parseExpression(LOWEST)
+		if arg != nil {
+			arguments = append(arguments, arg)
+		}
+
+		// Parse additional arguments separated by commas
+		for p.peekToken.Type == token.COMMA {
+			p.nextToken() // consume comma
+			p.nextToken() // move to next expression
+			arg := p.parseExpression(LOWEST)
+			if arg != nil {
+				arguments = append(arguments, arg)
+			}
+		}
+
+		if !p.expectPeek(token.RPAREN) {
+			return nil
+		}
+	}
+
+	if !p.expectPeek(token.SEMICOLON) {
+		return nil
+	}
+
+	return &ast.PrintStatement{
+		Arguments: arguments,
+		Newline:   newline,
+	}
+}
+
+// isValidImportIdentifier checks if the current token can be used as an identifier in import statements
+func (p *Parser) isValidImportIdentifier() bool {
+	return p.currentToken.Type == token.IDENT || 
+		   p.currentToken.Type == token.PRINTLN ||
+		   p.currentToken.Type == token.PRINT
 }
