@@ -4,26 +4,34 @@ Zeno is a programming language with TypeScript-inspired import syntax, designed 
 
 ## Features
 
-- **TypeScript-style Import System**: `import {println} from "std/fmt"` syntax
+- **TypeScript-style Import System**: `import {println} from "std/fmt"` syntax with module support
+- **Module System**: User-defined module imports with relative path support (`./`, `../`)
+- **Public Function Declarations**: `pub fn` keyword for public function visibility
 - **Function Definitions and Calls**: Support for parameters, return types, and return statements
 - **Unused Variable Detection**: Compile-time detection of unused variables with helpful error messages
+- **Unused Function Detection**: Compile-time detection of unused functions (excludes main and public functions)
 - **Import Validation**: Ensures functions are properly imported before use
 - **Binary Expressions**: Mathematical operations (+, -, *, /, %) and comparison operators
 - **Type Annotations**: Optional type annotations `let x: int = 42;`
 - **Multilingual Error Messages**: `-jp` flag for Japanese error messages alongside English
 - **Variable Declarations**: `let` keyword for variable declarations
+- **Enhanced CLI**: `run` and `compile` subcommands with improved error handling
 
 ## Current Implementation Status
 
 ✅ **Completed:**
 - Import statement parsing and validation
+- User-defined module imports with relative path support
+- Public function declarations (`pub fn` keyword)
 - Variable declarations (let)
 - Function definitions and calls
 - Return statements
 - Binary expressions (arithmetic, comparison)
 - Print statement conversion
 - Unused variable detection
+- Unused function detection (excludes main and public functions)
 - Multilingual error messages (English/Japanese)
+- Enhanced CLI with `run` and `compile` subcommands
 - Lexical analysis (Lexer)
 - AST construction (Parser)
 - Go code generation (Generator)
@@ -39,6 +47,7 @@ Zeno is a programming language with TypeScript-inspired import syntax, designed 
 ### Import Statements
 ```zeno
 import {println, print} from "std/fmt";
+import {add, multiply} from "./math_utils";  // User-defined module
 ```
 
 ### Variable Declarations
@@ -49,12 +58,39 @@ let y: int = 100;     // With type annotation
 
 ### Function Definitions
 ```zeno
-fn add(a: int, b: int): int {
+// Private function (default)
+fn helper(x: int): int {
+    return x * 2;
+}
+
+// Public function (accessible from other modules)
+pub fn add(a: int, b: int): int {
     return a + b;
 }
 
-fn greet(name: string) {
+pub fn greet(name: string) {
     println("Hello, " + name);
+}
+```
+
+### Module System
+```zeno
+// math_utils.zeno
+pub fn add(a: int, b: int): int {
+    return a + b;
+}
+
+pub fn multiply(a: int, b: int): int {
+    return a * b;
+}
+
+// main.zeno
+import {println} from "std/fmt";
+import {add, multiply} from "./math_utils";
+
+fn main() {
+    let result = add(10, multiply(3, 4));
+    println(result);
 }
 ```
 
@@ -87,6 +123,7 @@ println("World");     // Requires: import {println} from "std/fmt";
 
 ## Example Program
 
+### Basic Program
 ```zeno
 import {println} from "std/fmt";
 
@@ -94,6 +131,23 @@ let x = 10;
 let y = 20;
 let result = x + y;
 println(result);
+```
+
+### Using User-defined Modules
+```zeno
+// math_utils.zeno
+pub fn calculate(a: int, b: int): int {
+    return (a + b) * 2;
+}
+
+// main.zeno  
+import {println} from "std/fmt";
+import {calculate} from "./math_utils";
+
+fn main() {
+    let result = calculate(5, 10);
+    println(result);  // Output: 30
+}
 ```
 
 Generated Go code:
@@ -125,6 +179,23 @@ let y = x + 5;
 println(y);
 ```
 
+### Unused Function Detection
+```zeno
+import {println} from "std/fmt";
+
+fn main() {
+    println("Hello");
+}
+
+fn unused_helper() {  // Error: Unused functions found: unused_helper
+    return 42;
+}
+
+pub fn public_fn() {  // Public functions are never considered unused
+    return "public";
+}
+```
+
 ### Import Validation
 ```zeno
 // Error: println is not imported from std/fmt
@@ -147,25 +218,35 @@ cd zeno-go
 go build ./cmd/zeno-compiler
 ```
 
-### Basic Usage
+### Enhanced CLI Usage
 
 ```bash
-# Compile a Zeno file
-./zeno-compiler example.zeno
+# Run a Zeno file (compile and execute)
+./zeno-compiler run example.zeno
+
+# Compile a Zeno file to Go (output to stdout)
+./zeno-compiler compile example.zeno
 
 # Show Japanese error messages as well
-./zeno-compiler -jp example.zeno
+./zeno-compiler run -jp example.zeno
+./zeno-compiler compile -jp example.zeno
 
-# Run internal tests (when no file is specified)
-./zeno-compiler
+# Show help
+./zeno-compiler --help
+./zeno-compiler run --help
+./zeno-compiler compile --help
 ```
 
-### Test Files
+### Example Files
 
-The project includes several test files:
+The project includes comprehensive example files in the `examples/` directory:
 
+- `test_pub_functions.zeno` - Public function declarations test
+- `test_unused_functions.zeno` - Unused function detection test
+- `math_utils.zeno` - User-defined module with public functions
+- `test_module_import.zeno` - Module import system test
 - `test_simple.zeno` - Basic functionality test
-- `test_import.zeno` - Import statement test
+- `test_import.zeno` - Standard library import test
 - `test_unused.zeno` - Unused variable detection test
 - `test_no_import.zeno` - Missing import error test
 

@@ -14,14 +14,20 @@ This file lists planned features and improvements for the Zeno programming langu
 - [x] **Generator Restructure:** Struct-based generator with scope tracking
 - [x] **Variable Usage Analysis:** Two-pass compilation for proper validation
 - [x] **Standard Library Definition:** Basic std/fmt module with print/println
+- [x] **Public Function Declarations:** `pub fn` keyword for function visibility
+- [x] **User-defined Module System:** Relative path imports (`./`, `../`) with proper path resolution
+- [x] **Unused Function Detection:** Compile-time detection (excludes main and public functions)
+- [x] **Enhanced CLI Interface:** `run` and `compile` subcommands with improved error handling
 
 ## High Priority 🚀
 
-- [ ] **Function Definitions and Calls:**
-    - [ ] Syntax for defining functions with parameters and return types
-    - [ ] Parsing function definitions and calls
-    - [ ] Code generation for user-defined functions
-    - [ ] Return statements and return type validation
+- [x] **Function Definitions and Calls:**
+    - [x] Syntax for defining functions with parameters and return types
+    - [x] Parsing function definitions and calls
+    - [x] Code generation for user-defined functions
+    - [x] Return statements and return type validation
+    - [x] Public function declarations with `pub` keyword
+    - [x] Function visibility in generated Go code
 
 - [ ] **Control Flow Statements:**
     - [ ] if/else if/else statements
@@ -60,15 +66,15 @@ This file lists planned features and improvements for the Zeno programming langu
 
 ## Low Priority 🔮
 
-- [ ] **Advanced Language Features:**
+- [x] **Advanced Language Features:**
+    - [x] Module system and namespacing (user-defined modules)
     - [ ] Pattern matching with `match` expressions
     - [ ] Interfaces/traits for type contracts
-    - [ ] Module system and namespacing
     - [ ] Concurrency primitives (goroutine-like)
     - [ ] Channels for communication
 
 - [ ] **Performance Optimizations:**
-    - [ ] Dead code elimination
+    - [x] Dead code elimination (unused function detection)
     - [ ] Constant folding
     - [ ] Better memory management in generated Go code
     - [ ] Compile-time optimizations
