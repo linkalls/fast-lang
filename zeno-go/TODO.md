@@ -54,19 +54,15 @@ This file lists planned features and improvements for the Zeno programming langu
     - [ ] for loops
 
 - [ ] **Assignment and Mutation:**
-    - [ ] Assignment statements (`x = value`)
+    - [ ] Assignment statements (`x = value`) - No semicolons required
     - [ ] Type checking for assignments
-    - [ ] Support for mutable variables with `mut` keyword
 
-- [ ] **Mutable Variables:**
-    - [ ] `mut` keyword for mutable variable declarations
-    - [ ] Assignment statements for mutable variables
-    - [ ] Mutation validation and error checking
+**Language Design Note:** Zeno follows a semicolon-free syntax design similar to languages like Python and Ruby. All statements are terminated by newlines rather than semicolons for cleaner, more readable code. The language uses a unified `let`-only variable declaration system for simplicity and consistency.
 
 ## Medium Priority 📋
 
 - [ ] **Extended Standard Library:**
-    - [ ] std/io module for file operations
+    - [x] std/io module for file operations (readFile/writeFile functions)
     - [ ] std/string module for string manipulation
     - [ ] std/math module for mathematical functions
     - [ ] std/collections module for data structures

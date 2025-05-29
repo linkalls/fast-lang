@@ -9,9 +9,9 @@ import (
 
 func TestLetStatements(t *testing.T) {
 	input := `
-let x = 5;
-let y = 10;
-let foobar = 838383;
+let x = 5
+let y = 10
+let foobar = 838383
 `
 
 	l := lexer.New(input)
@@ -44,10 +44,12 @@ let foobar = 838383;
 	}
 }
 
-func TestMutStatements(t *testing.T) {
+func TestAssignmentStatements(t *testing.T) {
 	input := `
-mut x = 5;
-mut y: int = 10;
+let x = 5
+x = 10
+let y = 1
+y = 2
 `
 
 	l := lexer.New(input)
@@ -59,12 +61,12 @@ mut y: int = 10;
 	if program == nil {
 		t.Fatalf("ParseProgram() returned nil")
 	}
-	if len(program.Statements) != 2 {
-		t.Fatalf("program.Statements does not contain 2 statements. got=%d",
+	if len(program.Statements) != 4 {
+		t.Fatalf("program.Statements does not contain 4 statements. got=%d",
 			len(program.Statements))
 	}
 
-	// Test first statement (mut x = 5;)
+	// Test first statement (let x = 5)
 	stmt := program.Statements[0]
 	letStmt, ok := stmt.(*ast.LetDeclaration)
 	if !ok {
@@ -73,31 +75,40 @@ mut y: int = 10;
 	if letStmt.Name != "x" {
 		t.Errorf("letStmt.Name not 'x'. got=%s", letStmt.Name)
 	}
-	if !letStmt.Mutable {
-		t.Errorf("letStmt.Mutable not true. got=%t", letStmt.Mutable)
+
+	// Test second statement (x = 10)
+	stmt2 := program.Statements[1]
+	assignStmt, ok := stmt2.(*ast.AssignmentStatement)
+	if !ok {
+		t.Fatalf("stmt not *ast.AssignmentStatement. got=%T", stmt2)
+	}
+	if assignStmt.Name != "x" {
+		t.Errorf("assignStmt.Name not 'x'. got=%s", assignStmt.Name)
 	}
 
-	// Test second statement (mut y: int = 10;)
-	stmt2 := program.Statements[1]
-	letStmt2, ok := stmt2.(*ast.LetDeclaration)
+	// Test third statement (let y = 1)
+	stmt3 := program.Statements[2]
+	letStmt2, ok := stmt3.(*ast.LetDeclaration)
 	if !ok {
-		t.Fatalf("stmt not *ast.LetDeclaration. got=%T", stmt2)
+		t.Fatalf("stmt not *ast.LetDeclaration. got=%T", stmt3)
 	}
 	if letStmt2.Name != "y" {
 		t.Errorf("letStmt2.Name not 'y'. got=%s", letStmt2.Name)
 	}
-	if !letStmt2.Mutable {
-		t.Errorf("letStmt2.Mutable not true. got=%t", letStmt2.Mutable)
+
+	// Test fourth statement (y = 2)
+	stmt4 := program.Statements[3]
+	assignStmt2, ok := stmt4.(*ast.AssignmentStatement)
+	if !ok {
+		t.Fatalf("stmt not *ast.AssignmentStatement. got=%T", stmt4)
 	}
-	if letStmt2.TypeAnn == nil {
-		t.Errorf("letStmt2.TypeAnn is nil")
-	} else if *letStmt2.TypeAnn != "int" {
-		t.Errorf("letStmt2.TypeAnn not 'int'. got=%s", *letStmt2.TypeAnn)
+	if assignStmt2.Name != "y" {
+		t.Errorf("assignStmt2.Name not 'y'. got=%s", assignStmt2.Name)
 	}
 }
 
 func TestIntegerLiteralExpression(t *testing.T) {
-	input := "5;"
+	input := "5"
 
 	l := lexer.New(input)
 	p := New(l)

@@ -261,6 +261,20 @@ func (g *Generator) generateStatement(stmt ast.Statement, builder *strings.Build
 		}
 		builder.WriteString("\n")
 
+	case *ast.AssignmentStatement:
+		// Mark variable as used during assignment
+		g.usedVars[s.Name] = true
+		// Mark variables used in the assignment value
+		g.markVariableUsage(s.Value)
+
+		builder.WriteString(indent(indentLevel))
+		builder.WriteString(s.Name)
+		builder.WriteString(" = ")
+		if err := g.generateExpression(s.Value, builder); err != nil {
+			return err
+		}
+		builder.WriteString("\n")
+
 	case *ast.FunctionDefinition:
 		builder.WriteString(indent(indentLevel))
 		builder.WriteString("func ")
@@ -390,6 +404,18 @@ func (g *Generator) generateStatement(stmt ast.Statement, builder *strings.Build
 
 		builder.WriteString("\n")
 
+	case *ast.WhileStatement:
+		builder.WriteString(indent(indentLevel))
+		builder.WriteString("for ")
+		if err := g.generateCondition(s.Condition, builder); err != nil {
+			return err
+		}
+		builder.WriteString(" ")
+		if err := g.generateBlock(s.Block, builder, indentLevel); err != nil {
+			return err
+		}
+		builder.WriteString("\n")
+
 	default:
 		return GenerationError{Message: fmt.Sprintf("Unsupported statement type: %T", stmt)}
 	}
@@ -514,10 +540,10 @@ func (g *Generator) generateCondition(expr ast.Expression, builder *strings.Buil
 	case *ast.Identifier:
 		// Use type information to generate appropriate boolean conversion
 		varType := g.getVariableType(e.Value)
-		
+
 		// Debug output
 		fmt.Printf("DEBUG: Variable %s has type %v\n", e.Value, varType)
-		
+
 		switch varType {
 		case types.BoolType:
 			// Boolean variables can be used directly
@@ -602,6 +628,11 @@ func (g *Generator) collectImportsAndDeclarations(stmt ast.Statement) error {
 		if s.ValueExpression != nil {
 			g.markVariableUsage(s.ValueExpression)
 		}
+	case *ast.AssignmentStatement:
+		// Mark variable as used during assignment
+		g.usedVars[s.Name] = true
+		// Mark variables used in the assignment value
+		g.markVariableUsage(s.Value)
 	case *ast.FunctionDefinition:
 		// Track function declaration with Go naming convention
 		goFuncName := s.Name
@@ -643,6 +674,13 @@ func (g *Generator) collectImportsAndDeclarations(stmt ast.Statement) error {
 		// Process else block
 		if s.ElseBlock != nil {
 			g.markBlockUsage(s.ElseBlock)
+		}
+	case *ast.WhileStatement:
+		// Mark variables used in while condition
+		g.markVariableUsage(s.Condition)
+		// Process while block
+		if s.Block != nil {
+			g.markBlockUsage(s.Block)
 		}
 	}
 	return nil
@@ -750,7 +788,7 @@ func (g *Generator) validateImports(functionName string) error {
 		"print":   true,
 		"println": true,
 	}
-	
+
 	if builtinFunctions[functionName] {
 		return nil
 	}

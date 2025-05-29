@@ -103,7 +103,6 @@ func TestGenerateIntegerLiteral(t *testing.T) {
 		Statements: []ast.Statement{
 			&ast.LetDeclaration{
 				Name:            "x",
-				Mutable:         false,
 				ValueExpression: &ast.IntegerLiteral{Value: 42},
 			},
 		},
@@ -124,7 +123,6 @@ func TestGenerateStringEscaping(t *testing.T) {
 		Statements: []ast.Statement{
 			&ast.LetDeclaration{
 				Name:            "s",
-				Mutable:         false,
 				ValueExpression: &ast.StringLiteral{Value: "Hello\nWorld\t\"Quoted\""},
 			},
 		},
@@ -148,7 +146,6 @@ func TestGenerateTypeAnnotations(t *testing.T) {
 			&ast.LetDeclaration{
 				Name:            "x",
 				TypeAnn:         &typeAnn,
-				Mutable:         false,
 				ValueExpression: &ast.IntegerLiteral{Value: 42},
 			},
 		},
@@ -190,7 +187,6 @@ func TestGenerateBinaryExpressionBasic(t *testing.T) {
 		Statements: []ast.Statement{
 			&ast.LetDeclaration{
 				Name:    "result",
-				Mutable: false,
 				ValueExpression: &ast.BinaryExpression{
 					Left:     &ast.IntegerLiteral{Value: 5},
 					Operator: ast.BinaryOpPlus,

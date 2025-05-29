@@ -103,28 +103,32 @@ func (op UnaryOperator) String() string {
 	}
 }
 
-// LetDeclaration represents let and mut declarations
+// LetDeclaration represents let declarations
 type LetDeclaration struct {
 	Name            string
 	TypeAnn         *string // Optional type annotation
-	Mutable         bool
 	ValueExpression Expression
 }
 
 func (ld *LetDeclaration) statementNode() {}
 func (ld *LetDeclaration) String() string {
-	var result string
-	if ld.Mutable {
-		result = "mut "
-	} else {
-		result = "let "
-	}
-	result += ld.Name
+	result := "let " + ld.Name
 	if ld.TypeAnn != nil {
 		result += ": " + *ld.TypeAnn
 	}
-	result += " = " + ld.ValueExpression.String() + ";"
+	result += " = " + ld.ValueExpression.String()
 	return result
+}
+
+// AssignmentStatement represents assignment statements (x = value)
+type AssignmentStatement struct {
+	Name      string     // Variable name being assigned to
+	Value     Expression // Value being assigned
+}
+
+func (as *AssignmentStatement) statementNode() {}
+func (as *AssignmentStatement) String() string {
+	return as.Name + " = " + as.Value.String()
 }
 
 // ExpressionStatement represents expression statements
@@ -134,7 +138,7 @@ type ExpressionStatement struct {
 
 func (es *ExpressionStatement) statementNode() {}
 func (es *ExpressionStatement) String() string {
-	return es.Expression.String() + ";"
+	return es.Expression.String()
 }
 
 // IntegerLiteral represents integer literals
@@ -242,7 +246,7 @@ func (ps *PrintStatement) String() string {
 		}
 		result += arg.String()
 	}
-	result += ");"
+	result += ")"
 	return result
 }
 
@@ -359,4 +363,15 @@ func (rs *ReturnStatement) String() string {
 		return "return " + rs.Value.String() + ";"
 	}
 	return "return;"
+}
+
+// WhileStatement represents while loops
+type WhileStatement struct {
+	Condition Expression
+	Block     *Block
+}
+
+func (ws *WhileStatement) statementNode() {}
+func (ws *WhileStatement) String() string {
+	return "while " + ws.Condition.String() + " " + ws.Block.String()
 }

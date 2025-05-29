@@ -30,10 +30,10 @@ if (5 < 10) {
 // This is a comment
 /* This is a 
    multi-line comment */
-mut x = 5;
+let x = 5
 while (x > 0) {
-    print("Hello");
-    x = x - 1;
+    print("Hello")
+    x = x - 1
 }
 for (let i = 0; i < 10; i = i + 1) {
     println("World");
@@ -119,14 +119,12 @@ loop {
 		{token.INT, "10"},
 		{token.NOT_EQ, "!="},
 		{token.INT, "9"},
-		{token.SEMICOLON, ";"},
 		{token.STRING, "foobar"},
 		{token.STRING, "foo bar"},
-		{token.MUT, "mut"},
+		{token.LET, "let"},
 		{token.IDENT, "x"},
 		{token.ASSIGN, "="},
 		{token.INT, "5"},
-		{token.SEMICOLON, ";"},
 		{token.WHILE, "while"},
 		{token.LPAREN, "("},
 		{token.IDENT, "x"},

@@ -12,14 +12,14 @@ import (
 
 // Precedence levels for operator precedence parsing
 const (
-	_ int = iota
-	LOWEST      // 最低の優先度
-	EQUALS      // ==, != 演算子の優先度
-	COMPARISON  // <, >, <=, >= 演算子の優先度
-	SUM         // +, - 演算子の優先度
-	PRODUCT     // *, / 演算子の優先度
-	PREFIX      // -X or !X
-	CALL        // myFunction(X)
+	_          int = iota
+	LOWEST         // 最低の優先度
+	EQUALS         // ==, != 演算子の優先度
+	COMPARISON     // <, >, <=, >= 演算子の優先度
+	SUM            // +, - 演算子の優先度
+	PRODUCT        // *, / 演算子の優先度
+	PREFIX         // -X or !X
+	CALL           // myFunction(X)
 )
 
 // precedences maps tokens to their precedence
@@ -30,8 +30,8 @@ var precedences = map[token.TokenType]int{
 	token.LTE:      COMPARISON,
 	token.GT:       COMPARISON,
 	token.GTE:      COMPARISON,
-	token.AND:      EQUALS,    // 論理AND
-	token.OR:       EQUALS,    // 論理OR
+	token.AND:      EQUALS, // 論理AND
+	token.OR:       EQUALS, // 論理OR
 	token.PLUS:     SUM,
 	token.MINUS:    SUM,
 	token.DIVIDE:   PRODUCT,
@@ -51,7 +51,7 @@ type Parser struct {
 	prefixParseFns map[token.TokenType]prefixParseFn
 	infixParseFns  map[token.TokenType]infixParseFn
 
-	currentUntil token.TokenType  // 追加: 現在のuntilトークンを保持
+	currentUntil token.TokenType // 追加: 現在のuntilトークンを保持
 }
 
 type (
@@ -195,8 +195,6 @@ func (p *Parser) parseStatement() ast.Statement {
 		return p.parseImportStatement()
 	case token.LET:
 		return p.parseLetStatement()
-	case token.MUT:
-		return p.parseMutStatement()
 	case token.PRINT:
 		return p.parsePrintStatement(false)
 	case token.PRINTLN:
@@ -209,6 +207,15 @@ func (p *Parser) parseStatement() ast.Statement {
 		return p.parseFunctionDefinition()
 	case token.RETURN:
 		return p.parseReturnStatement()
+	case token.WHILE: // 追加: WHILEトークンに対する処理
+		return p.parseWhileStatement()
+	case token.IDENT:
+		// Check if this is an assignment statement
+		if p.peekToken.Type == token.ASSIGN {
+			return p.parseAssignmentStatement()
+		}
+		// Otherwise, it's an expression statement
+		return p.parseExpressionStatement()
 	default:
 		return p.parseExpressionStatement()
 	}
@@ -239,51 +246,9 @@ func (p *Parser) parseLetStatement() *ast.LetDeclaration {
 	p.nextToken()
 	value := p.parseExpression(LOWEST)
 
-	if p.peekToken.Type == token.SEMICOLON {
-		p.nextToken()
-	}
-
 	return &ast.LetDeclaration{
 		Name:            name,
 		TypeAnn:         typeAnn,
-		Mutable:         false,
-		ValueExpression: value,
-	}
-}
-
-func (p *Parser) parseMutStatement() *ast.LetDeclaration {
-	if !p.expectPeek(token.IDENT) {
-		return nil
-	}
-
-	name := p.currentToken.Literal
-
-	// Check for optional type annotation
-	var typeAnn *string
-	if p.peekToken.Type == token.COLON {
-		p.nextToken() // consume ':'
-		if !p.expectPeek(token.IDENT) {
-			return nil
-		}
-		annotation := p.currentToken.Literal
-		typeAnn = &annotation
-	}
-
-	if !p.expectPeek(token.ASSIGN) {
-		return nil
-	}
-
-	p.nextToken()
-	value := p.parseExpression(LOWEST)
-
-	if p.peekToken.Type == token.SEMICOLON {
-		p.nextToken()
-	}
-
-	return &ast.LetDeclaration{
-		Name:            name,
-		TypeAnn:         typeAnn,
-		Mutable:         true,
 		ValueExpression: value,
 	}
 }
@@ -292,11 +257,27 @@ func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
 	stmt := &ast.ExpressionStatement{}
 	stmt.Expression = p.parseExpression(LOWEST)
 
-	if p.peekToken.Type == token.SEMICOLON {
-		p.nextToken()
+	return stmt
+}
+
+// parseAssignmentStatement parses assignment statements (x = value)
+func (p *Parser) parseAssignmentStatement() *ast.AssignmentStatement {
+	// Current token is the identifier (variable name)
+	name := p.currentToken.Literal
+
+	// Expect the ASSIGN token
+	if !p.expectPeek(token.ASSIGN) {
+		return nil
 	}
 
-	return stmt
+	// Move to the value expression
+	p.nextToken()
+	value := p.parseExpression(LOWEST)
+
+	return &ast.AssignmentStatement{
+		Name:  name,
+		Value: value,
+	}
 }
 
 func (p *Parser) parseExpression(precedence int) ast.Expression {
@@ -740,4 +721,31 @@ func (p *Parser) parseBlockStatement() *ast.Block {
 	}
 
 	return block
+}
+
+// parseWhileStatement parses while loops
+func (p *Parser) parseWhileStatement() *ast.WhileStatement {
+	// Current token is WHILE
+	p.nextToken() // move to condition
+
+	condition := p.parseExpressionUntil(LOWEST, token.LBRACE)
+	if condition == nil {
+		return nil
+	}
+
+	// After parsing expression, we should be at the end of condition
+	// expectPeek will move us to LBRACE
+	if !p.expectPeek(token.LBRACE) {
+		return nil
+	}
+
+	block := p.parseBlockStatement()
+	if block == nil {
+		return nil
+	}
+
+	return &ast.WhileStatement{
+		Condition: condition,
+		Block:     block,
+	}
 }

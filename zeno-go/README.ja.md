@@ -9,7 +9,7 @@ Zeno プログラミング言語から Go への変換を行うコンパイラ�
 - **未使用変数検出**: コンパイル時に未使用変数を検出してエラーを出力
 - **Import検証**: 関数が適切にimportされているかをチェック
 - **バイナリ式サポート**: 数学演算（+, -, *, /, %）と比較演算子をサポート
-- **型注釈**: オプションの型注釈 `let x: int = 42;`
+- **型注釈**: オプションの型注釈 `let x: int = 42`
 - **多言語エラーメッセージ**: `-jp` フラグで日本語エラーメッセージも表示
 - **変数宣言**: letキーワードによる変数宣言をサポート
 
@@ -42,31 +42,31 @@ go build ./cmd/zeno-compiler
 
 #### 基本的な例
 ```zeno
-import {println} from "std/fmt";
+import {println} from "std/fmt"
 
-let x = 10;
-let y = 20;
-let result = x + y;
-println(result);
+let x = 10
+let y = 20
+let result = x + y
+println(result)
 ```
 
 #### 関数の例
 ```zeno
-import {println} from "std/fmt";
+import {println} from "std/fmt"
 
 fn add(a: int, b: int): int {
-    return a + b;
+    return a + b
 }
 
 fn greet(name: string) {
-    println("Hello, " + name + "!");
+    println("Hello, " + name + "!")
 }
 
 fn main() {
-    let result: int = add(5, 3);
-    println("Result: ", result);
+    let result: int = add(5, 3)
+    println("Result: ", result)
     
-    greet("Zeno");
+    greet("Zeno")
 }
 ```
 
@@ -98,70 +98,70 @@ func main() {
 
 ### Import文
 ```zeno
-import {println, print} from "std/fmt";
+import {println, print} from "std/fmt"
 ```
 
 ### 変数宣言
 ```zeno
-let x = 42;           // 変数宣言
-let y: int = 100;     // 型注釈付き
+let x = 42           // 変数宣言
+let y: int = 100     // 型注釈付き
 ```
 
 ### 関数定義
 ```zeno
 fn add(a: int, b: int): int {
-    return a + b;
+    return a + b
 }
 
 fn greet(name: string) {
-    println("Hello, " + name);
+    println("Hello, " + name)
 }
 ```
 
 ### 関数呼び出し
 ```zeno
-let result = add(10, 20);
-greet("World");
+let result = add(10, 20)
+greet("World")
 ```
 
 ### main関数
 ```zeno
 fn main() {
     // プログラムのエントリーポイント
-    println("Hello, World!");
+    println("Hello, World!")
 }
 ```
 
 ### バイナリ式
 ```zeno
-let sum = 10 + 20;
-let product = 5 * 6;
-let comparison = x > y;
+let sum = 10 + 20
+let product = 5 * 6
+let comparison = x > y
 ```
 
 ### Print文
 ```zeno
-print("Hello");       // import {print} from "std/fmt"; が必要
-println("World");     // import {println} from "std/fmt"; が必要
+print("Hello")       // import {print} from "std/fmt" が必要
+println("World")     // import {println} from "std/fmt" が必要
 ```
 
 ## エラー検出機能
 
 ### 未使用変数の検出
 ```zeno
-import {println} from "std/fmt";
+import {println} from "std/fmt"
 
-let x = 10;
-let unused = 42;  // エラー: Unused variables found: unused
-let y = x + 5;
-println(y);
+let x = 10
+let unused = 42  // エラー: Unused variables found: unused
+let y = x + 5
+println(y)
 ```
 
 ### Import検証
 ```zeno
 // エラー: println is not imported from std/fmt
-let x = 10;
-println(x);  // import文がない場合はエラー
+let x = 10
+println(x)  // import文がない場合はエラー
 ```
 
 ## 標準ライブラリ
@@ -176,26 +176,26 @@ println(x);  // import文がない場合はエラー
 `std/io` モジュールは、シンプルで直感的なファイルI/O操作を提供します：
 
 ```zeno
-import { println } from "std/fmt";
-import { readFile, writeFile } from "std/io";
+import { println } from "std/fmt"
+import { readFile, writeFile } from "std/io"
 
 fn main() {
     // ファイルにコンテンツを書き込み
-    let content = "こんにちは、Zeno!\nテストファイルです。";
-    writeFile("example.txt", content);
-    println("ファイルが正常に書き込まれました！");
+    let content = "こんにちは、Zeno!\nテストファイルです。"
+    writeFile("example.txt", content)
+    println("ファイルが正常に書き込まれました！")
     
     // ファイルからコンテンツを読み込み
-    let fileContent = readFile("example.txt");
-    println("ファイルの内容:");
-    println(fileContent);
+    let fileContent = readFile("example.txt")
+    println("ファイルの内容:")
+    println(fileContent)
     
     // 構造化データの書き込み
-    let jsonData = "{\"name\": \"Zeno\", \"version\": \"1.0\"}";
-    writeFile("config.json", jsonData);
+    let jsonData = "{\"name\": \"Zeno\", \"version\": \"1.0\"}"
+    writeFile("config.json", jsonData)
     
-    let configData = readFile("config.json");
-    println("設定: ", configData);
+    let configData = readFile("config.json")
+    println("設定: ", configData)
 }
 ```
 
@@ -220,7 +220,6 @@ fn main() {
 🔲 **今後の予定:**
 - 関数定義と呼び出し
 - 制御フロー（if/else、while、loop）
-- 可変変数（mut）
 - 型システムの拡張
 - 標準ライブラリの拡充
 

@@ -38,7 +38,6 @@ Zeno is a programming language with TypeScript-inspired import syntax, designed 
 
 🔲 **Planned:**
 - Control flow (if/else, while, loop)
-- Mutable variables (mut)
 - Extended type system
 - Expanded standard library
 
@@ -46,8 +45,8 @@ Zeno is a programming language with TypeScript-inspired import syntax, designed 
 
 ### Import Statements
 ```zeno
-import {println, print} from "std/fmt";
-import {add, multiply} from "./math_utils";  // User-defined module
+import {println, print} from "std/fmt"
+import {add, multiply} from "./math_utils"  // User-defined module
 ```
 
 ### Variable Declarations
