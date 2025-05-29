@@ -1,0 +1,93 @@
+package token
+
+// TokenType represents the type of a token
+type TokenType string
+
+// Token represents a token in the Zeno language
+type Token struct {
+	Type    TokenType
+	Literal string
+}
+
+// Token types for the Zeno language
+const (
+	// Special tokens
+	ILLEGAL TokenType = "ILLEGAL"
+	EOF     TokenType = "EOF"
+
+	// Identifiers + literals
+	IDENT  TokenType = "IDENT"  // add, foobar, x, y, ...
+	INT    TokenType = "INT"    // 1343456
+	FLOAT  TokenType = "FLOAT"  // 3.14159
+	STRING TokenType = "STRING" // "foobar"
+
+	// Keywords
+	LET      TokenType = "LET"
+	MUT      TokenType = "MUT"
+	IF       TokenType = "IF"
+	ELSE     TokenType = "ELSE"
+	LOOP     TokenType = "LOOP"
+	WHILE    TokenType = "WHILE"
+	FOR      TokenType = "FOR"
+	FN       TokenType = "FN"
+	RETURN   TokenType = "RETURN"
+	TRUE     TokenType = "TRUE"
+	FALSE    TokenType = "FALSE"
+	PRINT    TokenType = "PRINT"
+	PRINTLN  TokenType = "PRINTLN"
+	BREAK    TokenType = "BREAK"
+	CONTINUE TokenType = "CONTINUE"
+
+	// Operators
+	ASSIGN   TokenType = "="
+	PLUS     TokenType = "+"
+	MINUS    TokenType = "-"
+	MULTIPLY TokenType = "*"
+	DIVIDE   TokenType = "/"
+	MODULO   TokenType = "%"
+	BANG     TokenType = "!"
+	EQ       TokenType = "=="
+	NOT_EQ   TokenType = "!="
+	LT       TokenType = "<"
+	LTE      TokenType = "<="
+	GT       TokenType = ">"
+	GTE      TokenType = ">="
+	AND      TokenType = "&&"
+	OR       TokenType = "||"
+
+	// Delimiters
+	COMMA     TokenType = ","
+	SEMICOLON TokenType = ";"
+	COLON     TokenType = ":"
+	LPAREN    TokenType = "("
+	RPAREN    TokenType = ")"
+	LBRACE    TokenType = "{"
+	RBRACE    TokenType = "}"
+)
+
+// keywords maps string literals to their token types
+var keywords = map[string]TokenType{
+	"let":      LET,
+	"mut":      MUT,
+	"if":       IF,
+	"else":     ELSE,
+	"loop":     LOOP,
+	"while":    WHILE,
+	"for":      FOR,
+	"fn":       FN,
+	"return":   RETURN,
+	"true":     TRUE,
+	"false":    FALSE,
+	"print":    PRINT,
+	"println":  PRINTLN,
+	"break":    BREAK,
+	"continue": CONTINUE,
+}
+
+// LookupIdent checks if the identifier is a keyword
+func LookupIdent(ident string) TokenType {
+	if tok, ok := keywords[ident]; ok {
+		return tok
+	}
+	return IDENT
+}
