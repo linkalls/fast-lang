@@ -11,7 +11,7 @@ import (
 
 func main() {
 	fmt.Println("=== Zeno Binary Expression Tests ===")
-	
+
 	testCases := []struct {
 		name string
 		code string
@@ -23,28 +23,28 @@ func main() {
 		{"Type annotation", "let value: int = 42 * 2;"},
 		{"String assignment", "let message = \"Hello\";"},
 	}
-	
+
 	for _, tc := range testCases {
 		fmt.Printf("\n--- %s ---\n", tc.name)
 		fmt.Printf("Zeno: %s\n", tc.code)
-		
+
 		// Parse
 		l := lexer.New(tc.code)
 		p := parser.New(l)
 		program := p.ParseProgram()
-		
+
 		if len(p.Errors()) > 0 {
 			fmt.Printf("❌ Parser errors: %v\n", p.Errors())
 			continue
 		}
-		
+
 		// Generate
 		goCode, err := generator.Generate(program)
 		if err != nil {
 			fmt.Printf("❌ Generator error: %v\n", err)
 			continue
 		}
-		
+
 		// Extract just the variable declaration line
 		lines := strings.Split(goCode, "\n")
 		for _, line := range lines {

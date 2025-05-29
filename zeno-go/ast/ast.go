@@ -232,3 +232,74 @@ func (ps *PrintStatement) String() string {
 	result += ");"
 	return result
 }
+
+// Parameter represents a function parameter
+type Parameter struct {
+	Name string
+	Type string
+}
+
+func (p *Parameter) String() string {
+	return p.Name + ": " + p.Type
+}
+
+// FunctionDefinition represents function definitions
+type FunctionDefinition struct {
+	Name       string
+	Parameters []Parameter
+	ReturnType *string // Optional return type
+	Body       []Statement
+}
+
+func (fd *FunctionDefinition) statementNode() {}
+func (fd *FunctionDefinition) String() string {
+	result := "fn " + fd.Name + "("
+	for i, param := range fd.Parameters {
+		if i > 0 {
+			result += ", "
+		}
+		result += param.String()
+	}
+	result += ")"
+	if fd.ReturnType != nil {
+		result += ": " + *fd.ReturnType
+	}
+	result += " {\n"
+	for _, stmt := range fd.Body {
+		result += "  " + stmt.String() + "\n"
+	}
+	result += "}"
+	return result
+}
+
+// FunctionCall represents function calls
+type FunctionCall struct {
+	Name      string
+	Arguments []Expression
+}
+
+func (fc *FunctionCall) expressionNode() {}
+func (fc *FunctionCall) String() string {
+	result := fc.Name + "("
+	for i, arg := range fc.Arguments {
+		if i > 0 {
+			result += ", "
+		}
+		result += arg.String()
+	}
+	result += ")"
+	return result
+}
+
+// ReturnStatement represents return statements
+type ReturnStatement struct {
+	Value Expression // Optional return value
+}
+
+func (rs *ReturnStatement) statementNode() {}
+func (rs *ReturnStatement) String() string {
+	if rs.Value != nil {
+		return "return " + rs.Value.String() + ";"
+	}
+	return "return;"
+}

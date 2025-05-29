@@ -30,6 +30,7 @@ var precedences = map[token.TokenType]int{
 	token.MINUS:    SUM,
 	token.DIVIDE:   PRODUCT,
 	token.MULTIPLY: PRODUCT,
+	token.LPAREN:   CALL,
 }
 
 // Parser represents the parser
@@ -118,6 +119,7 @@ func New(l *lexer.Lexer) *Parser {
 		token.MINUS:    p.parseInfixExpression,
 		token.MULTIPLY: p.parseInfixExpression,
 		token.DIVIDE:   p.parseInfixExpression,
+		token.LPAREN:   p.parseFunctionCall,
 	}
 
 	// Read two tokens, so currentToken and peekToken are both set
@@ -180,6 +182,10 @@ func (p *Parser) parseStatement() ast.Statement {
 		return p.parsePrintStatement(false)
 	case token.PRINTLN:
 		return p.parsePrintStatement(true)
+	case token.FN:
+		return p.parseFunctionDefinition()
+	case token.RETURN:
+		return p.parseReturnStatement()
 	default:
 		return p.parseExpressionStatement()
 	}
@@ -447,4 +453,148 @@ func (p *Parser) isValidImportIdentifier() bool {
 	return p.currentToken.Type == token.IDENT || 
 		   p.currentToken.Type == token.PRINTLN ||
 		   p.currentToken.Type == token.PRINT
+}
+
+// parseFunctionDefinition parses function definitions
+func (p *Parser) parseFunctionDefinition() *ast.FunctionDefinition {
+	// Current token is FN
+	if !p.expectPeek(token.IDENT) {
+		return nil
+	}
+
+	name := p.currentToken.Literal
+
+	if !p.expectPeek(token.LPAREN) {
+		return nil
+	}
+
+	// Parse parameters
+	var parameters []ast.Parameter
+	if p.peekToken.Type != token.RPAREN {
+		p.nextToken() // move to first parameter name
+		
+		for {
+			if p.currentToken.Type != token.IDENT {
+				p.errors = append(p.errors, "expected parameter name")
+				return nil
+			}
+			
+			paramName := p.currentToken.Literal
+			
+			if !p.expectPeek(token.COLON) {
+				return nil
+			}
+			
+			if !p.expectPeek(token.IDENT) {
+				return nil
+			}
+			
+			paramType := p.currentToken.Literal
+			
+			parameters = append(parameters, ast.Parameter{
+				Name: paramName,
+				Type: paramType,
+			})
+			
+			if p.peekToken.Type == token.COMMA {
+				p.nextToken() // consume comma
+				p.nextToken() // move to next parameter
+			} else {
+				break
+			}
+		}
+	}
+
+	if !p.expectPeek(token.RPAREN) {
+		return nil
+	}
+
+	// Parse optional return type
+	var returnType *string
+	if p.peekToken.Type == token.COLON {
+		p.nextToken() // consume ':'
+		if !p.expectPeek(token.IDENT) {
+			return nil
+		}
+		retType := p.currentToken.Literal
+		returnType = &retType
+	}
+
+	if !p.expectPeek(token.LBRACE) {
+		return nil
+	}
+
+	// Parse function body
+	var body []ast.Statement
+	for p.peekToken.Type != token.RBRACE && p.peekToken.Type != token.EOF {
+		p.nextToken()
+		stmt := p.parseStatement()
+		if stmt != nil {
+			body = append(body, stmt)
+		}
+	}
+
+	if !p.expectPeek(token.RBRACE) {
+		return nil
+	}
+
+	return &ast.FunctionDefinition{
+		Name:       name,
+		Parameters: parameters,
+		ReturnType: returnType,
+		Body:       body,
+	}
+}
+
+// parseReturnStatement parses return statements
+func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
+	// Current token is RETURN
+	
+	var value ast.Expression
+	if p.peekToken.Type != token.SEMICOLON && p.peekToken.Type != token.EOF {
+		p.nextToken()
+		value = p.parseExpression(LOWEST)
+	}
+
+	if p.peekToken.Type == token.SEMICOLON {
+		p.nextToken()
+	}
+
+	return &ast.ReturnStatement{
+		Value: value,
+	}
+}
+
+// parseFunctionCall parses function calls
+func (p *Parser) parseFunctionCall(fn ast.Expression) ast.Expression {
+	call := &ast.FunctionCall{
+		Name: fn.(*ast.Identifier).Value,
+	}
+	call.Arguments = p.parseCallArguments()
+	return call
+}
+
+// parseCallArguments parses function call arguments
+func (p *Parser) parseCallArguments() []ast.Expression {
+	args := []ast.Expression{}
+
+	if p.peekToken.Type == token.RPAREN {
+		p.nextToken()
+		return args
+	}
+
+	p.nextToken()
+	args = append(args, p.parseExpression(LOWEST))
+
+	for p.peekToken.Type == token.COMMA {
+		p.nextToken()
+		p.nextToken()
+		args = append(args, p.parseExpression(LOWEST))
+	}
+
+	if !p.expectPeek(token.RPAREN) {
+		return nil
+	}
+
+	return args
 }

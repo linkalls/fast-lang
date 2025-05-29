@@ -19,11 +19,11 @@ func (e GenerationError) Error() string {
 
 // Generator manages code generation with scope and import tracking
 type Generator struct {
-	imports       map[string][]string // module -> imported identifiers
-	declaredVars  map[string]bool     // variable name -> declared
-	usedVars      map[string]bool     // variable name -> used
-	standardLibs  map[string]map[string]string // module -> function -> go equivalent
-	showJapanese  bool                // whether to show Japanese error messages
+	imports      map[string][]string          // module -> imported identifiers
+	declaredVars map[string]bool              // variable name -> declared
+	usedVars     map[string]bool              // variable name -> used
+	standardLibs map[string]map[string]string // module -> function -> go equivalent
+	showJapanese bool                         // whether to show Japanese error messages
 }
 
 // NewGenerator creates a new generator instance
@@ -34,13 +34,13 @@ func NewGenerator() *Generator {
 		usedVars:     make(map[string]bool),
 		standardLibs: make(map[string]map[string]string),
 	}
-	
+
 	// Define standard library mappings
 	g.standardLibs["std/fmt"] = map[string]string{
 		"print":   "fmt.Print",
 		"println": "fmt.Println",
 	}
-	
+
 	return g
 }
 
@@ -72,13 +72,56 @@ func (g *Generator) generateProgram(program *ast.Program) (string, error) {
 	builder.WriteString("import (\n")
 	builder.WriteString("\t\"fmt\"\n")
 	builder.WriteString(")\n\n")
-	builder.WriteString("func main() {\n")
 
-	// Generate statements
+	// Separate function definitions from other statements
+	var functionDefs []*ast.FunctionDefinition
+	var otherStmts []ast.Statement
+	var mainFunc *ast.FunctionDefinition
+
 	for _, stmt := range program.Statements {
-		if err := g.generateStatement(stmt, &builder, 1); err != nil {
+		if funcDef, ok := stmt.(*ast.FunctionDefinition); ok {
+			if funcDef.Name == "main" {
+				mainFunc = funcDef
+			} else {
+				functionDefs = append(functionDefs, funcDef)
+			}
+		} else if _, ok := stmt.(*ast.ImportStatement); !ok {
+			// Skip import statements as they're handled above
+			otherStmts = append(otherStmts, stmt)
+		}
+	}
+
+	// Generate function definitions at top level
+	for _, funcDef := range functionDefs {
+		if err := g.generateStatement(funcDef, &builder, 0); err != nil {
 			return "", err
 		}
+		builder.WriteString("\n")
+	}
+
+	// Generate main function
+	if mainFunc != nil {
+		// User defined main function
+		builder.WriteString("func main() {\n")
+		for _, bodyStmt := range mainFunc.Body {
+			if err := g.generateStatement(bodyStmt, &builder, 1); err != nil {
+				return "", err
+			}
+		}
+		builder.WriteString("}\n")
+	} else if len(otherStmts) > 0 {
+		// No user-defined main, but there are other statements - wrap them in main
+		builder.WriteString("func main() {\n")
+		for _, stmt := range otherStmts {
+			if err := g.generateStatement(stmt, &builder, 1); err != nil {
+				return "", err
+			}
+		}
+		builder.WriteString("}\n")
+	} else {
+		// No main function and no statements - generate empty main
+		builder.WriteString("func main() {\n")
+		builder.WriteString("}\n")
 	}
 
 	// Check for unused variables
@@ -86,7 +129,6 @@ func (g *Generator) generateProgram(program *ast.Program) (string, error) {
 		return "", err
 	}
 
-	builder.WriteString("}\n")
 	return builder.String(), nil
 }
 
@@ -123,15 +165,62 @@ func (g *Generator) generateStatement(stmt ast.Statement, builder *strings.Build
 		builder.WriteString(indent(indentLevel))
 		builder.WriteString("var ")
 		builder.WriteString(s.Name)
-		
+
 		if s.TypeAnn != nil {
 			builder.WriteString(" ")
 			builder.WriteString(mapType(*s.TypeAnn))
 		}
-		
+
 		builder.WriteString(" = ")
 		if err := g.generateExpression(s.ValueExpression, builder); err != nil {
 			return err
+		}
+		builder.WriteString("\n")
+
+	case *ast.FunctionDefinition:
+		builder.WriteString(indent(indentLevel))
+		builder.WriteString("func ")
+		builder.WriteString(s.Name)
+		builder.WriteString("(")
+
+		// Generate parameters
+		for i, param := range s.Parameters {
+			if i > 0 {
+				builder.WriteString(", ")
+			}
+			builder.WriteString(param.Name)
+			builder.WriteString(" ")
+			builder.WriteString(mapType(param.Type))
+		}
+
+		builder.WriteString(")")
+
+		// Generate return type if present
+		if s.ReturnType != nil {
+			builder.WriteString(" ")
+			builder.WriteString(mapType(*s.ReturnType))
+		}
+
+		builder.WriteString(" {\n")
+
+		// Generate function body
+		for _, bodyStmt := range s.Body {
+			if err := g.generateStatement(bodyStmt, builder, indentLevel+1); err != nil {
+				return err
+			}
+		}
+
+		builder.WriteString(indent(indentLevel))
+		builder.WriteString("}\n")
+
+	case *ast.ReturnStatement:
+		builder.WriteString(indent(indentLevel))
+		builder.WriteString("return")
+		if s.Value != nil {
+			builder.WriteString(" ")
+			if err := g.generateExpression(s.Value, builder); err != nil {
+				return err
+			}
 		}
 		builder.WriteString("\n")
 
@@ -157,7 +246,7 @@ func (g *Generator) generateStatement(stmt ast.Statement, builder *strings.Build
 			}
 			builder.WriteString("fmt.Print(")
 		}
-		
+
 		for i, arg := range s.Arguments {
 			if i > 0 {
 				builder.WriteString(", ")
@@ -166,7 +255,7 @@ func (g *Generator) generateStatement(stmt ast.Statement, builder *strings.Build
 				return err
 			}
 		}
-		
+
 		builder.WriteString(")\n")
 
 	default:
@@ -203,6 +292,19 @@ func (g *Generator) generateExpression(expr ast.Expression, builder *strings.Bui
 		}
 		builder.WriteString(")")
 
+	case *ast.FunctionCall:
+		builder.WriteString(e.Name)
+		builder.WriteString("(")
+		for i, arg := range e.Arguments {
+			if i > 0 {
+				builder.WriteString(", ")
+			}
+			if err := g.generateExpression(arg, builder); err != nil {
+				return err
+			}
+		}
+		builder.WriteString(")")
+
 	default:
 		return GenerationError{Message: fmt.Sprintf("Unsupported expression type: %T", expr)}
 	}
@@ -220,6 +322,16 @@ func (g *Generator) collectImportsAndDeclarations(stmt ast.Statement) error {
 		// Also check for variable usage in the value expression
 		if s.ValueExpression != nil {
 			g.markVariableUsage(s.ValueExpression)
+		}
+	case *ast.FunctionDefinition:
+		// Functions don't need variable tracking for now
+		// But we might want to track function bodies in the future
+		for _, bodyStmt := range s.Body {
+			g.collectImportsAndDeclarations(bodyStmt)
+		}
+	case *ast.ReturnStatement:
+		if s.Value != nil {
+			g.markVariableUsage(s.Value)
 		}
 	case *ast.ExpressionStatement:
 		// Check for variable usage in expressions
@@ -243,6 +355,11 @@ func (g *Generator) markVariableUsage(expr ast.Expression) {
 		g.markVariableUsage(e.Right)
 	case *ast.UnaryExpression:
 		g.markVariableUsage(e.Right)
+	case *ast.FunctionCall:
+		// Mark variables used in function arguments
+		for _, arg := range e.Arguments {
+			g.markVariableUsage(arg)
+		}
 	}
 }
 
@@ -254,7 +371,7 @@ func (g *Generator) checkUnusedVariables() error {
 			unusedVars = append(unusedVars, varName)
 		}
 	}
-	
+
 	if len(unusedVars) > 0 {
 		msg := fmt.Sprintf("Unused variables found: %s", strings.Join(unusedVars, ", "))
 		if g.showJapanese {
@@ -262,7 +379,7 @@ func (g *Generator) checkUnusedVariables() error {
 		}
 		return GenerationError{Message: msg}
 	}
-	
+
 	return nil
 }
 

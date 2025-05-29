@@ -5,6 +5,7 @@ Zeno is a programming language with TypeScript-inspired import syntax, designed 
 ## Features
 
 - **TypeScript-style Import System**: `import {println} from "std/fmt"` syntax
+- **Function Definitions and Calls**: Support for parameters, return types, and return statements
 - **Unused Variable Detection**: Compile-time detection of unused variables with helpful error messages
 - **Import Validation**: Ensures functions are properly imported before use
 - **Binary Expressions**: Mathematical operations (+, -, *, /, %) and comparison operators
@@ -17,6 +18,8 @@ Zeno is a programming language with TypeScript-inspired import syntax, designed 
 ✅ **Completed:**
 - Import statement parsing and validation
 - Variable declarations (let)
+- Function definitions and calls
+- Return statements
 - Binary expressions (arithmetic, comparison)
 - Print statement conversion
 - Unused variable detection
@@ -26,7 +29,6 @@ Zeno is a programming language with TypeScript-inspired import syntax, designed 
 - Go code generation (Generator)
 
 🔲 **Planned:**
-- Function definitions and calls
 - Control flow (if/else, while, loop)
 - Mutable variables (mut)
 - Extended type system
@@ -43,6 +45,31 @@ import {println, print} from "std/fmt";
 ```zeno
 let x = 42;           // Variable declaration
 let y: int = 100;     // With type annotation
+```
+
+### Function Definitions
+```zeno
+fn add(a: int, b: int): int {
+    return a + b;
+}
+
+fn greet(name: string) {
+    println("Hello, " + name);
+}
+```
+
+### Function Calls
+```zeno
+let result = add(10, 20);
+greet("World");
+```
+
+### Main Function
+```zeno
+fn main() {
+    // Program entry point
+    println("Hello, World!");
+}
 ```
 
 ### Binary Expressions

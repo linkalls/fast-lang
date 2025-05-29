@@ -5,6 +5,7 @@ Zeno プログラミング言語から Go への変換を行うコンパイラ�
 ## 特徴
 
 - **TypeScript風のImport文**: `import {println} from "std/fmt"` のような構文をサポート
+- **関数定義と呼び出し**: パラメータ、戻り値型、return文をサポート
 - **未使用変数検出**: コンパイル時に未使用変数を検出してエラーを出力
 - **Import検証**: 関数が適切にimportされているかをチェック
 - **バイナリ式サポート**: 数学演算（+, -, *, /, %）と比較演算子をサポート
@@ -24,18 +25,22 @@ go build ./cmd/zeno-compiler
 ### 基本的な使用方法
 
 ```bash
-# Zenoファイルをコンパイル
+# Zenoファイルをコンパイルして実行
+./zeno-compiler run example.zeno
+
+# Zenoファイルをコンパイル（.goファイルを生成）
+./zeno-compiler compile example.zeno
+
+# 後方互換性：直接ファイル名を指定してコンパイル
 ./zeno-compiler example.zeno
 
 # 日本語エラーメッセージも表示
-./zeno-compiler -jp example.zeno
-
-# デモテストを実行（ファイルを指定しない場合）
-./zeno-compiler
+./zeno-compiler -jp run example.zeno
 ```
 
 ### Zeno言語の例
 
+#### 基本的な例
 ```zeno
 import {println} from "std/fmt";
 
@@ -43,6 +48,26 @@ let x = 10;
 let y = 20;
 let result = x + y;
 println(result);
+```
+
+#### 関数の例
+```zeno
+import {println} from "std/fmt";
+
+fn add(a: int, b: int): int {
+    return a + b;
+}
+
+fn greet(name: string) {
+    println("Hello, " + name + "!");
+}
+
+fn main() {
+    let result: int = add(5, 3);
+    println("Result: ", result);
+    
+    greet("Zeno");
+}
 ```
 
 生成されるGoコード:
@@ -54,11 +79,18 @@ import (
 	"fmt"
 )
 
+func add(a int64, b int64) int64 {
+	return (a + b)
+}
+
+func greet(name string) {
+	fmt.Println(("Hello, " + name + "!"))
+}
+
 func main() {
-	var x = 10
-	var y = 20
-	var result = (x + y)
-	fmt.Println(result)
+	var result int64 = add(5, 3)
+	fmt.Println("Result: ", result)
+	greet("Zeno")
 }
 ```
 
@@ -73,6 +105,31 @@ import {println, print} from "std/fmt";
 ```zeno
 let x = 42;           // 変数宣言
 let y: int = 100;     // 型注釈付き
+```
+
+### 関数定義
+```zeno
+fn add(a: int, b: int): int {
+    return a + b;
+}
+
+fn greet(name: string) {
+    println("Hello, " + name);
+}
+```
+
+### 関数呼び出し
+```zeno
+let result = add(10, 20);
+greet("World");
+```
+
+### main関数
+```zeno
+fn main() {
+    // プログラムのエントリーポイント
+    println("Hello, World!");
+}
 ```
 
 ### バイナリ式
@@ -145,14 +202,14 @@ go build ./cmd/zeno-compiler
 ### 基本的な使用方法
 
 ```bash
-# Zenoファイルをコンパイル
-./zeno-compiler example.zeno
+# Zenoファイルをコンパイルして実行
+./zeno-compiler run example.zeno
+
+# Zenoファイルをコンパイル（.goファイルを生成）
+./zeno-compiler compile example.zeno
 
 # 日本語エラーメッセージも表示
-./zeno-compiler -jp example.zeno
-
-# ファイルを指定しない場合、内部テストが実行される
-./zeno-compiler
+./zeno-compiler -jp run example.zeno
 ```
 
 ### テストファイルの例
