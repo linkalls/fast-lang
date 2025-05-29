@@ -42,7 +42,7 @@ go build ./cmd/zeno
 
 #### 基本的な例
 ```zeno
-import {println} from "std/fmt"
+import { println } from "std/fmt"
 
 let x = 10
 let y = 20

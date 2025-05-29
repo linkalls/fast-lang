@@ -71,11 +71,13 @@ func main() {
 			os.Exit(1)
 		}
 	default:
-		// Backward compatibility: if first arg is a .zeno file, compile it
+		// Backward compatibility: if first arg is a .zeno file, run it
 		if strings.HasSuffix(command, ".zeno") {
-			err := compileFile(command)
+			fmt.Printf("=== Zeno Run Command ===\n")
+			err := runFile(command)
 			if err != nil {
-				fmt.Printf("Compilation failed: %v\n", err)
+				fmt.Printf("Run failed: %v\n", err)
+				fmt.Fprintf(os.Stderr, "Run failed: %v\n", err)
 				os.Exit(1)
 			}
 		} else {
