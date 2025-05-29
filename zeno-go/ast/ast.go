@@ -122,8 +122,8 @@ func (ld *LetDeclaration) String() string {
 
 // AssignmentStatement represents assignment statements (x = value)
 type AssignmentStatement struct {
-	Name      string     // Variable name being assigned to
-	Value     Expression // Value being assigned
+	Name  string     // Variable name being assigned to
+	Value Expression // Value being assigned
 }
 
 func (as *AssignmentStatement) statementNode() {}

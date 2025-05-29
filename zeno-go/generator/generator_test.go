@@ -186,7 +186,7 @@ func TestGenerateBinaryExpressionBasic(t *testing.T) {
 	program := &ast.Program{
 		Statements: []ast.Statement{
 			&ast.LetDeclaration{
-				Name:    "result",
+				Name: "result",
 				ValueExpression: &ast.BinaryExpression{
 					Left:     &ast.IntegerLiteral{Value: 5},
 					Operator: ast.BinaryOpPlus,
