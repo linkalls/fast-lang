@@ -1,0 +1,15 @@
+// Test file with functions used in main
+import { println } from "std/fmt"
+
+fn add(a: int, b: int): int {
+    return a + b
+}
+
+fn greet(name: string): string {
+    return "Hello, " + name
+}
+
+let message = greet("World")
+
+println(message)
+println("The result is calculated")

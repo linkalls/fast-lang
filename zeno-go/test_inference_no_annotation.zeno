@@ -1,0 +1,20 @@
+// Test type inference without explicit type annotations
+import { println } from "std/fmt"
+
+let a = 42      // Should infer as int
+let b = false   // Should infer as bool
+let c = "test"  // Should infer as string
+
+println("Testing type inference")
+
+if a {
+    println("a is truthy")
+}
+
+if b {
+    println("b is true")
+}
+
+if c {
+    println("c is truthy")
+}

@@ -172,30 +172,25 @@ func (g *Generator) generateProgram(program *ast.Program) (string, error) {
 		builder.WriteString("\n")
 	}
 
-	// Generate main function
+	// Always generate main function
+	builder.WriteString("func main() {\n")
 	if mainFunc != nil {
-		// User defined main function
-		builder.WriteString("func main() {\n")
+		// User defined main function - use its body
 		for _, bodyStmt := range mainFunc.Body {
 			if err := g.generateStatement(bodyStmt, &builder, 1); err != nil {
 				return "", err
 			}
 		}
-		builder.WriteString("}\n")
 	} else if len(otherStmts) > 0 {
 		// No user-defined main, but there are other statements - wrap them in main
-		builder.WriteString("func main() {\n")
 		for _, stmt := range otherStmts {
 			if err := g.generateStatement(stmt, &builder, 1); err != nil {
 				return "", err
 			}
 		}
-		builder.WriteString("}\n")
-	} else {
-		// No main function and no statements - generate empty main
-		builder.WriteString("func main() {\n")
-		builder.WriteString("}\n")
 	}
+	// Always close main function
+	builder.WriteString("}\n")
 
 	// Check for unused variables
 	if err := g.checkUnusedVariables(); err != nil {
@@ -240,6 +235,17 @@ func (g *Generator) generateStatement(stmt ast.Statement, builder *strings.Build
 		return nil
 
 	case *ast.LetDeclaration:
+		// Register variable type in symbol table
+		var varType types.Type
+		if s.TypeAnn != nil {
+			// Use explicit type annotation
+			varType = g.mapASTTypeToType(*s.TypeAnn)
+		} else {
+			// Infer type from value expression
+			varType = g.inferType(s.ValueExpression)
+		}
+		g.registerVariableWithType(s.Name, varType)
+
 		builder.WriteString(indent(indentLevel))
 		builder.WriteString("var ")
 		builder.WriteString(s.Name)
@@ -488,9 +494,9 @@ func (g *Generator) generateExpression(expr ast.Expression, builder *strings.Bui
 	return nil
 }
 
-// generateCondition generates Go code for a condition expression, ensuring it's boolean
+// generateCondition generates Go code for a condition expression, using type information for smart boolean conversion
 func (g *Generator) generateCondition(expr ast.Expression, builder *strings.Builder) error {
-	switch expr.(type) {
+	switch e := expr.(type) {
 	case *ast.BooleanLiteral:
 		// Already boolean, generate as-is
 		return g.generateExpression(expr, builder)
@@ -506,10 +512,44 @@ func (g *Generator) generateCondition(expr ast.Expression, builder *strings.Buil
 		builder.WriteString(" != 0)")
 		return nil
 	case *ast.Identifier:
-		// For identifiers, generate as-is and let Go handle the boolean conversion
-		// If it's already bool, Go will use it directly
-		// If it's numeric, Go will give a compile error which is better than runtime error
-		return g.generateExpression(expr, builder)
+		// Use type information to generate appropriate boolean conversion
+		varType := g.getVariableType(e.Value)
+		
+		// Debug output
+		fmt.Printf("DEBUG: Variable %s has type %v\n", e.Value, varType)
+		
+		switch varType {
+		case types.BoolType:
+			// Boolean variables can be used directly
+			return g.generateExpression(expr, builder)
+		case types.IntType:
+			// Integer variables need != 0 conversion
+			builder.WriteString("(")
+			if err := g.generateExpression(expr, builder); err != nil {
+				return err
+			}
+			builder.WriteString(" != 0)")
+			return nil
+		case types.StringType:
+			// String variables need != "" conversion
+			builder.WriteString("(")
+			if err := g.generateExpression(expr, builder); err != nil {
+				return err
+			}
+			builder.WriteString(" != \"\")")
+			return nil
+		case types.FloatType:
+			// Float variables need != 0.0 conversion
+			builder.WriteString("(")
+			if err := g.generateExpression(expr, builder); err != nil {
+				return err
+			}
+			builder.WriteString(" != 0.0)")
+			return nil
+		default:
+			// Unknown type - generate as-is and let Go handle it
+			return g.generateExpression(expr, builder)
+		}
 	default:
 		// For other expressions, generate as-is first
 		// Let Go's type system handle the boolean conversion
@@ -548,6 +588,16 @@ func (g *Generator) collectImportsAndDeclarations(stmt ast.Statement) error {
 		}
 	case *ast.LetDeclaration:
 		g.declaredVars[s.Name] = true
+		// Register variable type in symbol table
+		var varType types.Type
+		if s.TypeAnn != nil {
+			// Use explicit type annotation
+			varType = g.mapASTTypeToType(*s.TypeAnn)
+		} else {
+			// Infer type from value expression
+			varType = g.inferType(s.ValueExpression)
+		}
+		g.registerVariableWithType(s.Name, varType)
 		// Also check for variable usage in the value expression
 		if s.ValueExpression != nil {
 			g.markVariableUsage(s.ValueExpression)
@@ -837,4 +887,85 @@ func (g *Generator) generateStdIoHelpers(builder *strings.Builder) {
 	builder.WriteString("\t\tfmt.Printf(\"Error writing file %s: %v\\n\", filename, err)\n")
 	builder.WriteString("\t}\n")
 	builder.WriteString("}\n\n")
+}
+
+// inferType infers the type of an expression
+func (g *Generator) inferType(expr ast.Expression) types.Type {
+	switch e := expr.(type) {
+	case *ast.BooleanLiteral:
+		return types.BoolType
+	case *ast.IntegerLiteral:
+		return types.IntType
+	case *ast.StringLiteral:
+		return types.StringType
+	case *ast.Identifier:
+		// Look up the identifier in the symbol table
+		if symbol, ok := g.symbolTable.Resolve(e.Value); ok {
+			return symbol.Type
+		}
+		// Default to int if not found (for compatibility)
+		return types.IntType
+	case *ast.BinaryExpression:
+		// Comparison operators return boolean
+		switch e.Operator {
+		case ast.BinaryOpEq, ast.BinaryOpNotEq, ast.BinaryOpLt, ast.BinaryOpLte, ast.BinaryOpGt, ast.BinaryOpGte:
+			return types.BoolType
+		case ast.BinaryOpPlus, ast.BinaryOpMinus, ast.BinaryOpMultiply, ast.BinaryOpDivide, ast.BinaryOpModulo:
+			// Arithmetic operations: determine result type based on operands
+			leftType := g.inferType(e.Left)
+			rightType := g.inferType(e.Right)
+			// If either operand is float, result is float
+			if leftType == types.FloatType || rightType == types.FloatType {
+				return types.FloatType
+			}
+			return types.IntType
+		case ast.BinaryOpAnd, ast.BinaryOpOr:
+			return types.BoolType
+		}
+	case *ast.FunctionCall:
+		// For function calls, we'd need to track function return types
+		// For now, default to int
+		return types.IntType
+	}
+	// Default fallback
+	return types.IntType
+}
+
+// registerVariable registers a variable with its inferred type in the symbol table
+func (g *Generator) registerVariable(name string, expr ast.Expression) {
+	varType := g.inferType(expr)
+	g.symbolTable.Define(name, varType)
+}
+
+// registerVariableWithType registers a variable with a specific type in the symbol table
+func (g *Generator) registerVariableWithType(name string, varType types.Type) {
+	g.symbolTable.Define(name, varType)
+}
+
+// getVariableType gets the type of a variable from the symbol table
+func (g *Generator) getVariableType(name string) types.Type {
+	if symbol, ok := g.symbolTable.Resolve(name); ok {
+		fmt.Printf("DEBUG: Found variable %s with type %v in symbol table\n", name, symbol.Type)
+		return symbol.Type
+	}
+	// Default to int if not found
+	fmt.Printf("DEBUG: Variable %s not found in symbol table, defaulting to IntType\n", name)
+	return types.IntType
+}
+
+// mapASTTypeToType converts AST type annotations to type system types
+func (g *Generator) mapASTTypeToType(astType string) types.Type {
+	switch astType {
+	case "bool":
+		return types.BoolType
+	case "int":
+		return types.IntType
+	case "string":
+		return types.StringType
+	case "float":
+		return types.FloatType
+	default:
+		// Default to int for unknown types
+		return types.IntType
+	}
 }

@@ -1,0 +1,22 @@
+// Test file with simpler debug output
+import { println } from "std/fmt"
+
+let x: int = 5
+let y: bool = true
+let z = "hello"
+
+println("Starting program")
+
+if x {
+    println("x is truthy")
+}
+
+if y {
+    println("y is true")
+}
+
+if z {
+    println("z is truthy")
+}
+
+println("Program finished")
