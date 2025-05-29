@@ -32,7 +32,7 @@ func main() {
 	}
 
 	command := args[0]
-	
+
 	switch command {
 	case "run":
 		if len(args) < 2 {

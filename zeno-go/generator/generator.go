@@ -224,7 +224,7 @@ func (g *Generator) generateStatement(stmt ast.Statement, builder *strings.Build
 	case *ast.FunctionDefinition:
 		builder.WriteString(indent(indentLevel))
 		builder.WriteString("func ")
-		
+
 		// Handle function visibility - in Go, public functions start with uppercase
 		functionName := s.Name
 		if s.IsPublic {
@@ -238,7 +238,7 @@ func (g *Generator) generateStatement(stmt ast.Statement, builder *strings.Build
 				functionName = strings.ToLower(string(functionName[0])) + functionName[1:]
 			}
 		}
-		
+
 		builder.WriteString(functionName)
 		builder.WriteString("(")
 
@@ -373,7 +373,7 @@ func (g *Generator) generateExpression(expr ast.Expression, builder *strings.Bui
 				}
 			}
 		}
-		
+
 		builder.WriteString(functionName)
 		builder.WriteString("(")
 		for i, arg := range e.Arguments {

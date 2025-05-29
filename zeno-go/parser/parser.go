@@ -359,7 +359,7 @@ func (p *Parser) parseImportStatement() *ast.ImportStatement {
 	}
 
 	var imports []string
-	
+
 	// Parse first identifier (accept both IDENT and keywords as identifiers in import context)
 	p.nextToken()
 	if !p.isValidImportIdentifier() {
@@ -452,9 +452,9 @@ func (p *Parser) parsePrintStatement(newline bool) *ast.PrintStatement {
 
 // isValidImportIdentifier checks if the current token can be used as an identifier in import statements
 func (p *Parser) isValidImportIdentifier() bool {
-	return p.currentToken.Type == token.IDENT || 
-		   p.currentToken.Type == token.PRINTLN ||
-		   p.currentToken.Type == token.PRINT
+	return p.currentToken.Type == token.IDENT ||
+		p.currentToken.Type == token.PRINTLN ||
+		p.currentToken.Type == token.PRINT
 }
 
 // parseFunctionDefinition parses function definitions
@@ -469,7 +469,7 @@ func (p *Parser) parsePublicDeclaration() ast.Statement {
 		p.errors = append(p.errors, "pub can only be used with function definitions")
 		return nil
 	}
-	
+
 	p.nextToken() // consume PUB, move to FN
 	return p.parseFunctionDefinitionWithVisibility(true)
 }
@@ -491,30 +491,30 @@ func (p *Parser) parseFunctionDefinitionWithVisibility(isPublic bool) *ast.Funct
 	var parameters []ast.Parameter
 	if p.peekToken.Type != token.RPAREN {
 		p.nextToken() // move to first parameter name
-		
+
 		for {
 			if p.currentToken.Type != token.IDENT {
 				p.errors = append(p.errors, "expected parameter name")
 				return nil
 			}
-			
+
 			paramName := p.currentToken.Literal
-			
+
 			if !p.expectPeek(token.COLON) {
 				return nil
 			}
-			
+
 			if !p.expectPeek(token.IDENT) {
 				return nil
 			}
-			
+
 			paramType := p.currentToken.Literal
-			
+
 			parameters = append(parameters, ast.Parameter{
 				Name: paramName,
 				Type: paramType,
 			})
-			
+
 			if p.peekToken.Type == token.COMMA {
 				p.nextToken() // consume comma
 				p.nextToken() // move to next parameter
@@ -569,7 +569,7 @@ func (p *Parser) parseFunctionDefinitionWithVisibility(isPublic bool) *ast.Funct
 // parseReturnStatement parses return statements
 func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
 	// Current token is RETURN
-	
+
 	var value ast.Expression
 	if p.peekToken.Type != token.SEMICOLON && p.peekToken.Type != token.EOF {
 		p.nextToken()
