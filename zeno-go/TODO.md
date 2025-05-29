@@ -2,81 +2,140 @@
 
 This file lists planned features and improvements for the Zeno programming language Go implementation and its compiler.
 
-## Language Features
-- [ ] **Full Function Definitions:**
-    - [ ] Syntax for defining functions with parameters and return types (`fn name(param: type) -> type { ... }`).
-    - [ ] Parsing function definitions.
-    - [ ] Code generation for function definitions and calls.
-    - [ ] Return statements.
-- [ ] **Modules/Namespacing:**
-    - [ ] Simple module system for code organization.
-    - [ ] Import/export functionality.
+## Recently Completed ✅
+
+- [x] **TypeScript-style Import System:** `import {println} from "std/fmt"` syntax
+- [x] **Import Statement Parsing:** Full parsing and validation of import statements
+- [x] **Unused Variable Detection:** Compile-time detection with helpful error messages
+- [x] **Import Validation:** Ensures functions are imported before use
+- [x] **Multilingual Error Messages:** Japanese error messages with `-jp` flag
+- [x] **Binary Expressions:** Mathematical and comparison operators
+- [x] **Type Annotations:** Optional type annotations support
+- [x] **Generator Restructure:** Struct-based generator with scope tracking
+- [x] **Variable Usage Analysis:** Two-pass compilation for proper validation
+- [x] **Standard Library Definition:** Basic std/fmt module with print/println
+
+## High Priority 🚀
+
+- [ ] **Function Definitions and Calls:**
+    - [ ] Syntax for defining functions with parameters and return types
+    - [ ] Parsing function definitions and calls
+    - [ ] Code generation for user-defined functions
+    - [ ] Return statements and return type validation
+
+- [ ] **Control Flow Statements:**
+    - [ ] if/else if/else statements
+    - [ ] while loops
+    - [ ] loop statements with break/continue
+    - [ ] for loops
+
+- [ ] **Mutable Variables:**
+    - [ ] `mut` keyword for mutable variable declarations
+    - [ ] Assignment statements for mutable variables
+    - [ ] Mutation validation and error checking
+
+## Medium Priority 📋
+
+- [ ] **Extended Standard Library:**
+    - [ ] std/io module for file operations
+    - [ ] std/string module for string manipulation
+    - [ ] std/math module for mathematical functions
+    - [ ] std/collections module for data structures
+
+- [ ] **Enhanced Type System:**
+    - [ ] Type inference improvements
+    - [ ] Better type error messages
+    - [ ] Optional types and null safety
+    - [ ] Generic types (basic implementation)
+
 - [ ] **Basic Data Structures:**
-    - [ ] Arrays (fixed-size or dynamic).
-    - [ ] Structs or record types.
-- [ ] **Concurrency Primitives (Inspired by Go):**
-    - [ ] Lightweight "goroutine-like" tasks.
-    - [ ] Channels for communication between tasks.
-- [ ] **Interfaces/Traits (Inspired by TypeScript/Rust):**
-    - [ ] Define contracts for types.
-- [ ] **Pattern Matching (Basic):**
-    - [ ] Simple `match` expressions.
+    - [ ] Arrays (fixed-size or dynamic)
+    - [ ] Structs or record types
+    - [ ] Basic collections (lists, maps)
 
-## Compiler/Tooling Enhancements
-- [ ] **Enhanced Error Reporting:**
-    - [ ] Display source code snippets with error locations.
-    - [ ] More descriptive and helpful error messages.
-    - [ ] Suggest fixes for common errors.
-- [ ] **Standard Library:**
-    - [ ] Basic I/O operations beyond `print/println`.
-    - [ ] File system operations.
-    - [ ] String manipulation utilities.
+- [ ] **Comments Support:**
+    - [ ] Single-line comments (`//`)
+    - [ ] Multi-line comments (`/* */`)
+    - [ ] Documentation comments
+
+## Low Priority 🔮
+
+- [ ] **Advanced Language Features:**
+    - [ ] Pattern matching with `match` expressions
+    - [ ] Interfaces/traits for type contracts
+    - [ ] Module system and namespacing
+    - [ ] Concurrency primitives (goroutine-like)
+    - [ ] Channels for communication
+
 - [ ] **Performance Optimizations:**
-    - [ ] Better memory management in generated Go code.
-    - [ ] Dead code elimination.
-    - [ ] Constant folding and other compile-time optimizations.
-- [ ] **Language Server Protocol (LSP):**
-    - [ ] Syntax highlighting support.
-    - [ ] Auto-completion.
-    - [ ] Error diagnostics in real-time.
-- [ ] **Package Manager/Build System:**
-    - [ ] Dependency management.
-    - [ ] Project templates and scaffolding.
+    - [ ] Dead code elimination
+    - [ ] Constant folding
+    - [ ] Better memory management in generated Go code
+    - [ ] Compile-time optimizations
 
-## Code Quality and Testing
-- [ ] **Comprehensive Test Coverage:**
-    - [ ] Unit tests for lexer, parser, and generator.
-    - [ ] Integration tests for the full compilation pipeline.
-    - [ ] Test cases for error conditions and edge cases.
-- [ ] **Benchmarking:**
-    - [ ] Performance benchmarks for compiler components.
-    - [ ] Comparison with other language implementations.
-- [ ] **Documentation:**
-    - [ ] Detailed API documentation for all modules.
-    - [ ] Language specification document.
-    - [ ] Tutorial and examples.
+## Development and Tooling 🛠️
 
-## Infrastructure
+- [ ] **Enhanced Error Reporting:**
+    - [ ] Display source code snippets with error locations
+    - [ ] Suggest fixes for common errors
+    - [ ] Better error message formatting
+
+- [ ] **Testing Infrastructure:**
+    - [ ] Comprehensive unit tests for all components
+    - [ ] Integration tests for full compilation pipeline
+    - [ ] Test cases for error conditions and edge cases
+    - [ ] Performance benchmarks
+
+- [ ] **Development Tools:**
+    - [ ] Language Server Protocol (LSP) implementation
+    - [ ] VS Code extension
+    - [ ] Syntax highlighting support
+    - [ ] Auto-completion and diagnostics
+
+- [ ] **Build System:**
+    - [ ] Package manager for dependencies
+    - [ ] Project templates and scaffolding
+    - [ ] Build configuration system
+
+## Infrastructure 🏗️
+
 - [ ] **CI/CD Pipeline:**
-    - [ ] Automated testing on multiple platforms.
-    - [ ] Automated releases and distribution.
+    - [ ] Automated testing on multiple platforms
+    - [ ] Automated releases and distribution
+    - [ ] Code quality checks
+
 - [ ] **Cross-platform Support:**
-    - [ ] Ensure compatibility with Windows, macOS, and Linux.
-    - [ ] Platform-specific optimizations where necessary.
+    - [ ] Windows, macOS, and Linux compatibility
+    - [ ] Platform-specific optimizations
 
-## Long-term Goals
+- [ ] **Documentation:**
+    - [ ] Complete API documentation
+    - [ ] Language specification document
+    - [ ] Comprehensive tutorials and examples
+
+## Long-term Vision 🎯
+
 - [ ] **Self-hosting:**
-    - [ ] Implement the Zeno compiler in Zeno itself.
-- [ ] **Alternative Backends:**
-    - [ ] Support for compiling to other targets (WASM, native code).
-- [ ] **IDE Integration:**
-    - [ ] VS Code extension.
-    - [ ] Integration with other popular editors.
+    - [ ] Implement the Zeno compiler in Zeno itself
 
-## Migration from Rust Implementation
-- [x] **Core Lexer:** Port token definitions and lexical analysis.
-- [x] **Core Parser:** Port AST definitions and parsing logic.
-- [x] **Core Generator:** Port code generation to Go instead of Rust.
-- [x] **CLI Interface:** Port command-line argument parsing and main driver.
-- [ ] **Test Suite Migration:** Adapt existing Rust tests to Go.
-- [ ] **Example Programs:** Ensure all examples work with Go implementation.
+- [ ] **Alternative Backends:**
+    - [ ] WebAssembly (WASM) target
+    - [ ] Native code generation
+    - [ ] LLVM backend
+
+- [ ] **Advanced IDE Integration:**
+    - [ ] IntelliJ/GoLand plugin
+    - [ ] Vim/Neovim support
+    - [ ] Emacs mode
+
+## Migration Progress from Rust Implementation 🔄
+
+- [x] **Core Lexer:** Token definitions and lexical analysis
+- [x] **Core Parser:** AST definitions and parsing logic  
+- [x] **Core Generator:** Code generation (Go target instead of Rust)
+- [x] **CLI Interface:** Command-line argument parsing and main driver
+- [x] **Import System:** TypeScript-style import syntax
+- [x] **Error Handling:** Multilingual error messages
+- [ ] **Test Suite Migration:** Adapt existing Rust tests to Go
+- [ ] **Example Programs:** Ensure all examples work with Go implementation
+- [ ] **Feature Parity:** Complete remaining features from Rust version

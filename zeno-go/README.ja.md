@@ -1,127 +1,187 @@
-# Zeno プログラミング言語 (Go実装)
+# Zeno-Go コンパイラ
 
-Zenoは、GoとTypeScriptに触発された構文を持つ静的型付けプログラミング言語で、シンプルでありながら強力であることを目指して設計されています。このGoによるZenoコンパイラの実装は、現在ZenoコードをGoにコンパイルします。
+Zeno プログラミング言語から Go への変換を行うコンパイラです。Rust版からの移植作業の一環として開発されています。
 
 ## 特徴
-- **Go/TypeScriptに触発された構文:** 可読性と現代的な開発プラクティスを目指します。
-- **静的型付け:** 簡潔さのための型推論を備えています。
-    - `let name = value;` (不変、型推論)
-    - `let name: type = value;` (不変、明示的な型)
-    - `mut name = value;` (可変、型推論)
-    - `mut name: type = value;` (可変、明示的な型)
-- **オプショナルなセミコロン:** 文末のセミコロンはオプションです。
-- **基本型:** `int`, `float`, `bool`, `string`。
-- **制御フロー:** `if/else if/else`, `loop`, `while`, `for`。
-- **出力:** `print()` および `println()` 関数。
-- **コメント:** `// 単一行コメント` および `/* 複数行コメント */`。
-- **コンパイルターゲット:** Goコードを生成します。
 
-## 現在の状況
-- レキサー: 実装済み。
-- パーサー: 実装済み、オプショナルなセミコロンをサポート。
-- コードジェネレーター: 実装済み、ASTからGoコードを生成。
-- コンパイラドライバー: 実装済み。
-- プロジェクトはGo 1.21+を使用。
+- **TypeScript風のImport文**: `import {println} from "std/fmt"` のような構文をサポート
+- **未使用変数検出**: コンパイル時に未使用変数を検出してエラーを出力
+- **Import検証**: 関数が適切にimportされているかをチェック
+- **バイナリ式サポート**: 数学演算（+, -, *, /, %）と比較演算子をサポート
+- **型注釈**: オプションの型注釈 `let x: int = 42;`
+- **多言語エラーメッセージ**: `-jp` フラグで日本語エラーメッセージも表示
+- **変数宣言**: letキーワードによる変数宣言をサポート
 
-## 言語構文概要
+## インストール
 
-**変数宣言:**
-```zeno
-// 不変、型推論
-let message = "Hello, Zeno!"
-let count = 100
-
-// 可変、明示的な型
-mut temperature: float = 25.5
-mut is_active: bool = true
-
-is_active = false
+```bash
+cd zeno-go
+go build ./cmd/zeno-compiler
 ```
 
-**制御フロー:**
+## 使用方法
+
+### 基本的な使用方法
+
+```bash
+# Zenoファイルをコンパイル
+./zeno-compiler example.zeno
+
+# 日本語エラーメッセージも表示
+./zeno-compiler -jp example.zeno
+
+# デモテストを実行（ファイルを指定しない場合）
+./zeno-compiler
+```
+
+### Zeno言語の例
+
 ```zeno
-if count > 50 {
-    println("Count is greater than 50")
-} else if count == 50 {
-    println("Count is exactly 50")
-} else {
-    println("Count is less than 50")
+import {println} from "std/fmt";
+
+let x = 10;
+let y = 20;
+let result = x + y;
+println(result);
+```
+
+生成されるGoコード:
+
+```go
+package main
+
+import (
+	"fmt"
+)
+
+func main() {
+	var x = 10
+	var y = 20
+	var result = (x + y)
+	fmt.Println(result)
 }
-
-loop {
-    println("Looping...")
-    break // ループを終了
-}
-
-mut i = 0
-while i < 3 {
-    print(i)
-    i = i + 1
-} // 出力: 012
-
-for let j = 0; j < 3; j = j + 1 {
-    print(j)
-} // 出力: 012
 ```
 
-**出力:**
+## サポートされている構文
+
+### Import文
 ```zeno
-print("これは一行で出力されます。 ")
-println("これは新しい行に出力されます。")
-let name = "Zeno"
-println("Hello, " + name + "!") // 文字列の連結
+import {println, print} from "std/fmt";
 ```
 
-## Zenoコンパイラの使用方法 (CLI)
+### 変数宣言
+```zeno
+let x = 42;           // 変数宣言
+let y: int = 100;     // 型注釈付き
+```
 
-Zenoコンパイラを使用するには、まずソースからビルドする必要があります。
+### バイナリ式
+```zeno
+let sum = 10 + 20;
+let product = 5 * 6;
+let comparison = x > y;
+```
+
+### Print文
+```zeno
+print("Hello");       // import {print} from "std/fmt"; が必要
+println("World");     // import {println} from "std/fmt"; が必要
+```
+
+## エラー検出機能
+
+### 未使用変数の検出
+```zeno
+import {println} from "std/fmt";
+
+let x = 10;
+let unused = 42;  // エラー: Unused variables found: unused
+let y = x + 5;
+println(y);
+```
+
+### Import検証
+```zeno
+// エラー: println is not imported from std/fmt
+let x = 10;
+println(x);  // import文がない場合はエラー
+```
+
+## 標準ライブラリ
+
+現在サポートされているモジュール:
+
+- `std/fmt`: `print`, `println` 関数
+
+## 実装されている機能
+
+✅ **完了済み:**
+- Import文の解析と検証
+- 変数宣言（let）
+- バイナリ式（算術演算、比較演算）
+- Print文の変換
+- 未使用変数検出
+- 多言語エラーメッセージ（英語/日本語）
+- トークン解析（Lexer）
+- AST構築（Parser）
+- Goコード生成（Generator）
+
+🔲 **今後の予定:**
+- 関数定義と呼び出し
+- 制御フロー（if/else、while、loop）
+- 可変変数（mut）
+- 型システムの拡張
+- 標準ライブラリの拡充
+
+## コンパイラの使用方法
 
 ### コンパイラのビルド
-1.  Zenoプロジェクトのルートディレクトリ（`zeno-go/`ディレクトリ）に移動します。
-2.  以下のGoコマンドを実行します：
-    ```bash
-    go build -o zeno ./cmd/zeno-compiler
-    ```
-3.  コンパイラの実行ファイルは`./zeno`に配置されます。
 
-### コマンドラインインターフェース
-基本的なコマンド構造は以下の通りです：
 ```bash
-./zeno <SOURCE_FILE.zeno> [OPTIONS]
+cd zeno-go
+go build ./cmd/zeno-compiler
 ```
 
-**一般的な操作と例:**
+### 基本的な使用方法
 
-1.  **Zenoファイルをコンパイルして生成されたGoコードを表示:**
-    これにより、変換されたGoコードを含む`output.go`（または`-o`が使用されていない場合はデフォルトで`<SOURCE_FILE>.go`）が作成されます。
-    ```bash
-    ./zeno examples/hello.zeno --output-go-file output.go --keep-go
-    # またはデフォルトの .go 出力名を使用する場合（例：examples/hello.go）:
-    ./zeno examples/hello.zeno --keep-go
-    ```
+```bash
+# Zenoファイルをコンパイル
+./zeno-compiler example.zeno
 
-2.  **Zenoファイルを直接実行ファイルにコンパイル:**
-    これによりGoコードが生成され、`go build`を使用してコンパイルし、実行ファイル（例：`my_program`）を作成します。
-    ```bash
-    ./zeno examples/variables.zeno --compile --output-executable-file my_program
-    ```
-    `--output-executable-file`が省略された場合、実行ファイルはソースファイルと同じ名前（拡張子なし、例：`examples/variables`）になります。
+# 日本語エラーメッセージも表示
+./zeno-compiler -jp example.zeno
 
-3.  **Zenoファイルをコンパイルして即座に実行:**
-    これは簡単なテストに便利です。中間Goファイルは`--keep-go`が指定されない限り、デフォルトで削除されます。
-    ```bash
-    ./zeno examples/controlflow.zeno --compile --run
-    ```
+# ファイルを指定しない場合、内部テストが実行される
+./zeno-compiler
+```
 
-**重要なフラグ:**
--   `<source_file>`: （必須）Zenoソースファイルへのパス（例：`examples/hello.zeno`）。
--   `--output-go-file <path>`, `-o <path>`: 生成されるGoコードの出力ファイルを指定します。
--   `--output-executable-file <path>`, `-O <path>`: コンパイルされた実行ファイルの出力ファイル名を指定します。
--   `--compile`, `-c`: 生成されたGoコードを`go build`を使用して実行ファイルにコンパイルします。
--   `--run`, `-r`: コンパイルされた実行ファイルを実行します。`--compile`が必要です。
--   `--keep-go`: コンパイル後の中間`.go`ファイルの削除を防ぎます。
--   `--help`: CLIの引数に関するヘルプ情報を表示します。
+### テストファイルの例
+
+プロジェクトには以下のテストファイルが含まれています：
+
+- `test_simple.zeno` - 正常動作のテスト
+- `test_import.zeno` - Import文のテスト
+- `test_unused.zeno` - 未使用変数検出のテスト
+- `test_no_import.zeno` - Import不足エラーのテスト
+
+## 開発ツール
+
+デバッグ用のツールも含まれています：
+
+- `debug_lexer.go` - レクサーの動作確認用
+- `debug_parser.go` - パーサーの動作確認用
 
 ## 貢献
-貢献を歓迎します！協力できる領域については`TODO.md`をご覧ください。
-（さらなる貢献ガイドラインは後日追加予定）。
+
+貢献を歓迎します！協力できる領域については `TODO.md` をご覧ください。
+
+### 開発の進め方
+
+1. プロジェクトをクローン
+2. `go build ./cmd/zeno-compiler` でコンパイラをビルド
+3. テストファイルで動作確認
+4. 新機能の実装や改善を行う
+
+### バグ報告
+
+GitHub Issuesにてバグ報告や機能要求をお待ちしています。
