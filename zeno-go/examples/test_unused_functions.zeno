@@ -1,27 +1,27 @@
 // Test file for unused function detection
-import { println } from "std/fmt";
+import { println } from "std/fmt"
 
 // Used function
 fn add(a: int, b: int): int {
-    return a + b;
+    return a + b
 }
 
 // Unused function (should trigger error)
 fn unusedMultiply(x: int, y: int): int {
-    return x * y;
+    return x * y
 }
 
 // Public function (should not trigger error even if unused)
 pub fn PublicFunction() {
-    println("This is a public function");
+    println("This is a public function")
 }
 
 // Another unused function
 fn unusedGreet(name: string) {
-    println("Hello, " + name);
+    println("Hello, " + name)
 }
 
 fn main() {
-    let result: int = add(3, 4);
-    println("Result: ", result);
+    let result: int = add(3, 4)
+    println("Result: ", result)
 }

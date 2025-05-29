@@ -207,7 +207,7 @@ func (l *Lexer) NextToken() token.Token {
 		}
 	case ',':
 		tok = newToken(token.COMMA, l.ch)
-	case ';':
+	case '':
 		tok = newToken(token.SEMICOLON, l.ch)
 	case ':':
 		tok = newToken(token.COLON, l.ch)
@@ -271,7 +271,7 @@ func isDigit(ch byte) bool {
 // processEscapeSequence processes escape sequences in strings
 func processEscapeSequence(str string) string {
 	result := make([]byte, 0, len(str))
-	for i := 0; i < len(str); i++ {
+	for i := 0 i < len(str) i++ {
 		if str[i] == '\\' && i+1 < len(str) {
 			switch str[i+1] {
 			case 'n':

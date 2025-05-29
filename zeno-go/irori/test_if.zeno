@@ -1,0 +1,11 @@
+import { println } from "std/fmt"
+
+let x = 5
+
+if x > 3 {
+    println("x is greater than 3")
+} else if x == 3 {
+    println("x equals 3") 
+} else {
+    println("x is less than 3")
+}

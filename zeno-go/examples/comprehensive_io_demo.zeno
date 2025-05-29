@@ -1,55 +1,55 @@
 // Comprehensive example demonstrating std/io module capabilities
-import { println, print } from "std/fmt";
-import { readFile, writeFile } from "std/io";
+import { println, print } from "std/fmt"
+import { readFile, writeFile } from "std/io"
 
 fn main() {
-    println("🚀 Zeno std/io Module - Comprehensive Demo");
-    println("==========================================");
+    println("🚀 Zeno std/io Module - Comprehensive Demo")
+    println("==========================================")
     
     // 1. Basic file operations
-    println("📝 Basic File Operations:");
-    let greeting = "Hello, World from Zeno!";
-    writeFile("hello.txt", greeting);
+    println("📝 Basic File Operations:")
+    let greeting = "Hello, World from Zeno!"
+    writeFile("hello.txt", greeting)
     
-    let readGreeting = readFile("hello.txt");
-    print("📖 Read: ");
-    println(readGreeting);
+    let readGreeting = readFile("hello.txt")
+    print("📖 Read: ")
+    println(readGreeting)
     
     // 2. Configuration file example
-    println("⚙️  Configuration File Example:");
-    let config = "# Application Configuration\napp_name=ZenoApp\nport=8080\ndebug=true\nversion=1.0.0";
-    writeFile("app.conf", config);
+    println("⚙️  Configuration File Example:")
+    let config = "# Application Configuration\napp_name=ZenoApp\nport=8080\ndebug=true\nversion=1.0.0"
+    writeFile("app.conf", config)
     
-    let configContent = readFile("app.conf");
-    println("📋 Configuration file contents:");
-    println(configContent);
+    let configContent = readFile("app.conf")
+    println("📋 Configuration file contents:")
+    println(configContent)
     
     // 3. Data serialization example
-    println("💾 Data Serialization Example:");
-    let userData = "{\"id\": 1, \"name\": \"Alice\", \"email\": \"alice@example.com\"}";
-    writeFile("user.json", userData);
+    println("💾 Data Serialization Example:")
+    let userData = "{\"id\": 1, \"name\": \"Alice\", \"email\": \"alice@example.com\"}"
+    writeFile("user.json", userData)
     
-    let userJson = readFile("user.json");
-    print("👤 User data: ");
-    println(userJson);
+    let userJson = readFile("user.json")
+    print("👤 User data: ")
+    println(userJson)
     
     // 4. Multi-line content
-    println("📄 Multi-line Content Example:");
-    let multiLine = "Line 1: Introduction\nLine 2: Features\nLine 3: Usage\nLine 4: Conclusion";
-    writeFile("document.txt", multiLine);
+    println("📄 Multi-line Content Example:")
+    let multiLine = "Line 1: Introduction\nLine 2: Features\nLine 3: Usage\nLine 4: Conclusion"
+    writeFile("document.txt", multiLine)
     
-    let document = readFile("document.txt");
-    println("📚 Document contents:");
-    println(document);
+    let document = readFile("document.txt")
+    println("📚 Document contents:")
+    println(document)
     
     // 5. Error handling demonstration (file doesn't exist)
-    println("🚫 Error Handling Demo:");
-    let nonExistent = readFile("does_not_exist.txt");
-    print("📄 Non-existent file read result: '");
-    print(nonExistent);
-    println("'");
-    println("✅ Gracefully handled non-existent file (returned empty string)");
+    println("🚫 Error Handling Demo:")
+    let nonExistent = readFile("does_not_exist.txt")
+    print("📄 Non-existent file read result: '")
+    print(nonExistent)
+    println("'")
+    println("✅ Gracefully handled non-existent file (returned empty string)")
     
-    println("✨ Demo completed successfully!");
-    println("Created files: hello.txt, app.conf, user.json, document.txt");
+    println("✨ Demo completed successfully!")
+    println("Created files: hello.txt, app.conf, user.json, document.txt")
 }

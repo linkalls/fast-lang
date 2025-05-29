@@ -59,7 +59,7 @@ const (
 
 	// Delimiters
 	COMMA     TokenType = ","
-	SEMICOLON TokenType = ";"
+	SEMICOLON TokenType = ""
 	COLON     TokenType = ":"
 	LPAREN    TokenType = "("
 	RPAREN    TokenType = ")"
@@ -92,7 +92,7 @@ var keywords = map[string]TokenType{
 
 // LookupIdent checks if the identifier is a keyword
 func LookupIdent(ident string) TokenType {
-	if tok, ok := keywords[ident]; ok {
+	if tok, ok := keywords[ident] ok {
 		return tok
 	}
 	return IDENT

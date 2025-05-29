@@ -1,19 +1,19 @@
 // Math utility functions
-import { println } from "std/fmt";
+import { println } from "std/fmt"
 
 pub fn Add(a: int, b: int): int {
-    return a + b;
+    return a + b
 }
 
 pub fn Multiply(x: int, y: int): int {
-    return x * y;
+    return x * y
 }
 
 // Private function - not accessible from outside
 fn internalHelper(): int {
-    return 42;
+    return 42
 }
 
 pub fn GetAnswer(): int {
-    return internalHelper();
+    return internalHelper()
 }

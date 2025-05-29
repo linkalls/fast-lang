@@ -1,0 +1,25 @@
+{
+  "name": "zeno",
+  "displayName": "zeno-lang",
+  "description": "",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [{
+      "id": "zeno",
+      "aliases": ["Zeno", "zeno"],
+      "extensions": [".zeno"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "zeno",
+      "scopeName": "source.zeno",
+      "path": "./syntaxes/zeno.tmLanguage.json"
+    }]
+  }
+}

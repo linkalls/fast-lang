@@ -222,7 +222,7 @@ func (is *ImportStatement) String() string {
 		}
 		result += imp
 	}
-	result += "} from \"" + is.Module + "\";"
+	result += "} from \"" + is.Module + "\""
 	return result
 }
 
@@ -360,9 +360,9 @@ type ReturnStatement struct {
 func (rs *ReturnStatement) statementNode() {}
 func (rs *ReturnStatement) String() string {
 	if rs.Value != nil {
-		return "return " + rs.Value.String() + ";"
+		return "return " + rs.Value.String() + ""
 	}
-	return "return;"
+	return "return"
 }
 
 // WhileStatement represents while loops

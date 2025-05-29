@@ -49,7 +49,7 @@ func runGeneratorTest(t *testing.T, inputZeno string, expectedGoSubstrings []str
 }
 
 func TestGenerateLetDeclarations(t *testing.T) {
-	runGeneratorTest(t, "let x = 10;", []string{
+	runGeneratorTest(t, "let x = 10", []string{
 		"package main",
 		"import (",
 		"\"fmt\"",
@@ -60,13 +60,13 @@ func TestGenerateLetDeclarations(t *testing.T) {
 }
 
 func TestGenerateStringLiterals(t *testing.T) {
-	runGeneratorTest(t, `let s = "Hello World";`, []string{
+	runGeneratorTest(t, `let s = "Hello World"`, []string{
 		`var s = "Hello World"`,
 	})
 }
 
 func TestGenerateStructure(t *testing.T) {
-	code := runGeneratorTest(t, "let x = 42;", []string{
+	code := runGeneratorTest(t, "let x = 42", []string{
 		"package main",
 		"func main() {",
 		"var x = 42",
@@ -208,13 +208,13 @@ func TestGenerateBinaryExpressionBasic(t *testing.T) {
 
 // Test std/io module functions
 func TestGenerateStdIoFunctions(t *testing.T) {
-	zenoCode := `import { println } from "std/fmt";
-import { readFile, writeFile } from "std/io";
+	zenoCode := `import { println } from "std/fmt"
+import { readFile, writeFile } from "std/io"
 	
 fn main() {
-    writeFile("test.txt", "hello");
-    let content = readFile("test.txt");
-    println(content);
+    writeFile("test.txt", "hello")
+    let content = readFile("test.txt")
+    println(content)
 }`
 
 	runGeneratorTest(t, zenoCode, []string{
@@ -241,7 +241,7 @@ fn main() {
 func TestGenerateStdIoImportValidation(t *testing.T) {
 	// Test that std/io functions require proper imports
 	zenoCode := `fn main() {
-    writeFile("test.txt", "hello");
+    writeFile("test.txt", "hello")
 }`
 
 	l := lexer.New(zenoCode)

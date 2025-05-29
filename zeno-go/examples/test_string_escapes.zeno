@@ -1,36 +1,36 @@
 // Test string escape sequences with std/io
-import { println } from "std/fmt";
-import { writeFile, readFile } from "std/io";
+import { println } from "std/fmt"
+import { writeFile, readFile } from "std/io"
 
 fn main() {
-    println("Testing string escape sequences:");
+    println("Testing string escape sequences:")
     
     // Test various escape sequences
-    let multiLineText = "Line 1\nLine 2\nLine 3";
-    let tabbedText = "Column1\tColumn2\tColumn3";
-    let quotedText = "He said \"Hello, World!\"";
-    let pathText = "C:\\Users\\zeno\\file.txt";
+    let multiLineText = "Line 1\nLine 2\nLine 3"
+    let tabbedText = "Column1\tColumn2\tColumn3"
+    let quotedText = "He said \"Hello, World!\""
+    let pathText = "C:\\Users\\zeno\\file.txt"
     
     // Write to files
-    writeFile("multiline.txt", multiLineText);
-    writeFile("tabbed.txt", tabbedText);
-    writeFile("quoted.txt", quotedText);
-    writeFile("path.txt", pathText);
+    writeFile("multiline.txt", multiLineText)
+    writeFile("tabbed.txt", tabbedText)
+    writeFile("quoted.txt", quotedText)
+    writeFile("path.txt", pathText)
     
     // Read back and verify
-    println("Multi-line content:");
-    let readMulti = readFile("multiline.txt");
-    println(readMulti);
+    println("Multi-line content:")
+    let readMulti = readFile("multiline.txt")
+    println(readMulti)
     
-    println("Tabbed content:");
-    let readTabbed = readFile("tabbed.txt");
-    println(readTabbed);
+    println("Tabbed content:")
+    let readTabbed = readFile("tabbed.txt")
+    println(readTabbed)
     
-    println("Quoted content:");
-    let readQuoted = readFile("quoted.txt");
-    println(readQuoted);
+    println("Quoted content:")
+    let readQuoted = readFile("quoted.txt")
+    println(readQuoted)
     
-    println("Path content:");
-    let readPath = readFile("path.txt");
-    println(readPath);
+    println("Path content:")
+    let readPath = readFile("path.txt")
+    println(readPath)
 }

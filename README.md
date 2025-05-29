@@ -12,7 +12,7 @@ Zeno is a programming language with TypeScript-inspired import syntax, designed 
 - **Unused Function Detection**: Compile-time detection of unused functions (excludes main and public functions)
 - **Import Validation**: Ensures functions are properly imported before use
 - **Binary Expressions**: Mathematical operations (+, -, *, /, %) and comparison operators
-- **Type Annotations**: Optional type annotations `let x: int = 42;`
+- **Type Annotations**: Optional type annotations `let x: int = 42`
 - **Multilingual Error Messages**: `-jp` flag for Japanese error messages alongside English
 - **Variable Declarations**: `let` keyword for variable declarations
 - **Enhanced CLI**: `run` and `compile` subcommands with improved error handling
@@ -51,24 +51,24 @@ import {add, multiply} from "./math_utils"  // User-defined module
 
 ### Variable Declarations
 ```zeno
-let x = 42;           // Variable declaration
-let y: int = 100;     // With type annotation
+let x = 42           // Variable declaration
+let y: int = 100     // With type annotation
 ```
 
 ### Function Definitions
 ```zeno
 // Private function (default)
 fn helper(x: int): int {
-    return x * 2;
+    return x * 2
 }
 
 // Public function (accessible from other modules)
 pub fn add(a: int, b: int): int {
-    return a + b;
+    return a + b
 }
 
 pub fn greet(name: string) {
-    println("Hello, " + name);
+    println("Hello, " + name)
 }
 ```
 
@@ -76,76 +76,76 @@ pub fn greet(name: string) {
 ```zeno
 // math_utils.zeno
 pub fn add(a: int, b: int): int {
-    return a + b;
+    return a + b
 }
 
 pub fn multiply(a: int, b: int): int {
-    return a * b;
+    return a * b
 }
 
 // main.zeno
-import {println} from "std/fmt";
-import {add, multiply} from "./math_utils";
+import {println} from "std/fmt"
+import {add, multiply} from "./math_utils"
 
 fn main() {
-    let result = add(10, multiply(3, 4));
-    println(result);
+    let result = add(10, multiply(3, 4))
+    println(result)
 }
 ```
 
 ### Function Calls
 ```zeno
-let result = add(10, 20);
-greet("World");
+let result = add(10, 20)
+greet("World")
 ```
 
 ### Main Function
 ```zeno
 fn main() {
     // Program entry point
-    println("Hello, World!");
+    println("Hello, World!")
 }
 ```
 
 ### Binary Expressions
 ```zeno
-let sum = 10 + 20;
-let product = 5 * 6;
-let comparison = x > y;
+let sum = 10 + 20
+let product = 5 * 6
+let comparison = x > y
 ```
 
 ### Print Statements
 ```zeno
-print("Hello");       // Requires: import {print} from "std/fmt";
-println("World");     // Requires: import {println} from "std/fmt";
+print("Hello")       // Requires: import {print} from "std/fmt"
+println("World")     // Requires: import {println} from "std/fmt"
 ```
 
 ## Example Program
 
 ### Basic Program
 ```zeno
-import {println} from "std/fmt";
+import {println} from "std/fmt"
 
-let x = 10;
-let y = 20;
-let result = x + y;
-println(result);
+let x = 10
+let y = 20
+let result = x + y
+println(result)
 ```
 
 ### Using User-defined Modules
 ```zeno
 // math_utils.zeno
 pub fn calculate(a: int, b: int): int {
-    return (a + b) * 2;
+    return (a + b) * 2
 }
 
 // main.zeno  
-import {println} from "std/fmt";
-import {calculate} from "./math_utils";
+import {println} from "std/fmt"
+import {calculate} from "./math_utils"
 
 fn main() {
-    let result = calculate(5, 10);
-    println(result);  // Output: 30
+    let result = calculate(5, 10)
+    println(result)  // Output: 30
 }
 ```
 
@@ -170,36 +170,36 @@ func main() {
 
 ### Unused Variable Detection
 ```zeno
-import {println} from "std/fmt";
+import {println} from "std/fmt"
 
-let x = 10;
-let unused = 42;  // Error: Unused variables found: unused
-let y = x + 5;
-println(y);
+let x = 10
+let unused = 42  // Error: Unused variables found: unused
+let y = x + 5
+println(y)
 ```
 
 ### Unused Function Detection
 ```zeno
-import {println} from "std/fmt";
+import {println} from "std/fmt"
 
 fn main() {
-    println("Hello");
+    println("Hello")
 }
 
 fn unused_helper() {  // Error: Unused functions found: unused_helper
-    return 42;
+    return 42
 }
 
 pub fn public_fn() {  // Public functions are never considered unused
-    return "public";
+    return "public"
 }
 ```
 
 ### Import Validation
 ```zeno
 // Error: println is not imported from std/fmt
-let x = 10;
-println(x);  // Missing import statement
+let x = 10
+println(x)  // Missing import statement
 ```
 
 ## Standard Library

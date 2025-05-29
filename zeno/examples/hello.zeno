@@ -1,4 +1,0 @@
-// Example: Hello World
-println("Hello, Zeno!")
-print("This is Zeno speaking.")
-println(" Nice to meet you.")

@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	input := "let y = x > 3;"
+	input := "let y = x > 3"
 	l := lexer.New(input)
 	p := parser.New(l)
 
