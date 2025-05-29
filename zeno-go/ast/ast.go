@@ -157,6 +157,19 @@ func (sl *StringLiteral) String() string {
 	return "\"" + sl.Value + "\""
 }
 
+// BooleanLiteral represents boolean literals
+type BooleanLiteral struct {
+	Value bool
+}
+
+func (bl *BooleanLiteral) expressionNode() {}
+func (bl *BooleanLiteral) String() string {
+	if bl.Value {
+		return "true"
+	}
+	return "false"
+}
+
 // Identifier represents identifiers
 type Identifier struct {
 	Value string
@@ -290,6 +303,49 @@ func (fc *FunctionCall) String() string {
 	}
 	result += ")"
 	return result
+}
+
+// Block represents a block of statements
+type Block struct {
+	Statements []Statement
+}
+
+func (b *Block) String() string {
+	result := "{\n"
+	for _, stmt := range b.Statements {
+		result += "  " + stmt.String() + "\n"
+	}
+	result += "}"
+	return result
+}
+
+// IfStatement represents if/else if/else statements
+type IfStatement struct {
+	Condition     Expression
+	ThenBlock     *Block
+	ElseIfClauses []ElseIfClause
+	ElseBlock     *Block // Optional else block
+}
+
+func (ifs *IfStatement) statementNode() {}
+func (ifs *IfStatement) String() string {
+	result := "if " + ifs.Condition.String() + " " + ifs.ThenBlock.String()
+
+	for _, elseif := range ifs.ElseIfClauses {
+		result += " else if " + elseif.Condition.String() + " " + elseif.Block.String()
+	}
+
+	if ifs.ElseBlock != nil {
+		result += " else " + ifs.ElseBlock.String()
+	}
+
+	return result
+}
+
+// ElseIfClause represents an else if clause
+type ElseIfClause struct {
+	Condition Expression
+	Block     *Block
 }
 
 // ReturnStatement represents return statements

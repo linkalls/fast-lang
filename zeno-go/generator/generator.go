@@ -50,8 +50,7 @@ func NewGenerator() *Generator {
 
 	// Define standard library mappings
 	g.standardLibs["std/fmt"] = map[string]string{
-		"print":   "fmt.Print",
-		"println": "fmt.Println",
+		// Note: print and println are built-in functions, not imported
 	}
 
 	g.standardLibs["std/io"] = map[string]string{
@@ -94,10 +93,10 @@ func (g *Generator) generateProgram(program *ast.Program) (string, error) {
 	// Generate package and imports
 	builder.WriteString("package main\n\n")
 	builder.WriteString("import (\n")
-	
+
 	// Add required imports based on used standard library functions
 	requiredImports := make(map[string]bool)
-	
+
 	// Check which standard library modules are imported
 	for module := range g.imports {
 		if strings.HasPrefix(module, "std/") {
@@ -108,17 +107,17 @@ func (g *Generator) generateProgram(program *ast.Program) (string, error) {
 			}
 		}
 	}
-	
+
 	// Always include fmt for basic functionality
 	requiredImports["fmt"] = true
-	
+
 	// Generate import statements
 	for imp := range requiredImports {
 		builder.WriteString(fmt.Sprintf("\t\"%s\"\n", imp))
 	}
-	
+
 	builder.WriteString(")\n\n")
-	
+
 	// Generate std/io helper functions if needed
 	if _, hasStdIo := g.imports["std/io"]; hasStdIo {
 		g.generateStdIoHelpers(&builder)
@@ -349,6 +348,39 @@ func (g *Generator) generateStatement(stmt ast.Statement, builder *strings.Build
 
 		builder.WriteString(")\n")
 
+	case *ast.IfStatement:
+		builder.WriteString(indent(indentLevel))
+		builder.WriteString("if ")
+		if err := g.generateExpression(s.Condition, builder); err != nil {
+			return err
+		}
+		builder.WriteString(" ")
+		if err := g.generateBlock(s.ThenBlock, builder, indentLevel); err != nil {
+			return err
+		}
+
+		// Generate else if clauses
+		for _, elseIf := range s.ElseIfClauses {
+			builder.WriteString(" else if ")
+			if err := g.generateExpression(elseIf.Condition, builder); err != nil {
+				return err
+			}
+			builder.WriteString(" ")
+			if err := g.generateBlock(elseIf.Block, builder, indentLevel); err != nil {
+				return err
+			}
+		}
+
+		// Generate else clause if present
+		if s.ElseBlock != nil {
+			builder.WriteString(" else ")
+			if err := g.generateBlock(s.ElseBlock, builder, indentLevel); err != nil {
+				return err
+			}
+		}
+
+		builder.WriteString("\n")
+
 	default:
 		return GenerationError{Message: fmt.Sprintf("Unsupported statement type: %T", stmt)}
 	}
@@ -366,6 +398,13 @@ func (g *Generator) generateExpression(expr ast.Expression, builder *strings.Bui
 		// Escape the string for Go
 		escaped := strconv.Quote(e.Value)
 		builder.WriteString(escaped)
+
+	case *ast.BooleanLiteral:
+		if e.Value {
+			builder.WriteString("true")
+		} else {
+			builder.WriteString("false")
+		}
 
 	case *ast.Identifier:
 		builder.WriteString(e.Value)
@@ -388,7 +427,7 @@ func (g *Generator) generateExpression(expr ast.Expression, builder *strings.Bui
 		if err := g.validateImports(e.Name); err != nil {
 			return err
 		}
-		
+
 		// First check if this is a function defined in the current file
 		functionName := e.Name
 		if goFuncName, exists := g.declaredFns[functionName]; exists {
@@ -409,7 +448,7 @@ func (g *Generator) generateExpression(expr ast.Expression, builder *strings.Bui
 					break
 				}
 			}
-			
+
 			// Check if this is a standard library function
 			for module, functions := range g.standardLibs {
 				if goFuncName, exists := functions[functionName]; exists {
@@ -443,6 +482,24 @@ func (g *Generator) generateExpression(expr ast.Expression, builder *strings.Bui
 		return GenerationError{Message: fmt.Sprintf("Unsupported expression type: %T", expr)}
 	}
 
+	return nil
+}
+
+// generateBlock generates Go code for a block of statements
+func (g *Generator) generateBlock(block *ast.Block, builder *strings.Builder, indentLevel int) error {
+	if block == nil {
+		builder.WriteString("{}\n")
+		return nil
+	}
+
+	builder.WriteString("{\n")
+	for _, stmt := range block.Statements {
+		if err := g.generateStatement(stmt, builder, indentLevel+1); err != nil {
+			return err
+		}
+	}
+	builder.WriteString(indent(indentLevel))
+	builder.WriteString("}")
 	return nil
 }
 
@@ -487,6 +544,24 @@ func (g *Generator) collectImportsAndDeclarations(stmt ast.Statement) error {
 		for _, arg := range s.Arguments {
 			g.markVariableUsage(arg)
 		}
+	case *ast.IfStatement:
+		// Mark variables used in if condition
+		g.markVariableUsage(s.Condition)
+		// Process then block
+		if s.ThenBlock != nil {
+			g.markBlockUsage(s.ThenBlock)
+		}
+		// Process else if clauses
+		for _, elseIf := range s.ElseIfClauses {
+			g.markVariableUsage(elseIf.Condition)
+			if elseIf.Block != nil {
+				g.markBlockUsage(elseIf.Block)
+			}
+		}
+		// Process else block
+		if s.ElseBlock != nil {
+			g.markBlockUsage(s.ElseBlock)
+		}
 	}
 	return nil
 }
@@ -496,6 +571,12 @@ func (g *Generator) markVariableUsage(expr ast.Expression) {
 	switch e := expr.(type) {
 	case *ast.Identifier:
 		g.usedVars[e.Value] = true
+	case *ast.BooleanLiteral:
+		// Boolean literals don't reference variables, nothing to do
+	case *ast.IntegerLiteral:
+		// Integer literals don't reference variables, nothing to do
+	case *ast.StringLiteral:
+		// String literals don't reference variables, nothing to do
 	case *ast.BinaryExpression:
 		g.markVariableUsage(e.Left)
 		g.markVariableUsage(e.Right)
@@ -508,6 +589,16 @@ func (g *Generator) markVariableUsage(expr ast.Expression) {
 		for _, arg := range e.Arguments {
 			g.markVariableUsage(arg)
 		}
+	}
+}
+
+// markBlockUsage marks variables as used when referenced in a block of statements
+func (g *Generator) markBlockUsage(block *ast.Block) {
+	if block == nil {
+		return
+	}
+	for _, stmt := range block.Statements {
+		g.collectImportsAndDeclarations(stmt)
 	}
 }
 
@@ -572,6 +663,16 @@ func (g *Generator) isPublicFunction(fnName string) bool {
 
 // validateImports checks that all used functions are properly imported
 func (g *Generator) validateImports(functionName string) error {
+	// Built-in functions don't need to be imported
+	builtinFunctions := map[string]bool{
+		"print":   true,
+		"println": true,
+	}
+	
+	if builtinFunctions[functionName] {
+		return nil
+	}
+
 	// Check if function is a standard library function
 	for module, functions := range g.standardLibs {
 		if _, exists := functions[functionName]; exists {
@@ -696,7 +797,7 @@ func (g *Generator) generateStdIoHelpers(builder *strings.Builder) {
 	builder.WriteString("\t}\n")
 	builder.WriteString("\treturn string(data)\n")
 	builder.WriteString("}\n\n")
-	
+
 	// Generate writeFile helper function
 	builder.WriteString("func writeFile(filename string, content string) {\n")
 	builder.WriteString("\terr := os.WriteFile(filename, []byte(content), 0644)\n")

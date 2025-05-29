@@ -220,7 +220,7 @@ fn main() {
     let content = readFile("test.txt");
     println(content);
 }`
-	
+
 	runGeneratorTest(t, zenoCode, []string{
 		"package main",
 		"import (",
@@ -247,7 +247,7 @@ func TestGenerateStdIoImportValidation(t *testing.T) {
 	zenoCode := `fn main() {
     writeFile("test.txt", "hello");
 }`
-	
+
 	l := lexer.New(zenoCode)
 	p := parser.New(l)
 	program := p.ParseProgram()
@@ -261,7 +261,7 @@ func TestGenerateStdIoImportValidation(t *testing.T) {
 		t.Error("Expected error for using writeFile without import, but got none")
 		return
 	}
-	
+
 	errorMsg := err.Error()
 	if !strings.Contains(errorMsg, "writeFile") || !strings.Contains(errorMsg, "not imported") {
 		t.Errorf("Expected import validation error for writeFile, got: %v", err)

@@ -25,7 +25,11 @@ var precedences = map[token.TokenType]int{
 	token.EQ:       LOWEST,
 	token.NOT_EQ:   LOWEST,
 	token.LT:       LOWEST,
+	token.LTE:      LOWEST,
 	token.GT:       LOWEST,
+	token.GTE:      LOWEST,
+	token.AND:      LOWEST,
+	token.OR:       LOWEST,
 	token.PLUS:     SUM,
 	token.MINUS:    SUM,
 	token.DIVIDE:   PRODUCT,
@@ -111,6 +115,8 @@ func New(l *lexer.Lexer) *Parser {
 		token.IDENT:  p.parseIdentifier,
 		token.INT:    p.parseIntegerLiteral,
 		token.STRING: p.parseStringLiteral,
+		token.TRUE:   p.parseBooleanLiteral,
+		token.FALSE:  p.parseBooleanLiteral,
 	}
 
 	// Initialize infix parse functions
@@ -119,6 +125,14 @@ func New(l *lexer.Lexer) *Parser {
 		token.MINUS:    p.parseInfixExpression,
 		token.MULTIPLY: p.parseInfixExpression,
 		token.DIVIDE:   p.parseInfixExpression,
+		token.EQ:       p.parseInfixExpression,
+		token.NOT_EQ:   p.parseInfixExpression,
+		token.LT:       p.parseInfixExpression,
+		token.LTE:      p.parseInfixExpression,
+		token.GT:       p.parseInfixExpression,
+		token.GTE:      p.parseInfixExpression,
+		token.AND:      p.parseInfixExpression,
+		token.OR:       p.parseInfixExpression,
 		token.LPAREN:   p.parseFunctionCall,
 	}
 
@@ -182,6 +196,8 @@ func (p *Parser) parseStatement() ast.Statement {
 		return p.parsePrintStatement(false)
 	case token.PRINTLN:
 		return p.parsePrintStatement(true)
+	case token.IF:
+		return p.parseIfStatement()
 	case token.PUB:
 		return p.parsePublicDeclaration()
 	case token.FN:
@@ -279,6 +295,10 @@ func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
 }
 
 func (p *Parser) parseExpression(precedence int) ast.Expression {
+	return p.parseExpressionUntil(precedence, token.SEMICOLON)
+}
+
+func (p *Parser) parseExpressionUntil(precedence int, until token.TokenType) ast.Expression {
 	prefix := p.prefixParseFns[p.currentToken.Type]
 	if prefix == nil {
 		p.noPrefixParseFnError(p.currentToken.Type)
@@ -287,7 +307,7 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 
 	leftExp := prefix()
 
-	for p.peekToken.Type != token.SEMICOLON && precedence < p.peekPrecedence() {
+	for p.peekToken.Type != until && p.peekToken.Type != token.EOF && precedence < p.peekPrecedence() {
 		infix := p.infixParseFns[p.peekToken.Type]
 		if infix == nil {
 			return leftExp
@@ -322,6 +342,10 @@ func (p *Parser) parseStringLiteral() ast.Expression {
 	// Process escape sequences in the string literal
 	processedValue := lexer.ProcessStringLiteral(p.currentToken.Literal)
 	return &ast.StringLiteral{Value: processedValue}
+}
+
+func (p *Parser) parseBooleanLiteral() ast.Expression {
+	return &ast.BooleanLiteral{Value: p.currentToken.Type == token.TRUE}
 }
 
 func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression {
@@ -397,10 +421,6 @@ func (p *Parser) parseImportStatement() *ast.ImportStatement {
 		module = module[1 : len(module)-1]
 	}
 
-	if !p.expectPeek(token.SEMICOLON) {
-		return nil
-	}
-
 	return &ast.ImportStatement{
 		Imports: imports,
 		Module:  module,
@@ -440,10 +460,6 @@ func (p *Parser) parsePrintStatement(newline bool) *ast.PrintStatement {
 		if !p.expectPeek(token.RPAREN) {
 			return nil
 		}
-	}
-
-	if !p.expectPeek(token.SEMICOLON) {
-		return nil
 	}
 
 	return &ast.PrintStatement{
@@ -619,4 +635,100 @@ func (p *Parser) parseCallArguments() []ast.Expression {
 	}
 
 	return args
+}
+
+// parseIfStatement parses if/else if/else statements
+func (p *Parser) parseIfStatement() *ast.IfStatement {
+	// Current token is IF
+	p.nextToken() // move to condition
+
+	condition := p.parseExpressionUntil(LOWEST, token.LBRACE)
+	if condition == nil {
+		return nil
+	}
+
+	// After parsing expression, we should be at the end of condition
+	// expectPeek will move us to LBRACE
+	if !p.expectPeek(token.LBRACE) {
+		return nil
+	}
+
+	thenBlock := p.parseBlockStatement()
+	if thenBlock == nil {
+		return nil
+	}
+
+	var elseIfClauses []ast.ElseIfClause
+	var elseBlock *ast.Block
+
+	// Check for else if and else clauses
+	for p.peekToken.Type == token.ELSE {
+		p.nextToken() // consume current token (RBRACE from previous block)
+		p.nextToken() // consume ELSE
+
+		if p.currentToken.Type == token.IF {
+			// This is an else if clause
+			p.nextToken() // consume IF, move to condition
+
+			elseIfCondition := p.parseExpressionUntil(LOWEST, token.LBRACE)
+			if elseIfCondition == nil {
+				return nil
+			}
+
+			if !p.expectPeek(token.LBRACE) {
+				return nil
+			}
+
+			elseIfBlock := p.parseBlockStatement()
+			if elseIfBlock == nil {
+				return nil
+			}
+
+			elseIfClauses = append(elseIfClauses, ast.ElseIfClause{
+				Condition: elseIfCondition,
+				Block:     elseIfBlock,
+			})
+		} else if p.currentToken.Type == token.LBRACE {
+			// This is an else clause
+			elseBlock = p.parseBlockStatement()
+			if elseBlock == nil {
+				return nil
+			}
+			break // else block is the last one
+		} else {
+			// else must be followed by if or {
+			p.errors = append(p.errors, fmt.Sprintf("expected 'if' or '{' after 'else', got %s", p.currentToken.Type))
+			return nil
+		}
+	}
+
+	return &ast.IfStatement{
+		Condition:     condition,
+		ThenBlock:     thenBlock,
+		ElseIfClauses: elseIfClauses,
+		ElseBlock:     elseBlock,
+	}
+}
+
+// parseBlockStatement parses a block statement
+func (p *Parser) parseBlockStatement() *ast.Block {
+	// Current token is LBRACE
+	block := &ast.Block{}
+
+	p.nextToken() // move past LBRACE
+
+	for p.currentToken.Type != token.RBRACE && p.currentToken.Type != token.EOF {
+		stmt := p.parseStatement()
+		if stmt != nil {
+			block.Statements = append(block.Statements, stmt)
+		}
+		p.nextToken()
+	}
+
+	if p.currentToken.Type != token.RBRACE {
+		p.errors = append(p.errors, "expected '}' to close block")
+		return nil
+	}
+
+	return block
 }
