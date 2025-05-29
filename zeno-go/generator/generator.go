@@ -10,6 +10,7 @@ import (
 	"github.com/linkalls/zeno-lang/ast"
 	"github.com/linkalls/zeno-lang/lexer"
 	"github.com/linkalls/zeno-lang/parser"
+	"github.com/linkalls/zeno-lang/types"
 )
 
 // GenerationError represents errors during code generation
@@ -33,6 +34,7 @@ type Generator struct {
 	standardLibs map[string]map[string]string // module -> function -> go equivalent
 	currentDir   string                       // directory of the current file being compiled
 	showJapanese bool                         // whether to show Japanese error messages
+	symbolTable  *types.SymbolTable           // symbol table for type inference
 }
 
 // NewGenerator creates a new generator instance
@@ -46,6 +48,7 @@ func NewGenerator() *Generator {
 		userModules:  make(map[string]map[string]string),
 		moduleASTs:   make(map[string]*ast.Program),
 		standardLibs: make(map[string]map[string]string),
+		symbolTable:  types.NewSymbolTable(nil),
 	}
 
 	// Define standard library mappings
@@ -351,7 +354,7 @@ func (g *Generator) generateStatement(stmt ast.Statement, builder *strings.Build
 	case *ast.IfStatement:
 		builder.WriteString(indent(indentLevel))
 		builder.WriteString("if ")
-		if err := g.generateExpression(s.Condition, builder); err != nil {
+		if err := g.generateCondition(s.Condition, builder); err != nil {
 			return err
 		}
 		builder.WriteString(" ")
@@ -362,7 +365,7 @@ func (g *Generator) generateStatement(stmt ast.Statement, builder *strings.Build
 		// Generate else if clauses
 		for _, elseIf := range s.ElseIfClauses {
 			builder.WriteString(" else if ")
-			if err := g.generateExpression(elseIf.Condition, builder); err != nil {
+			if err := g.generateCondition(elseIf.Condition, builder); err != nil {
 				return err
 			}
 			builder.WriteString(" ")
@@ -483,6 +486,35 @@ func (g *Generator) generateExpression(expr ast.Expression, builder *strings.Bui
 	}
 
 	return nil
+}
+
+// generateCondition generates Go code for a condition expression, ensuring it's boolean
+func (g *Generator) generateCondition(expr ast.Expression, builder *strings.Builder) error {
+	switch expr.(type) {
+	case *ast.BooleanLiteral:
+		// Already boolean, generate as-is
+		return g.generateExpression(expr, builder)
+	case *ast.BinaryExpression:
+		// Binary expressions like comparisons are already boolean
+		return g.generateExpression(expr, builder)
+	case *ast.IntegerLiteral:
+		// Convert integer literals to boolean: value != 0
+		builder.WriteString("(")
+		if err := g.generateExpression(expr, builder); err != nil {
+			return err
+		}
+		builder.WriteString(" != 0)")
+		return nil
+	case *ast.Identifier:
+		// For identifiers, generate as-is and let Go handle the boolean conversion
+		// If it's already bool, Go will use it directly
+		// If it's numeric, Go will give a compile error which is better than runtime error
+		return g.generateExpression(expr, builder)
+	default:
+		// For other expressions, generate as-is first
+		// Let Go's type system handle the boolean conversion
+		return g.generateExpression(expr, builder)
+	}
 }
 
 // generateBlock generates Go code for a block of statements

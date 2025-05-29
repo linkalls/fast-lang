@@ -13,23 +13,25 @@ import (
 // Precedence levels for operator precedence parsing
 const (
 	_ int = iota
-	LOWEST
-	SUM     // +, -
-	PRODUCT // *, /
-	PREFIX  // -X or !X
-	CALL    // myFunction(X)
+	LOWEST      // 最低の優先度
+	EQUALS      // ==, != 演算子の優先度
+	COMPARISON  // <, >, <=, >= 演算子の優先度
+	SUM         // +, - 演算子の優先度
+	PRODUCT     // *, / 演算子の優先度
+	PREFIX      // -X or !X
+	CALL        // myFunction(X)
 )
 
 // precedences maps tokens to their precedence
 var precedences = map[token.TokenType]int{
-	token.EQ:       LOWEST,
-	token.NOT_EQ:   LOWEST,
-	token.LT:       LOWEST,
-	token.LTE:      LOWEST,
-	token.GT:       LOWEST,
-	token.GTE:      LOWEST,
-	token.AND:      LOWEST,
-	token.OR:       LOWEST,
+	token.EQ:       EQUALS,
+	token.NOT_EQ:   EQUALS,
+	token.LT:       COMPARISON,
+	token.LTE:      COMPARISON,
+	token.GT:       COMPARISON,
+	token.GTE:      COMPARISON,
+	token.AND:      EQUALS,    // 論理AND
+	token.OR:       EQUALS,    // 論理OR
 	token.PLUS:     SUM,
 	token.MINUS:    SUM,
 	token.DIVIDE:   PRODUCT,
@@ -37,7 +39,7 @@ var precedences = map[token.TokenType]int{
 	token.LPAREN:   CALL,
 }
 
-// Parser represents the parser
+// Parser holds the state for parsing tokens into an AST
 type Parser struct {
 	l *lexer.Lexer
 
@@ -48,6 +50,8 @@ type Parser struct {
 
 	prefixParseFns map[token.TokenType]prefixParseFn
 	infixParseFns  map[token.TokenType]infixParseFn
+
+	currentUntil token.TokenType  // 追加: 現在のuntilトークンを保持
 }
 
 type (
@@ -106,8 +110,9 @@ func (p *Parser) curPrecedence() int {
 // New creates a new parser instance
 func New(l *lexer.Lexer) *Parser {
 	p := &Parser{
-		l:      l,
-		errors: []string{},
+		l:            l,
+		errors:       []string{},
+		currentUntil: token.SEMICOLON, // 追加: デフォルトのuntilトークン
 	}
 
 	// Initialize prefix parse functions
@@ -299,25 +304,28 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 }
 
 func (p *Parser) parseExpressionUntil(precedence int, until token.TokenType) ast.Expression {
+	// 保存してuntilコンテキストを設定
+	prev := p.currentUntil
+	p.currentUntil = until
+	defer func() { p.currentUntil = prev }()
+
 	prefix := p.prefixParseFns[p.currentToken.Type]
 	if prefix == nil {
 		p.noPrefixParseFnError(p.currentToken.Type)
 		return nil
 	}
 
-	leftExp := prefix()
+	left := prefix()
 
 	for p.peekToken.Type != until && p.peekToken.Type != token.EOF && precedence < p.peekPrecedence() {
 		infix := p.infixParseFns[p.peekToken.Type]
 		if infix == nil {
-			return leftExp
+			return left
 		}
-
 		p.nextToken()
-		leftExp = infix(leftExp)
+		left = infix(left)
 	}
-
-	return leftExp
+	return left
 }
 
 func (p *Parser) parseIdentifier() ast.Expression {
@@ -354,9 +362,10 @@ func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression {
 		Operator: tokenToBinaryOperator(p.currentToken.Literal),
 	}
 
-	precedence := p.curPrecedence()
+	prec := p.curPrecedence()
 	p.nextToken()
-	expr.Right = p.parseExpression(precedence)
+	// 右辺をcurrentUntilコンテキストでパース
+	expr.Right = p.parseExpressionUntil(prec, p.currentUntil)
 
 	return expr
 }
