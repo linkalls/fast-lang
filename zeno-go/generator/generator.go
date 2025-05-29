@@ -138,7 +138,7 @@ func (g *Generator) generateProgram(program *ast.Program) (string, error) {
 			} else {
 				functionDefs = append(functionDefs, funcDef)
 			}
-		} else if _, ok := stmt.(*ast.ImportStatement);!ok {
+		} else if _, ok := stmt.(*ast.ImportStatement); !ok {
 			// Skip import statements as they're handled above
 			otherStmts = append(otherStmts, stmt)
 		}
