@@ -248,26 +248,29 @@ fn main() {
 
 ```bash
 cd zeno-go
-go build ./cmd/zeno-compiler
+go build ./cmd/zeno
 ```
 
 ### Enhanced CLI Usage
 
 ```bash
 # Run a Zeno file (compile and execute)
-./zeno-compiler run example.zeno
+./zeno run example.zeno
 
 # Compile a Zeno file to Go (output to stdout)
-./zeno-compiler compile example.zeno
+./zeno compile example.zeno
+
+# Compile a Zeno file to binary (output to file)
+./zeno build example.zeno
 
 # Show Japanese error messages as well
-./zeno-compiler run -jp example.zeno
-./zeno-compiler compile -jp example.zeno
+./zeno run -jp example.zeno
+./zeno compile -jp example.zeno
 
 # Show help
-./zeno-compiler --help
-./zeno-compiler run --help
-./zeno-compiler compile --help
+./zeno --help
+./zeno run --help
+./zeno compile --help
 ```
 
 ### Example Files
@@ -297,7 +300,7 @@ Contributions are welcome! Please see `TODO.md` for areas where you can help.
 ### Development Process
 
 1. Clone the project
-2. Build compiler with `go build ./cmd/zeno-compiler`
+2. Build compiler with `go build ./cmd/zeno`
 3. Test with provided test files
 4. Implement new features or improvements
 
