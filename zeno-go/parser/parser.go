@@ -319,7 +319,9 @@ func (p *Parser) parseIntegerLiteral() ast.Expression {
 }
 
 func (p *Parser) parseStringLiteral() ast.Expression {
-	return &ast.StringLiteral{Value: p.currentToken.Literal}
+	// Process escape sequences in the string literal
+	processedValue := lexer.ProcessStringLiteral(p.currentToken.Literal)
+	return &ast.StringLiteral{Value: processedValue}
 }
 
 func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression {

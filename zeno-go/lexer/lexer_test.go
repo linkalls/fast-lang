@@ -372,3 +372,25 @@ func TestComparisonOperators(t *testing.T) {
 		}
 	}
 }
+
+func TestProcessStringLiteral(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"hello", "hello"},
+		{"hello\\nworld", "hello\nworld"},
+		{"tab\\there", "tab\there"},
+		{"quote\\\"test", "quote\"test"},
+		{"backslash\\\\test", "backslash\\test"},
+		{"mixed\\n\\t\\\"content\\\\", "mixed\n\t\"content\\"},
+	}
+
+	for i, tt := range tests {
+		result := ProcessStringLiteral(tt.input)
+		if result != tt.expected {
+			t.Errorf("test[%d] - ProcessStringLiteral wrong. input=%q, expected=%q, got=%q",
+				i, tt.input, tt.expected, result)
+		}
+	}
+}

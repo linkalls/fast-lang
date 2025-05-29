@@ -54,6 +54,11 @@ func NewGenerator() *Generator {
 		"println": "fmt.Println",
 	}
 
+	g.standardLibs["std/io"] = map[string]string{
+		"readFile":  "readFile",
+		"writeFile": "writeFile",
+	}
+
 	return g
 }
 
@@ -89,8 +94,35 @@ func (g *Generator) generateProgram(program *ast.Program) (string, error) {
 	// Generate package and imports
 	builder.WriteString("package main\n\n")
 	builder.WriteString("import (\n")
-	builder.WriteString("\t\"fmt\"\n")
+	
+	// Add required imports based on used standard library functions
+	requiredImports := make(map[string]bool)
+	
+	// Check which standard library modules are imported
+	for module := range g.imports {
+		if strings.HasPrefix(module, "std/") {
+			if module == "std/fmt" {
+				requiredImports["fmt"] = true
+			} else if module == "std/io" {
+				requiredImports["os"] = true
+			}
+		}
+	}
+	
+	// Always include fmt for basic functionality
+	requiredImports["fmt"] = true
+	
+	// Generate import statements
+	for imp := range requiredImports {
+		builder.WriteString(fmt.Sprintf("\t\"%s\"\n", imp))
+	}
+	
 	builder.WriteString(")\n\n")
+	
+	// Generate std/io helper functions if needed
+	if _, hasStdIo := g.imports["std/io"]; hasStdIo {
+		g.generateStdIoHelpers(&builder)
+	}
 
 	// Separate function definitions from other statements
 	var functionDefs []*ast.FunctionDefinition
@@ -352,6 +384,11 @@ func (g *Generator) generateExpression(expr ast.Expression, builder *strings.Bui
 		builder.WriteString(")")
 
 	case *ast.FunctionCall:
+		// Validate that the function is properly imported if it's a standard library function
+		if err := g.validateImports(e.Name); err != nil {
+			return err
+		}
+		
 		// First check if this is a function defined in the current file
 		functionName := e.Name
 		if goFuncName, exists := g.declaredFns[functionName]; exists {
@@ -365,6 +402,22 @@ func (g *Generator) generateExpression(expr ast.Expression, builder *strings.Bui
 						for _, importedFunc := range importedFuncs {
 							if importedFunc == functionName {
 								functionName = goFuncName // Use the Go-style function name
+								break
+							}
+						}
+					}
+					break
+				}
+			}
+			
+			// Check if this is a standard library function
+			for module, functions := range g.standardLibs {
+				if goFuncName, exists := functions[functionName]; exists {
+					// Check if this function is imported from this module
+					if importedFuncs, imported := g.imports[module]; imported {
+						for _, importedFunc := range importedFuncs {
+							if importedFunc == functionName {
+								functionName = goFuncName // Use the Go standard library mapping
 								break
 							}
 						}
@@ -629,4 +682,26 @@ func (g *Generator) processUserModule(modulePath string, importedFunctions []str
 	g.userModules[modulePath] = publicFunctions
 	g.moduleASTs[modulePath] = program
 	return nil
+}
+
+// generateStdIoHelpers generates helper functions for std/io module
+func (g *Generator) generateStdIoHelpers(builder *strings.Builder) {
+	// Generate readFile helper function
+	builder.WriteString("// std/io helper functions\n")
+	builder.WriteString("func readFile(filename string) string {\n")
+	builder.WriteString("\tdata, err := os.ReadFile(filename)\n")
+	builder.WriteString("\tif err != nil {\n")
+	builder.WriteString("\t\tfmt.Printf(\"Error reading file %s: %v\\n\", filename, err)\n")
+	builder.WriteString("\t\treturn \"\"\n")
+	builder.WriteString("\t}\n")
+	builder.WriteString("\treturn string(data)\n")
+	builder.WriteString("}\n\n")
+	
+	// Generate writeFile helper function
+	builder.WriteString("func writeFile(filename string, content string) {\n")
+	builder.WriteString("\terr := os.WriteFile(filename, []byte(content), 0644)\n")
+	builder.WriteString("\tif err != nil {\n")
+	builder.WriteString("\t\tfmt.Printf(\"Error writing file %s: %v\\n\", filename, err)\n")
+	builder.WriteString("\t}\n")
+	builder.WriteString("}\n\n")
 }

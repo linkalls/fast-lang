@@ -209,3 +209,61 @@ func TestGenerateBinaryExpressionBasic(t *testing.T) {
 		t.Errorf("Generated code should contain binary expression, got:\n%s", code)
 	}
 }
+
+// Test std/io module functions
+func TestGenerateStdIoFunctions(t *testing.T) {
+	zenoCode := `import { println } from "std/fmt";
+import { readFile, writeFile } from "std/io";
+	
+fn main() {
+    writeFile("test.txt", "hello");
+    let content = readFile("test.txt");
+    println(content);
+}`
+	
+	runGeneratorTest(t, zenoCode, []string{
+		"package main",
+		"import (",
+		"\"fmt\"",
+		"\"os\"",
+		")",
+		"// std/io helper functions",
+		"func readFile(filename string) string {",
+		"data, err := os.ReadFile(filename)",
+		"return string(data)",
+		"}",
+		"func writeFile(filename string, content string) {",
+		"err := os.WriteFile(filename, []byte(content), 0644)",
+		"}",
+		"func main() {",
+		"writeFile(\"test.txt\", \"hello\")",
+		"var content = readFile(\"test.txt\")",
+		"}",
+	})
+}
+
+func TestGenerateStdIoImportValidation(t *testing.T) {
+	// Test that std/io functions require proper imports
+	zenoCode := `fn main() {
+    writeFile("test.txt", "hello");
+}`
+	
+	l := lexer.New(zenoCode)
+	p := parser.New(l)
+	program := p.ParseProgram()
+
+	if len(p.Errors()) > 0 {
+		t.Fatalf("Parser errors: %v", p.Errors())
+	}
+
+	_, err := Generate(program)
+	if err == nil {
+		t.Error("Expected error for using writeFile without import, but got none")
+		return
+	}
+	
+	errorMsg := err.Error()
+	if !strings.Contains(errorMsg, "writeFile") || !strings.Contains(errorMsg, "not imported") {
+		t.Errorf("Expected import validation error for writeFile, got: %v", err)
+	}
+}

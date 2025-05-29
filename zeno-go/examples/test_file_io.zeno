@@ -1,0 +1,15 @@
+// Test file for std/io module
+import { println } from "std/fmt";
+import { readFile, writeFile } from "std/io";
+
+fn main() {
+    // Test writing to a file
+    let content = "Hello, World!\nThis is a test file.";
+    writeFile("test_output.txt", content);
+    println("File written successfully!");
+    
+    // Test reading from a file
+    let readContent = readFile("test_output.txt");
+    println("File content:");
+    println(readContent);
+}

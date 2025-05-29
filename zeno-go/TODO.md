@@ -14,6 +14,8 @@ This file lists planned features and improvements for the Zeno programming langu
 - [x] **Generator Restructure:** Struct-based generator with scope tracking
 - [x] **Variable Usage Analysis:** Two-pass compilation for proper validation
 - [x] **Standard Library Definition:** Basic std/fmt module with print/println
+- [x] **std/io Module:** File I/O operations with readFile/writeFile functions
+- [x] **String Escape Sequences:** Proper handling of \n, \t, \", \\ in string literals
 - [x] **Public Function Declarations:** `pub fn` keyword for function visibility
 - [x] **User-defined Module System:** Relative path imports (`./`, `../`) with proper path resolution
 - [x] **Unused Function Detection:** Compile-time detection (excludes main and public functions)

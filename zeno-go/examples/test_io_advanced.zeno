@@ -1,0 +1,42 @@
+// Advanced test for std/io module with better examples
+import { println, print } from "std/fmt";
+import { readFile, writeFile } from "std/io";
+
+fn main() {
+    println("=== Zeno std/io Module Test ===");
+    
+    // Test 1: Write a simple text file
+    println("Test 1: Writing a simple text file...");
+    let simpleContent = "Hello from Zeno!";
+    writeFile("simple.txt", simpleContent);
+    println("✓ simple.txt created");
+    
+    // Test 2: Write a multi-line configuration file
+    println("Test 2: Writing a configuration file...");
+    let configContent = "# Zeno Configuration\nname=MyApp\nversion=1.0\ndebug=true";
+    writeFile("config.txt", configContent);
+    println("✓ config.txt created");
+    
+    // Test 3: Read and display files
+    println("Test 3: Reading files...");
+    
+    print("simple.txt content: ");
+    let simpleRead = readFile("simple.txt");
+    println(simpleRead);
+    
+    println("config.txt content:");
+    let configRead = readFile("config.txt");
+    println(configRead);
+    
+    // Test 4: Write JSON-like data
+    println("Test 4: Writing structured data...");
+    let jsonData = "{\"name\": \"Zeno\", \"type\": \"programming-language\"}";
+    writeFile("data.json", jsonData);
+    println("✓ data.json created");
+    
+    let jsonRead = readFile("data.json");
+    print("data.json content: ");
+    println(jsonRead);
+    
+    println("=== All tests completed! ===");
+}

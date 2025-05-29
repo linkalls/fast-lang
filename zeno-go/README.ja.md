@@ -169,6 +169,40 @@ println(x);  // import文がない場合はエラー
 現在サポートされているモジュール:
 
 - `std/fmt`: `print`, `println` 関数
+- `std/io`: `readFile`, `writeFile` 関数
+
+### std/io モジュールの使用法
+
+`std/io` モジュールは、シンプルで直感的なファイルI/O操作を提供します：
+
+```zeno
+import { println } from "std/fmt";
+import { readFile, writeFile } from "std/io";
+
+fn main() {
+    // ファイルにコンテンツを書き込み
+    let content = "こんにちは、Zeno!\nテストファイルです。";
+    writeFile("example.txt", content);
+    println("ファイルが正常に書き込まれました！");
+    
+    // ファイルからコンテンツを読み込み
+    let fileContent = readFile("example.txt");
+    println("ファイルの内容:");
+    println(fileContent);
+    
+    // 構造化データの書き込み
+    let jsonData = "{\"name\": \"Zeno\", \"version\": \"1.0\"}";
+    writeFile("config.json", jsonData);
+    
+    let configData = readFile("config.json");
+    println("設定: ", configData);
+}
+```
+
+#### std/io 関数
+
+- `writeFile(filename: string, content: string)`: 自動エラーハンドリング付きでファイルにコンテンツを書き込み
+- `readFile(filename: string): string`: ファイル内容を読み込んで文字列として返却、エラー時は空文字列を返却
 
 ## 実装されている機能
 

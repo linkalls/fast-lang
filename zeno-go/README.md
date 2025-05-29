@@ -208,6 +208,40 @@ println(x);  // Missing import statement
 Currently supported modules:
 
 - `std/fmt`: `print`, `println` functions
+- `std/io`: `readFile`, `writeFile` functions
+
+### std/io Module Usage
+
+The `std/io` module provides simple and intuitive file I/O operations:
+
+```zeno
+import { println } from "std/fmt";
+import { readFile, writeFile } from "std/io";
+
+fn main() {
+    // Write content to a file
+    let content = "Hello, Zeno!\nThis is a test file.";
+    writeFile("example.txt", content);
+    println("File written successfully!");
+    
+    // Read content from a file
+    let fileContent = readFile("example.txt");
+    println("File content:");
+    println(fileContent);
+    
+    // Write structured data
+    let jsonData = "{\"name\": \"Zeno\", \"version\": \"1.0\"}";
+    writeFile("config.json", jsonData);
+    
+    let configData = readFile("config.json");
+    println("Config: ", configData);
+}
+```
+
+#### std/io Functions
+
+- `writeFile(filename: string, content: string)`: Writes content to a file with automatic error handling
+- `readFile(filename: string): string`: Reads file content and returns it as a string, returns empty string on error
 
 ## Using the Zeno Compiler
 
