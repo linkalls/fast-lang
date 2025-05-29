@@ -94,14 +94,14 @@ func tokenToBinaryOperator(literal string) ast.BinaryOperator {
 }
 
 func (p *Parser) peekPrecedence() int {
-	if prec, ok := precedences[p.peekToken.Type] ok {
+	if prec, ok := precedences[p.peekToken.Type]; ok {
 		return prec
 	}
 	return LOWEST
 }
 
 func (p *Parser) curPrecedence() int {
-	if prec, ok := precedences[p.currentToken.Type] ok {
+	if prec, ok := precedences[p.currentToken.Type]; ok {
 		return prec
 	}
 	return LOWEST

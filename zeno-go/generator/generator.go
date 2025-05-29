@@ -88,7 +88,7 @@ func (g *Generator) generateProgram(program *ast.Program) (string, error) {
 
 	// First pass: collect imports and declarations
 	for _, stmt := range program.Statements {
-		if err := g.collectImportsAndDeclarations(stmt) err != nil {
+		if err := g.collectImportsAndDeclarations(stmt); err != nil {
 			return "", err
 		}
 	}
@@ -122,7 +122,7 @@ func (g *Generator) generateProgram(program *ast.Program) (string, error) {
 	builder.WriteString(")\n\n")
 
 	// Generate std/io helper functions if needed
-	if _, hasStdIo := g.imports["std/io"] hasStdIo {
+	if _, hasStdIo := g.imports["std/io"]; hasStdIo {
 		g.generateStdIoHelpers(&builder)
 	}
 
@@ -132,13 +132,13 @@ func (g *Generator) generateProgram(program *ast.Program) (string, error) {
 	var mainFunc *ast.FunctionDefinition
 
 	for _, stmt := range program.Statements {
-		if funcDef, ok := stmt.(*ast.FunctionDefinition) ok {
+		if funcDef, ok := stmt.(*ast.FunctionDefinition); ok {
 			if funcDef.Name == "main" {
 				mainFunc = funcDef
 			} else {
 				functionDefs = append(functionDefs, funcDef)
 			}
-		} else if _, ok := stmt.(*ast.ImportStatement) !ok {
+		} else if _, ok := stmt.(*ast.ImportStatement);!ok {
 			// Skip import statements as they're handled above
 			otherStmts = append(otherStmts, stmt)
 		}
@@ -146,13 +146,13 @@ func (g *Generator) generateProgram(program *ast.Program) (string, error) {
 
 	// Generate imported user module functions first
 	for modulePath, moduleAST := range g.moduleASTs {
-		if importedFuncs, exists := g.imports[modulePath] exists {
+		if importedFuncs, exists := g.imports[modulePath]; exists {
 			for _, stmt := range moduleAST.Statements {
-				if funcDef, ok := stmt.(*ast.FunctionDefinition) ok && funcDef.IsPublic {
+				if funcDef, ok := stmt.(*ast.FunctionDefinition); ok && funcDef.IsPublic {
 					// Check if this function is actually imported
 					for _, importedFunc := range importedFuncs {
 						if importedFunc == funcDef.Name {
-							if err := g.generateStatement(funcDef, &builder, 0) err != nil {
+							if err := g.generateStatement(funcDef, &builder, 0); err != nil {
 								return "", err
 							}
 							builder.WriteString("\n")
@@ -166,7 +166,7 @@ func (g *Generator) generateProgram(program *ast.Program) (string, error) {
 
 	// Generate function definitions at top level
 	for _, funcDef := range functionDefs {
-		if err := g.generateStatement(funcDef, &builder, 0) err != nil {
+		if err := g.generateStatement(funcDef, &builder, 0); err != nil {
 			return "", err
 		}
 		builder.WriteString("\n")
@@ -177,14 +177,14 @@ func (g *Generator) generateProgram(program *ast.Program) (string, error) {
 	if mainFunc != nil {
 		// User defined main function - use its body
 		for _, bodyStmt := range mainFunc.Body {
-			if err := g.generateStatement(bodyStmt, &builder, 1) err != nil {
+			if err := g.generateStatement(bodyStmt, &builder, 1); err != nil {
 				return "", err
 			}
 		}
 	} else if len(otherStmts) > 0 {
 		// No user-defined main, but there are other statements - wrap them in main
 		for _, stmt := range otherStmts {
-			if err := g.generateStatement(stmt, &builder, 1) err != nil {
+			if err := g.generateStatement(stmt, &builder, 1); err != nil {
 				return "", err
 			}
 		}
@@ -193,12 +193,12 @@ func (g *Generator) generateProgram(program *ast.Program) (string, error) {
 	builder.WriteString("}\n")
 
 	// Check for unused variables
-	if err := g.checkUnusedVariables() err != nil {
+	if err := g.checkUnusedVariables(); err != nil {
 		return "", err
 	}
 
 	// Check for unused functions
-	if err := g.checkUnusedFunctions() err != nil {
+	if err := g.checkUnusedFunctions(); err != nil {
 		return "", err
 	}
 
@@ -256,7 +256,7 @@ func (g *Generator) generateStatement(stmt ast.Statement, builder *strings.Build
 		}
 
 		builder.WriteString(" = ")
-		if err := g.generateExpression(s.ValueExpression, builder) err != nil {
+		if err := g.generateExpression(s.ValueExpression, builder); err != nil {
 			return err
 		}
 		builder.WriteString("\n")
@@ -270,7 +270,7 @@ func (g *Generator) generateStatement(stmt ast.Statement, builder *strings.Build
 		builder.WriteString(indent(indentLevel))
 		builder.WriteString(s.Name)
 		builder.WriteString(" = ")
-		if err := g.generateExpression(s.Value, builder) err != nil {
+		if err := g.generateExpression(s.Value, builder); err != nil {
 			return err
 		}
 		builder.WriteString("\n")
@@ -318,7 +318,7 @@ func (g *Generator) generateStatement(stmt ast.Statement, builder *strings.Build
 
 		// Generate function body
 		for _, bodyStmt := range s.Body {
-			if err := g.generateStatement(bodyStmt, builder, indentLevel+1) err != nil {
+			if err := g.generateStatement(bodyStmt, builder, indentLevel+1); err != nil {
 				return err
 			}
 		}
@@ -331,7 +331,7 @@ func (g *Generator) generateStatement(stmt ast.Statement, builder *strings.Build
 		builder.WriteString("return")
 		if s.Value != nil {
 			builder.WriteString(" ")
-			if err := g.generateExpression(s.Value, builder) err != nil {
+			if err := g.generateExpression(s.Value, builder); err != nil {
 				return err
 			}
 		}
@@ -339,7 +339,7 @@ func (g *Generator) generateStatement(stmt ast.Statement, builder *strings.Build
 
 	case *ast.ExpressionStatement:
 		builder.WriteString(indent(indentLevel))
-		if err := g.generateExpression(s.Expression, builder) err != nil {
+		if err := g.generateExpression(s.Expression, builder); err != nil {
 			return err
 		}
 		builder.WriteString("\n")
@@ -348,13 +348,13 @@ func (g *Generator) generateStatement(stmt ast.Statement, builder *strings.Build
 		builder.WriteString(indent(indentLevel))
 		if s.Newline {
 			// Validate that println is imported
-			if err := g.validateImports("println") err != nil {
+			if err := g.validateImports("println"); err != nil {
 				return err
 			}
 			builder.WriteString("fmt.Println(")
 		} else {
 			// Validate that print is imported
-			if err := g.validateImports("print") err != nil {
+			if err := g.validateImports("print"); err != nil {
 				return err
 			}
 			builder.WriteString("fmt.Print(")
@@ -364,7 +364,7 @@ func (g *Generator) generateStatement(stmt ast.Statement, builder *strings.Build
 			if i > 0 {
 				builder.WriteString(", ")
 			}
-			if err := g.generateExpression(arg, builder) err != nil {
+			if err := g.generateExpression(arg, builder); err != nil {
 				return err
 			}
 		}
@@ -374,22 +374,22 @@ func (g *Generator) generateStatement(stmt ast.Statement, builder *strings.Build
 	case *ast.IfStatement:
 		builder.WriteString(indent(indentLevel))
 		builder.WriteString("if ")
-		if err := g.generateCondition(s.Condition, builder) err != nil {
+		if err := g.generateCondition(s.Condition, builder); err != nil {
 			return err
 		}
 		builder.WriteString(" ")
-		if err := g.generateBlock(s.ThenBlock, builder, indentLevel) err != nil {
+		if err := g.generateBlock(s.ThenBlock, builder, indentLevel); err != nil {
 			return err
 		}
 
 		// Generate else if clauses
 		for _, elseIf := range s.ElseIfClauses {
 			builder.WriteString(" else if ")
-			if err := g.generateCondition(elseIf.Condition, builder) err != nil {
+			if err := g.generateCondition(elseIf.Condition, builder); err != nil {
 				return err
 			}
 			builder.WriteString(" ")
-			if err := g.generateBlock(elseIf.Block, builder, indentLevel) err != nil {
+			if err := g.generateBlock(elseIf.Block, builder, indentLevel); err != nil {
 				return err
 			}
 		}
@@ -397,7 +397,7 @@ func (g *Generator) generateStatement(stmt ast.Statement, builder *strings.Build
 		// Generate else clause if present
 		if s.ElseBlock != nil {
 			builder.WriteString(" else ")
-			if err := g.generateBlock(s.ElseBlock, builder, indentLevel) err != nil {
+			if err := g.generateBlock(s.ElseBlock, builder, indentLevel); err != nil {
 				return err
 			}
 		}
@@ -407,11 +407,11 @@ func (g *Generator) generateStatement(stmt ast.Statement, builder *strings.Build
 	case *ast.WhileStatement:
 		builder.WriteString(indent(indentLevel))
 		builder.WriteString("for ")
-		if err := g.generateCondition(s.Condition, builder) err != nil {
+		if err := g.generateCondition(s.Condition, builder); err != nil {
 			return err
 		}
 		builder.WriteString(" ")
-		if err := g.generateBlock(s.Block, builder, indentLevel) err != nil {
+		if err := g.generateBlock(s.Block, builder, indentLevel); err != nil {
 			return err
 		}
 		builder.WriteString("\n")
@@ -446,33 +446,33 @@ func (g *Generator) generateExpression(expr ast.Expression, builder *strings.Bui
 
 	case *ast.BinaryExpression:
 		builder.WriteString("(")
-		if err := g.generateExpression(e.Left, builder) err != nil {
+		if err := g.generateExpression(e.Left, builder); err != nil {
 			return err
 		}
 		builder.WriteString(" ")
 		builder.WriteString(e.Operator.String())
 		builder.WriteString(" ")
-		if err := g.generateExpression(e.Right, builder) err != nil {
+		if err := g.generateExpression(e.Right, builder); err != nil {
 			return err
 		}
 		builder.WriteString(")")
 
 	case *ast.FunctionCall:
 		// Validate that the function is properly imported if it's a standard library function
-		if err := g.validateImports(e.Name) err != nil {
+		if err := g.validateImports(e.Name); err != nil {
 			return err
 		}
 
 		// First check if this is a function defined in the current file
 		functionName := e.Name
-		if goFuncName, exists := g.declaredFns[functionName] exists {
+		if goFuncName, exists := g.declaredFns[functionName]; exists {
 			functionName = goFuncName
 		} else {
 			// Check if this is a function from a user-defined module
 			for module, functions := range g.userModules {
-				if goFuncName, exists := functions[functionName] exists {
+				if goFuncName, exists := functions[functionName]; exists {
 					// Check if this function is imported from this module
-					if importedFuncs, imported := g.imports[module] imported {
+					if importedFuncs, imported := g.imports[module]; imported {
 						for _, importedFunc := range importedFuncs {
 							if importedFunc == functionName {
 								functionName = goFuncName // Use the Go-style function name
@@ -486,9 +486,9 @@ func (g *Generator) generateExpression(expr ast.Expression, builder *strings.Bui
 
 			// Check if this is a standard library function
 			for module, functions := range g.standardLibs {
-				if goFuncName, exists := functions[functionName] exists {
+				if goFuncName, exists := functions[functionName]; exists {
 					// Check if this function is imported from this module
-					if importedFuncs, imported := g.imports[module] imported {
+					if importedFuncs, imported := g.imports[module]; imported {
 						for _, importedFunc := range importedFuncs {
 							if importedFunc == functionName {
 								functionName = goFuncName // Use the Go standard library mapping
@@ -507,7 +507,7 @@ func (g *Generator) generateExpression(expr ast.Expression, builder *strings.Bui
 			if i > 0 {
 				builder.WriteString(", ")
 			}
-			if err := g.generateExpression(arg, builder) err != nil {
+			if err := g.generateExpression(arg, builder); err != nil {
 				return err
 			}
 		}
@@ -532,7 +532,7 @@ func (g *Generator) generateCondition(expr ast.Expression, builder *strings.Buil
 	case *ast.IntegerLiteral:
 		// Convert integer literals to boolean: value != 0
 		builder.WriteString("(")
-		if err := g.generateExpression(expr, builder) err != nil {
+		if err := g.generateExpression(expr, builder); err != nil {
 			return err
 		}
 		builder.WriteString(" != 0)")
@@ -551,7 +551,7 @@ func (g *Generator) generateCondition(expr ast.Expression, builder *strings.Buil
 		case types.IntType:
 			// Integer variables need != 0 conversion
 			builder.WriteString("(")
-			if err := g.generateExpression(expr, builder) err != nil {
+			if err := g.generateExpression(expr, builder); err != nil {
 				return err
 			}
 			builder.WriteString(" != 0)")
@@ -559,7 +559,7 @@ func (g *Generator) generateCondition(expr ast.Expression, builder *strings.Buil
 		case types.StringType:
 			// String variables need != "" conversion
 			builder.WriteString("(")
-			if err := g.generateExpression(expr, builder) err != nil {
+			if err := g.generateExpression(expr, builder); err != nil {
 				return err
 			}
 			builder.WriteString(" != \"\")")
@@ -567,7 +567,7 @@ func (g *Generator) generateCondition(expr ast.Expression, builder *strings.Buil
 		case types.FloatType:
 			// Float variables need != 0.0 conversion
 			builder.WriteString("(")
-			if err := g.generateExpression(expr, builder) err != nil {
+			if err := g.generateExpression(expr, builder); err != nil {
 				return err
 			}
 			builder.WriteString(" != 0.0)")
@@ -592,7 +592,7 @@ func (g *Generator) generateBlock(block *ast.Block, builder *strings.Builder, in
 
 	builder.WriteString("{\n")
 	for _, stmt := range block.Statements {
-		if err := g.generateStatement(stmt, builder, indentLevel+1) err != nil {
+		if err := g.generateStatement(stmt, builder, indentLevel+1); err != nil {
 			return err
 		}
 	}
@@ -608,7 +608,7 @@ func (g *Generator) collectImportsAndDeclarations(stmt ast.Statement) error {
 		g.imports[s.Module] = s.Imports
 		// If it's a user module (starts with "./" or "../"), process it
 		if strings.HasPrefix(s.Module, "./") || strings.HasPrefix(s.Module, "../") {
-			if err := g.processUserModule(s.Module, s.Imports) err != nil {
+			if err := g.processUserModule(s.Module, s.Imports); err != nil {
 				return err
 			}
 		}
@@ -772,7 +772,7 @@ func (g *Generator) checkUnusedFunctions() error {
 
 // isPublicFunction checks if a function name indicates it's public (Go function name starts with uppercase)
 func (g *Generator) isPublicFunction(fnName string) bool {
-	if goFuncName, exists := g.declaredFns[fnName] exists {
+	if goFuncName, exists := g.declaredFns[fnName]; exists {
 		if len(goFuncName) == 0 {
 			return false
 		}
@@ -795,9 +795,9 @@ func (g *Generator) validateImports(functionName string) error {
 
 	// Check if function is a standard library function
 	for module, functions := range g.standardLibs {
-		if _, exists := functions[functionName] exists {
+		if _, exists := functions[functionName]; exists {
 			// Check if this function is imported from the correct module
-			if importedFuncs, imported := g.imports[module] imported {
+			if importedFuncs, imported := g.imports[module]; imported {
 				for _, importedFunc := range importedFuncs {
 					if importedFunc == functionName {
 						return nil // Function is properly imported
@@ -814,9 +814,9 @@ func (g *Generator) validateImports(functionName string) error {
 
 	// Check if function is from a user-defined module
 	for module, functions := range g.userModules {
-		if _, exists := functions[functionName] exists {
+		if _, exists := functions[functionName]; exists {
 			// Check if this function is imported from the correct module
-			if importedFuncs, imported := g.imports[module] imported {
+			if importedFuncs, imported := g.imports[module]; imported {
 				for _, importedFunc := range importedFuncs {
 					if importedFunc == functionName {
 						return nil // Function is properly imported
@@ -878,7 +878,7 @@ func (g *Generator) processUserModule(modulePath string, importedFunctions []str
 	// Extract public functions from the module
 	publicFunctions := make(map[string]string)
 	for _, stmt := range program.Statements {
-		if funcDef, ok := stmt.(*ast.FunctionDefinition) ok && funcDef.IsPublic {
+		if funcDef, ok := stmt.(*ast.FunctionDefinition); ok && funcDef.IsPublic {
 			// Convert function name to Go convention (uppercase first letter)
 			goFuncName := funcDef.Name
 			if len(goFuncName) > 0 {
@@ -890,7 +890,7 @@ func (g *Generator) processUserModule(modulePath string, importedFunctions []str
 
 	// Validate that all imported functions exist and are public
 	for _, importedFunc := range importedFunctions {
-		if _, exists := publicFunctions[importedFunc] !exists {
+		if _, exists := publicFunctions[importedFunc]; !exists {
 			msg := fmt.Sprintf("Function '%s' is not exported from module '%s'", importedFunc, modulePath)
 			if g.showJapanese {
 				msg += fmt.Sprintf(" / 関数 '%s' はモジュール '%s' からexportされていません", importedFunc, modulePath)
@@ -938,7 +938,7 @@ func (g *Generator) inferType(expr ast.Expression) types.Type {
 		return types.StringType
 	case *ast.Identifier:
 		// Look up the identifier in the symbol table
-		if symbol, ok := g.symbolTable.Resolve(e.Value) ok {
+		if symbol, ok := g.symbolTable.Resolve(e.Value); ok {
 			return symbol.Type
 		}
 		// Default to int if not found (for compatibility)
@@ -982,7 +982,7 @@ func (g *Generator) registerVariableWithType(name string, varType types.Type) {
 
 // getVariableType gets the type of a variable from the symbol table
 func (g *Generator) getVariableType(name string) types.Type {
-	if symbol, ok := g.symbolTable.Resolve(name) ok {
+	if symbol, ok := g.symbolTable.Resolve(name); ok {
 		fmt.Printf("DEBUG: Found variable %s with type %v in symbol table\n", name, symbol.Type)
 		return symbol.Type
 	}

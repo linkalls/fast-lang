@@ -254,7 +254,7 @@ func buildExecutable(filename string) error {
 
 	fmt.Printf("✅ Successfully built executable: %s\n", executableName)
 	fmt.Printf("   You can run it with: ./%s\n", executableName)
-	
+
 	// Clean up the temporary Go file
 	err = os.Remove(goFile)
 	if err != nil {
