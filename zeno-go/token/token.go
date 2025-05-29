@@ -24,6 +24,7 @@ const (
 	// Keywords
 	LET      TokenType = "LET"
 	MUT      TokenType = "MUT"
+	PUB      TokenType = "PUB"
 	IMPORT   TokenType = "IMPORT"
 	FROM     TokenType = "FROM"
 	IF       TokenType = "IF"
@@ -73,6 +74,7 @@ const (
 var keywords = map[string]TokenType{
 	"let":      LET,
 	"mut":      MUT,
+	"pub":      PUB,
 	"import":   IMPORT,
 	"from":     FROM,
 	"if":       IF,

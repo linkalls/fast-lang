@@ -249,6 +249,7 @@ type FunctionDefinition struct {
 	Parameters []Parameter
 	ReturnType *string // Optional return type
 	Body       []Statement
+	IsPublic   bool    // Whether the function is public (pub fn)
 }
 
 func (fd *FunctionDefinition) statementNode() {}

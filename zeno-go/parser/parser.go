@@ -182,6 +182,8 @@ func (p *Parser) parseStatement() ast.Statement {
 		return p.parsePrintStatement(false)
 	case token.PRINTLN:
 		return p.parsePrintStatement(true)
+	case token.PUB:
+		return p.parsePublicDeclaration()
 	case token.FN:
 		return p.parseFunctionDefinition()
 	case token.RETURN:
@@ -457,6 +459,23 @@ func (p *Parser) isValidImportIdentifier() bool {
 
 // parseFunctionDefinition parses function definitions
 func (p *Parser) parseFunctionDefinition() *ast.FunctionDefinition {
+	return p.parseFunctionDefinitionWithVisibility(false)
+}
+
+// parsePublicDeclaration parses public declarations (pub fn)
+func (p *Parser) parsePublicDeclaration() ast.Statement {
+	// Current token is PUB
+	if p.peekToken.Type != token.FN {
+		p.errors = append(p.errors, "pub can only be used with function definitions")
+		return nil
+	}
+	
+	p.nextToken() // consume PUB, move to FN
+	return p.parseFunctionDefinitionWithVisibility(true)
+}
+
+// parseFunctionDefinitionWithVisibility parses function definitions with optional visibility
+func (p *Parser) parseFunctionDefinitionWithVisibility(isPublic bool) *ast.FunctionDefinition {
 	// Current token is FN
 	if !p.expectPeek(token.IDENT) {
 		return nil
@@ -543,6 +562,7 @@ func (p *Parser) parseFunctionDefinition() *ast.FunctionDefinition {
 		Parameters: parameters,
 		ReturnType: returnType,
 		Body:       body,
+		IsPublic:   isPublic,
 	}
 }
 

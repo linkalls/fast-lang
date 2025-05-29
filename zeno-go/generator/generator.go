@@ -22,6 +22,8 @@ type Generator struct {
 	imports      map[string][]string          // module -> imported identifiers
 	declaredVars map[string]bool              // variable name -> declared
 	usedVars     map[string]bool              // variable name -> used
+	declaredFns  map[string]bool              // function name -> declared
+	usedFns      map[string]bool              // function name -> used
 	standardLibs map[string]map[string]string // module -> function -> go equivalent
 	showJapanese bool                         // whether to show Japanese error messages
 }
@@ -32,6 +34,8 @@ func NewGenerator() *Generator {
 		imports:      make(map[string][]string),
 		declaredVars: make(map[string]bool),
 		usedVars:     make(map[string]bool),
+		declaredFns:  make(map[string]bool),
+		usedFns:      make(map[string]bool),
 		standardLibs: make(map[string]map[string]string),
 	}
 
@@ -129,6 +133,11 @@ func (g *Generator) generateProgram(program *ast.Program) (string, error) {
 		return "", err
 	}
 
+	// Check for unused functions
+	if err := g.checkUnusedFunctions(); err != nil {
+		return "", err
+	}
+
 	return builder.String(), nil
 }
 
@@ -180,7 +189,22 @@ func (g *Generator) generateStatement(stmt ast.Statement, builder *strings.Build
 	case *ast.FunctionDefinition:
 		builder.WriteString(indent(indentLevel))
 		builder.WriteString("func ")
-		builder.WriteString(s.Name)
+		
+		// Handle function visibility - in Go, public functions start with uppercase
+		functionName := s.Name
+		if s.IsPublic {
+			// Make first letter uppercase for public functions
+			if len(functionName) > 0 {
+				functionName = strings.ToUpper(string(functionName[0])) + functionName[1:]
+			}
+		} else {
+			// Make first letter lowercase for private functions (unless it's main)
+			if functionName != "main" && len(functionName) > 0 {
+				functionName = strings.ToLower(string(functionName[0])) + functionName[1:]
+			}
+		}
+		
+		builder.WriteString(functionName)
 		builder.WriteString("(")
 
 		// Generate parameters
@@ -324,8 +348,9 @@ func (g *Generator) collectImportsAndDeclarations(stmt ast.Statement) error {
 			g.markVariableUsage(s.ValueExpression)
 		}
 	case *ast.FunctionDefinition:
-		// Functions don't need variable tracking for now
-		// But we might want to track function bodies in the future
+		// Track function declaration
+		g.declaredFns[s.Name] = true
+		// Process function body
 		for _, bodyStmt := range s.Body {
 			g.collectImportsAndDeclarations(bodyStmt)
 		}
@@ -356,6 +381,8 @@ func (g *Generator) markVariableUsage(expr ast.Expression) {
 	case *ast.UnaryExpression:
 		g.markVariableUsage(e.Right)
 	case *ast.FunctionCall:
+		// Mark function as used
+		g.usedFns[e.Name] = true
 		// Mark variables used in function arguments
 		for _, arg := range e.Arguments {
 			g.markVariableUsage(arg)
@@ -381,6 +408,42 @@ func (g *Generator) checkUnusedVariables() error {
 	}
 
 	return nil
+}
+
+// checkUnusedFunctions returns an error if there are unused functions
+func (g *Generator) checkUnusedFunctions() error {
+	var unusedFns []string
+	for fnName := range g.declaredFns {
+		// Skip main function as it's the entry point
+		if fnName == "main" {
+			continue
+		}
+		// Skip public functions as they might be used externally
+		if g.isPublicFunction(fnName) {
+			continue
+		}
+		if !g.usedFns[fnName] {
+			unusedFns = append(unusedFns, fnName)
+		}
+	}
+
+	if len(unusedFns) > 0 {
+		msg := fmt.Sprintf("Unused functions found: %s", strings.Join(unusedFns, ", "))
+		if g.showJapanese {
+			msg += fmt.Sprintf(" / 未使用の関数があります: %s", strings.Join(unusedFns, ", "))
+		}
+		return GenerationError{Message: msg}
+	}
+
+	return nil
+}
+
+// isPublicFunction checks if a function name indicates it's public (starts with uppercase)
+func (g *Generator) isPublicFunction(fnName string) bool {
+	if len(fnName) == 0 {
+		return false
+	}
+	return fnName[0] >= 'A' && fnName[0] <= 'Z'
 }
 
 // validateImports checks that all used functions are properly imported
