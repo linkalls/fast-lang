@@ -2,6 +2,9 @@ package lexer
 
 import (
 	"github.com/linkalls/zeno-lang/token"
+	"unicode" 
+	"strings" // Added: for strings.Builder and strings.Contains (though Contains might not be used anymore)
+	"strconv" // Added: for strconv.ParseInt
 )
 
 // Lexer represents the lexical analyzer
@@ -166,8 +169,8 @@ func (l *Lexer) NextToken() token.Token {
 	case '*':
 		tok = newToken(token.MULTIPLY, l.ch)
 	case '/':
-		if l.skipComment() {
-			return l.NextToken()
+		if l.skipComment() { 
+			return l.NextToken() 
 		} else {
 			tok = newToken(token.DIVIDE, l.ch)
 		}
@@ -224,7 +227,7 @@ func (l *Lexer) NextToken() token.Token {
 	case '"':
 		str, ok := l.readString()
 		if !ok {
-			tok = newToken(token.ILLEGAL, l.ch)
+			tok = newToken(token.ILLEGAL, l.ch) 
 		} else {
 			tok.Type = token.STRING
 			tok.Literal = str
@@ -236,12 +239,12 @@ func (l *Lexer) NextToken() token.Token {
 		if isLetter(l.ch) {
 			tok.Literal = l.readIdentifier()
 			tok.Type = token.LookupIdent(tok.Literal)
-			return tok // early return to avoid readChar() call
+			return tok 
 		} else if isDigit(l.ch) {
 			tokenType, literal := l.readNumber()
 			tok.Type = tokenType
 			tok.Literal = literal
-			return tok // early return to avoid readChar() call
+			return tok 
 		} else {
 			tok = newToken(token.ILLEGAL, l.ch)
 		}
@@ -251,49 +254,66 @@ func (l *Lexer) NextToken() token.Token {
 	return tok
 }
 
-// newToken creates a new token
 func newToken(tokenType token.TokenType, ch byte) token.Token {
 	return token.Token{Type: tokenType, Literal: string(ch)}
 }
 
-// isLetter checks if the character is a letter
 func isLetter(ch byte) bool {
-	return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch == '_'
+	return unicode.IsLetter(rune(ch)) || ch == '_'
 }
 
-// isDigit checks if the character is a digit
 func isDigit(ch byte) bool {
 	return '0' <= ch && ch <= '9'
 }
 
-// processEscapeSequence processes escape sequences in strings
 func processEscapeSequence(str string) string {
-	result := make([]byte, 0, len(str))
+	var result strings.Builder
+	result.Grow(len(str)) 
 	for i := 0; i < len(str); i++ {
 		if str[i] == '\\' && i+1 < len(str) {
-			switch str[i+1] {
+			i++ 
+			switch str[i] {
 			case 'n':
-				result = append(result, '\n')
+				result.WriteByte('\n')
 			case 't':
-				result = append(result, '\t')
+				result.WriteByte('\t')
 			case 'r':
-				result = append(result, '\r')
+				result.WriteByte('\r')
 			case '\\':
-				result = append(result, '\\')
+				result.WriteByte('\\')
 			case '"':
-				result = append(result, '"')
+				result.WriteByte('"')
+			case 'u':
+				if i+4 < len(str) {
+					val, err := strconv.ParseInt(str[i+1:i+5], 16, 32)
+					if err == nil {
+						result.WriteRune(rune(val))
+						i += 4
+						continue
+					}
+				}
+				result.WriteByte('u')
+			case 'x':
+				if i+2 < len(str) {
+					val, err := strconv.ParseInt(str[i+1:i+3], 16, 32)
+					if err == nil {
+						result.WriteByte(byte(val))
+						i += 2
+						continue
+					}
+				}
+				result.WriteByte('x')
 			default:
-				result = append(result, str[i+1])
+				result.WriteByte('\\')
+				result.WriteByte(str[i])
 			}
-			i++ // skip the escaped character
 		} else {
-			result = append(result, str[i])
+			result.WriteByte(str[i])
 		}
 	}
-	return string(result)
+	return result.String()
 }
 
-// ProcessStringLiteral processes escape sequences in a string literal
 func ProcessStringLiteral(literal string) string {
 	return processEscapeSequence(literal)
 }

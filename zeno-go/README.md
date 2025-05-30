@@ -16,6 +16,7 @@ Zeno is a programming language with TypeScript-inspired import syntax, designed 
 - **Multilingual Error Messages**: `-jp` flag for Japanese error messages alongside English
 - **Variable Declarations**: `let` keyword for variable declarations
 - **Enhanced CLI**: `run` and `compile` subcommands with improved error handling
+- **Built-in Linter**: Static analysis for code quality and conventions.
 
 ## Current Implementation Status
 
@@ -278,6 +279,42 @@ go build ./cmd/zeno
 ./zeno run --help
 ./zeno compile --help
 ```
+
+## Linting Zeno Code
+
+Zeno includes a built-in linter to help you identify potential issues and enforce coding conventions in your Zeno source files.
+
+### Usage
+
+You can run the linter using the `lint` subcommand:
+
+-   **Lint a single file:**
+    ```bash
+    ./zeno lint path/to/yourfile.zeno
+    ```
+-   **Lint all `.zeno` and `.zn` files in a directory (recursively):**
+    ```bash
+    ./zeno lint path/to/your_directory
+    ```
+
+The linter will print any issues found to the console in the format:
+`filepath:line:column: [rule-name] message`
+
+If any linting issues are found, the command will exit with a status code of 1. Otherwise, it will exit with 0.
+
+### Supported Rules (Initial Set)
+
+The linter currently checks for the following:
+
+1.  **`unused-variable`**: Detects variables declared with `let` that are not used. (Rule L1)
+2.  **`unused-function`**: Detects non-public functions (`fn`) that are defined but not used (excludes `main` function). (Rule L2)
+3.  **`function-naming-convention`**: Ensures private functions (`fn`) are `lowerCamelCase` and public functions (`pub fn`) are `UpperCamelCase`. (Rule L3)
+4.  **`variable-naming-convention`**: Ensures variables declared with `let` are in `lowerCamelCase` (ignores `_` identifier). (Rule L4)
+5.  **`unused-import`**: Detects symbols imported from modules that are not used in the current file. (Rule L5)
+
+*(Note: Line and column numbers in issue reports are currently placeholders (0:0) and will be improved with future parser enhancements to include positional information in AST nodes.)*
+
+*(Future enhancements may include a configuration file to customize enabled rules and their parameters.)*
 
 ### Example Files
 

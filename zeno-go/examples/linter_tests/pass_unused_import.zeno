@@ -1,0 +1,8 @@
+import { println, print } from "std/fmt"
+import { readFile } from "std/io"
+
+fn main() {
+    println("Hello")
+    print("World")
+    let _ = readFile("dummy.txt") // Mark readFile as used
+}

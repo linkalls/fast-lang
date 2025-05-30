@@ -1,0 +1,75 @@
+
+
+--- Linting ./examples/linter_tests/fail_unused_function.zeno ---
+Exit Status: 1
+Output:
+=== Zeno Lint Command ===
+Linting file: ./examples/linter_tests/fail_unused_function.zeno
+
+Found 1 linting issue(s):
+/app/zeno-go/examples/linter_tests/fail_unused_function.zeno:1:1: [unused-function] Function 'unusedPrivateHelper' is defined but not used.
+exit status 1
+VERIFICATION: PASSED - Correctly found unused function 'unusedPrivateHelper'.
+
+
+--- Linting ./examples/linter_tests/pass_unused_function.zeno ---
+Exit Status: 0
+Output:
+=== Zeno Lint Command ===
+Linting file: ./examples/linter_tests/pass_unused_function.zeno
+No linting issues found.
+VERIFICATION: PASSED - Correctly found no issues.
+
+
+--- Linting ./examples/linter_tests/fail_variable_naming.zeno ---
+Exit Status: 1
+Output:
+=== Zeno Lint Command ===
+Linting file: ./examples/linter_tests/fail_variable_naming.zeno
+Parser errors in ./examples/linter_tests/fail_variable_naming.zeno:
+  - expected next token to be =, got ILLEGAL instead
+  - no prefix parse function for ILLEGAL found
+  - no prefix parse function for ILLEGAL found
+  - expected next token to be ), got ILLEGAL instead
+  - no prefix parse function for ILLEGAL found
+  - no prefix parse function for ILLEGAL found
+  - no prefix parse function for ) found
+No linting issues found.
+exit status 1
+VERIFICATION: FAILED - Did not find expected variable naming violations or wrong exit status (1).
+
+
+--- Linting ./examples/linter_tests/pass_variable_naming.zeno ---
+Exit Status: 0
+Output:
+=== Zeno Lint Command ===
+Linting file: ./examples/linter_tests/pass_variable_naming.zeno
+No linting issues found.
+VERIFICATION: PASSED - Correctly found no issues.
+
+
+--- Linting ./examples/linter_tests/fail_unused_import.zeno ---
+Exit Status: 1
+Output:
+=== Zeno Lint Command ===
+Linting file: ./examples/linter_tests/fail_unused_import.zeno
+
+Found 3 linting issue(s):
+/app/zeno-go/examples/linter_tests/fail_unused_import.zeno:1:1: [unused-import] Imported symbol 'print' from module 'std/fmt' is not used.
+/app/zeno-go/examples/linter_tests/fail_unused_import.zeno:1:1: [unused-import] Imported symbol 'readFile' from module 'std/io' is not used.
+/app/zeno-go/examples/linter_tests/fail_unused_import.zeno:1:1: [unused-import] Imported symbol 'writeFile' from module 'std/io' is not used.
+exit status 1
+VERIFICATION: PASSED - Correctly found all unused imports.
+
+
+--- Linting ./examples/linter_tests/pass_unused_import.zeno ---
+Exit Status: 1
+Output:
+=== Zeno Lint Command ===
+Linting file: ./examples/linter_tests/pass_unused_import.zeno
+
+Found 2 linting issue(s):
+/app/zeno-go/examples/linter_tests/pass_unused_import.zeno:1:1: [variable-naming-convention] Variable '_' should be in lowerCamelCase (e.g., myVariable).
+/app/zeno-go/examples/linter_tests/pass_unused_import.zeno:1:1: [unused-variable] Variable '_' is declared but not used.
+exit status 1
+VERIFICATION: FAILED - Unexpected issues or exit status (1).

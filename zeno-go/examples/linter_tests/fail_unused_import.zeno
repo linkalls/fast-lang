@@ -1,0 +1,6 @@
+import { println, print } from "std/fmt" // 'print' is unused
+import { readFile, writeFile } from "std/io" // 'readFile' and 'writeFile' are unused
+
+fn main() {
+    println("Hello")
+}

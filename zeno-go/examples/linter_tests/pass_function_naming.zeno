@@ -1,0 +1,10 @@
+// No imports needed
+fn myPrivateFunc() {
+    // This function now does something, or is called, to be considered used.
+    // For simplicity, let's just have it do nothing but be called.
+}
+pub fn MyPublicFunc() {}
+
+fn main() {
+    myPrivateFunc() // Call the private function to mark it as used
+}
