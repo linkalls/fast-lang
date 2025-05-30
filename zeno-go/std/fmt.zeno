@@ -1,0 +1,11 @@
+// Standard Formatting Module
+
+// Prints the given value to the console without a new line.
+pub fn print(value: string) {
+    __native_print(value)
+}
+
+// Prints the given value to the console followed by a new line.
+pub fn println(value: string) {
+    __native_println(value)
+}
