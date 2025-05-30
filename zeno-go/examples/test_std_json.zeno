@@ -1,0 +1,101 @@
+import { println, print } from "std/fmt"
+import { parse, stringify } from "std/json"
+
+fn main() {
+    println("=== Testing std/json module ===")
+
+    // Test Case 1: Basic object parsing and stringifying (round trip)
+    println("
+--- Test Case 1: Object Round Trip ---")
+    let jsonObjectString = "{\"name\": \"Zeno\", \"version\": 0.1, \"isAwesome\": true, \"features\": [\"typed\", \"simple\"], \"details\": null}"
+    print("Original Object JSON: ")
+    println(jsonObjectString)
+
+    let parsedObject = parse(jsonObjectString)
+    
+    let stringifiedObject = stringify(parsedObject)
+    print("Stringified Object JSON: ")
+    println(stringifiedObject)
+    
+    if stringifiedObject == "" && jsonObjectString != "{}" {
+        println("ERROR: Stringify returned empty for a non-empty parsed object!")
+    } else if stringifiedObject == "null" && jsonObjectString != "null" {
+        println("ERROR: Stringify returned JSON null for a non-null parsed object!")
+    } else {
+        // A simple check for now. More robust would be to parse stringifiedObject and compare field by field.
+        // For example, check if some key fields are present.
+        // However, Zeno doesn't have map access or type assertion yet to do this easily from Zeno code.
+        // We will rely on visual inspection of the stringified output for now.
+        println("Object Round Trip: Appears OK (stringified is not unexpectedly empty or null)")
+    }
+
+    // Test Case 2: Basic array parsing and stringifying (round trip)
+    println("
+--- Test Case 2: Array Round Trip ---")
+    let jsonArrayString = "[10, \"hello\", false, null, {\"key\": \"value\"}]"
+    print("Original Array JSON: ")
+    println(jsonArrayString)
+    let parsedArray = parse(jsonArrayString)
+    let stringifiedArray = stringify(parsedArray)
+    print("Stringified Array JSON: ")
+    println(stringifiedArray)
+    if stringifiedArray == "" && jsonArrayString != "[]" {
+         println("ERROR: Stringify returned empty for a non-empty parsed array!")
+    } else if stringifiedArray == "null" && jsonArrayString != "null" {
+        println("ERROR: Stringify returned JSON null for a non-null parsed array!")
+    } else {
+        println("Array Round Trip: Appears OK (stringified is not unexpectedly empty or null)")
+    }
+
+    // Test Case 3: Stringify primitives
+    println("
+--- Test Case 3: Stringify Primitives ---")
+    print("Stringify string \"zeno\": ")
+    println(stringify("zeno")) 
+    
+    print("Stringify int 123: ")
+    println(stringify(123))    
+    
+    print("Stringify float 3.14: ") 
+    println(stringify(3.14))   
+
+    print("Stringify bool true: ")
+    println(stringify(true))   
+    
+    // Test Case 4: Parse Invalid JSON
+    println("
+--- Test Case 4: Parse Invalid JSON ---")
+    let invalidJson = "{\"name\": \"Zeno\", " 
+    print("Parsing invalid JSON: '")
+    print(invalidJson)
+    println("'")
+    let parsedInvalid = parse(invalidJson) 
+    let stringifiedNull = stringify(parsedInvalid) 
+    print("Stringified result of invalid parse: ")
+    println(stringifiedNull) 
+    if stringifiedNull == "null" { 
+        println("Parse Invalid JSON: OK (resulted in JSON null when stringified)")
+    } else {
+        println("ERROR: Invalid JSON parse did not result in null when stringified! Got: " + stringifiedNull)
+    }
+
+    // Test Case 5: Parse valid null
+    println("
+--- Test Case 5: Parse Valid JSON null ---")
+    let nullJson = "null"
+    print("Parsing JSON: '")
+    print(nullJson)
+    println("'")
+    let parsedValidNull = parse(nullJson)
+    let stringifiedValidNull = stringify(parsedValidNull)
+    print("Stringified result of valid null parse: ")
+    println(stringifiedValidNull)
+    if stringifiedValidNull == "null" {
+        println("Parse Valid JSON null: OK")
+    } else {
+        println("ERROR: Valid JSON null parse did not result in null when stringified! Got: " + stringifiedValidNull)
+    }
+    
+    println("
+=== std/json module test completed ===")
+}

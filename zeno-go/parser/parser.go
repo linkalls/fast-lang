@@ -14,6 +14,8 @@ import (
 const (
 	_          int = iota
 	LOWEST         // 最低の優先度
+	LOGICAL_OR     // ||
+	LOGICAL_AND    // &&
 	EQUALS         // ==, != 演算子の優先度
 	COMPARISON     // <, >, <=, >= 演算子の優先度
 	SUM            // +, - 演算子の優先度
@@ -30,8 +32,8 @@ var precedences = map[token.TokenType]int{
 	token.LTE:      COMPARISON,
 	token.GT:       COMPARISON,
 	token.GTE:      COMPARISON,
-	token.AND:      EQUALS, // 論理AND
-	token.OR:       EQUALS, // 論理OR
+	token.AND:      LOGICAL_AND, 
+	token.OR:       LOGICAL_OR,  
 	token.PLUS:     SUM,
 	token.MINUS:    SUM,
 	token.DIVIDE:   PRODUCT,
@@ -106,6 +108,7 @@ func New(l *lexer.Lexer) *Parser {
 		token.FALSE:  p.parseBooleanLiteral,
 		token.BANG:   p.parsePrefixExpression,
 		token.MINUS:  p.parsePrefixExpression,
+		token.FLOAT:  p.parseFloatLiteral,
 	}
 	p.infixParseFns = map[token.TokenType]infixParseFn{
 		token.PLUS:     p.parseInfixExpression,
@@ -253,6 +256,18 @@ func (p *Parser) parseIntegerLiteral() ast.Expression {
 }
 func (p *Parser) parseStringLiteral() ast.Expression { return &ast.StringLiteral{Value: lexer.ProcessStringLiteral(p.currentToken.Literal)} }
 func (p *Parser) parseBooleanLiteral() ast.Expression { return &ast.BooleanLiteral{Value: p.currentToken.Type == token.TRUE} }
+
+func (p *Parser) parseFloatLiteral() ast.Expression {
+	lit := &ast.FloatLiteral{}
+	value, err := strconv.ParseFloat(p.currentToken.Literal, 64)
+	if err != nil {
+		msg := fmt.Sprintf("could not parse %q as float", p.currentToken.Literal)
+		p.errors = append(p.errors, msg)
+		return nil
+	}
+	lit.Value = value
+	return lit
+}
 
 func (p *Parser) parsePrefixExpression() ast.Expression {
 	expr := &ast.UnaryExpression{Operator: tokenToUnaryOperator(p.currentToken.Type)}

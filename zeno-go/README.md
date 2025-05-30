@@ -17,6 +17,7 @@ Zeno is a programming language with TypeScript-inspired import syntax, designed 
 - **Variable Declarations**: `let` keyword for variable declarations
 - **Enhanced CLI**: `run` and `compile` subcommands with improved error handling
 - **Built-in Linter**: Static analysis for code quality and conventions.
+- **Floating-Point Literals**: Support for numbers with decimal points (e.g., `3.14`).
 
 ## Current Implementation Status
 
@@ -36,6 +37,8 @@ Zeno is a programming language with TypeScript-inspired import syntax, designed 
 - Lexical analysis (Lexer)
 - AST construction (Parser)
 - Go code generation (Generator)
+- Standard Library: std/json module (parse, stringify)
+- Floating-point literal parsing and generation
 
 🔲 **Planned:**
 - Control flow (if/else, while, loop)
@@ -54,6 +57,7 @@ import {add, multiply} from "./math_utils"  // User-defined module
 ```zeno
 let x = 42           // Variable declaration
 let y: int = 100     // With type annotation
+let pi = 3.14        // Floating-point number
 ```
 
 ### Function Definitions
@@ -212,7 +216,8 @@ println(x)  // Missing import statement
 Currently supported modules:
 
 - `std/fmt`: `print`, `println` functions
-- `std/io`: `readFile`, `writeFile` functions
+- `std/io`: `readFile`, `writeFile`, `remove`, `pwd` functions
+- `std/json`: JSON parsing (`parse`) and stringification (`stringify`) functions.
 
 ### std/io Module Usage
 
@@ -248,6 +253,44 @@ fn main() {
 - `readFile(filename: string): string`: Reads file content and returns it as a string, returns empty string on error
 - `remove(filename: string): bool`: Removes the specified file or empty directory. Returns `true` on success, `false` on failure.
 - `pwd(): string`: Returns the current working directory as an absolute path. Returns an empty string on failure.
+
+### std/json Module Usage
+
+The `std/json` module provides functions to parse JSON strings into Zeno data structures and stringify Zeno data structures into JSON strings.
+
+```zeno
+import { println, print } from "std/fmt"
+import { parse, stringify } from "std/json"
+
+fn main() {
+    let jsonString = "{\"name\": \"Zeno\", \"version\": 0.2, \"active\": true}"
+    println("Original JSON string: " + jsonString)
+
+    let parsedData = parse(jsonString)
+    // At present, 'parsedData' is of type 'any'. Interacting with its structure
+    // (e.g., accessing map keys or array elements) will depend on future
+    // Zeno language features for type inspection and manipulation of 'any'.
+
+    let reStringified = stringify(parsedData)
+    print("Re-stringified JSON: ")
+    println(reStringified)
+
+    let zenoData = "a simple string" // Example of a Zeno primitive
+    let jsonFromZeno = stringify(zenoData)
+    print("JSON from Zeno string 'a simple string': ")
+    println(jsonFromZeno) // Expected: "\"a simple string\""
+    
+    let invalidJson = "{\"key\": value_not_string}" // Note: value_not_string needs to be a Zeno string for this to be a valid Zeno line
+    let parsedError = parse(invalidJson)
+    print("Result of parsing invalid JSON: ")
+    println(stringify(parsedError)) // Expected: "null"
+}
+```
+
+#### std/json Functions
+
+- `parse(jsonString: string): any`: Parses a JSON string. Returns the parsed data as type `any` (representing a Zeno string, number, boolean, list, or map). Returns Zeno's `nil` equivalent (which stringifies to JSON `null`) on parsing error.
+- `stringify(value: any): string`: Converts a Zeno value (of type `any`, expected to be composed of primitives, lists, or maps) into a JSON string. Returns an empty string `""` on stringification error.
 
 ## Using the Zeno Compiler
 

@@ -1,0 +1,59 @@
+import { println } from "std/fmt"
+
+fn testIfs(a: int, b: int) {
+    // Modified println to work with current Zeno capabilities
+    println("Testing with a and b (values not directly printed in this line)") 
+    // To see values, one would need:
+    // print("a="); println(int_to_string(a)); print("b="); println(int_to_string(b));
+    // Or, if println could take multiple args / types (it can't yet at Zeno level)
+
+    if a > b {
+        println("  Result: a is greater than b")
+    } else if a < b {
+        println("  Result: a is less than b")
+    } else {
+        println("  Result: a is equal to b")
+    }
+
+    if a == 10 {
+        println("  Condition: a is 10")
+    }
+
+    if b == 20 {
+        println("  Condition: b is 20, then block only")
+    } else {
+        println("  Condition: b is not 20, else block only")
+    }
+
+    // Nested and chained
+    if a > 0 {
+        if b > 0 {
+            println("  Flow: both a and b are positive")
+        } else if b == 0 {
+            println("  Flow: a is positive, b is zero")
+        } else {
+            println("  Flow: a is positive, b is negative")
+        }
+    } else if a == 0 {
+        println("  Flow: a is zero")
+    } else {
+        // a is negative
+        if b < 0 {
+            println("  Flow: both a and b are negative")
+        } else {
+            println("  Flow: a is negative, b is not negative (zero or positive)")
+        }
+    }
+    println("---") // Separator for test cases
+}
+
+fn main() {
+    testIfs(10, 5)
+    testIfs(5, 10)
+    testIfs(7, 7)
+    testIfs(10, 20)
+    testIfs(0, 0)
+    testIfs(-5, -10)
+    testIfs(-5, 5)
+    testIfs(10, 0)
+}

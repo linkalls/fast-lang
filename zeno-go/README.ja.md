@@ -13,6 +13,7 @@ Zeno プログラミング言語から Go への変換を行うコンパイラ�
 - **多言語エラーメッセージ**: `-jp` フラグで日本語エラーメッセージも表示
 - **変数宣言**: letキーワードによる変数宣言をサポート
 - **組み込みリンター**: コード品質と規約のための静的解析。
+- **浮動小数点リテラル**: 小数点を含む数値のサポート (例: `3.14`)。
 
 ## インストール
 
@@ -142,6 +143,7 @@ import {println, print} from "std/fmt"
 ```zeno
 let x = 42           // 変数宣言
 let y: int = 100     // 型注釈付き
+let pi = 3.14        // 浮動小数点数
 ```
 
 ### 関数定義
@@ -210,7 +212,8 @@ println(x)  // import文がない場合はエラー
 現在サポートされているモジュール:
 
 - `std/fmt`: `print`, `println` 関数
-- `std/io`: `readFile`, `writeFile` 関数
+- `std/io`: `readFile`, `writeFile`, `remove`, `pwd` 関数
+- `std/json`: JSONパース (`parse`) 及び文字列化 (`stringify`) 関数
 
 ### std/io モジュールの使用法
 
@@ -247,6 +250,43 @@ fn main() {
 - `remove(filename: string): bool`: 指定されたファイルまたは空のディレクトリを削除します。成功時に `true`、失敗時に `false` を返します。
 - `pwd(): string`: 現在の作業ディレクトリを絶対パスとして返します。失敗時には空文字列を返します。
 
+### std/json モジュールの使用法
+
+`std/json` モジュールは、JSON文字列をZenoのデータ構造にパースする機能と、Zenoのデータ構造をJSON文字列に変換する機能を提供します。
+
+```zeno
+import { println, print } from "std/fmt"
+import { parse, stringify } from "std/json"
+
+fn main() {
+    let jsonString = "{\"name\": \"Zeno\", \"version\": 0.2, \"active\": true}"
+    println("元のJSON文字列: " + jsonString)
+
+    let parsedData = parse(jsonString)
+    // 現状、'parsedData' は 'any' 型です。その構造（マップのキーアクセスや配列要素アクセスなど）を
+    // 直接操作するには、将来のZeno言語の型検査や 'any' 型操作機能に依存します。
+
+    let reStringified = stringify(parsedData)
+    print("再文字列化されたJSON: ")
+    println(reStringified)
+
+    let zenoData = "単純な文字列" // Zenoのプリミティブ値の例
+    let jsonFromZeno = stringify(zenoData)
+    print("Zeno文字列 '単純な文字列' からのJSON: ")
+    println(jsonFromZeno) // 期待値: "\"単純な文字列\""
+    
+    let invalidJson = "{\"key\": value_not_string}" // 注意: この行が有効なZenoの行であるためには、value_not_stringがZeno文字列である必要があります
+    let parsedError = parse(invalidJson)
+    print("不正なJSONをパースした結果: ")
+    println(stringify(parsedError)) // 期待値: "null"
+}
+```
+
+#### std/json 関数
+
+- `parse(jsonString: string): any`: JSON文字列をパースします。パースされたデータを `any` 型（Zenoの文字列、数値、ブール値、リスト、またはマップを表す）として返します。パースエラーの場合はZenoの `nil` 相当（JSONの `null` に文字列化される値）を返します。
+- `stringify(value: any): string`: Zenoのデータ（`any`型で、プリミティブ、リスト、またはマップで構成されることを期待）をJSON文字列に変換します。文字列化エラーの場合は空文字列 `""` を返します。
+
 ## 実装されている機能
 
 ✅ **完了済み:**
@@ -259,6 +299,8 @@ fn main() {
 - トークン解析（Lexer）
 - AST構築（Parser）
 - Goコード生成（Generator）
+- 標準ライブラリ: std/json モジュール (parse, stringify)
+- 浮動小数点リテラルのパースと生成
 
 🔲 **今後の予定:**
 - 関数定義と呼び出し

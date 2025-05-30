@@ -128,6 +128,8 @@ func (g *Generator) generateProgram(program *ast.Program) (string, error) {
 	requiredImports["fmt"] = true
 	// Always include os because native helpers might need it (e.g. for file I/O)
 	requiredImports["os"] = true
+	// Always include encoding/json for JSON native helpers
+	requiredImports["encoding/json"] = true
 
 	// Generate import statements
 	for imp := range requiredImports {
@@ -467,6 +469,10 @@ func (g *Generator) generateExpression(expr ast.Expression, builder *strings.Bui
 		// Escape the string for Go
 		escaped := strconv.Quote(e.Value)
 		builder.WriteString(escaped)
+
+	case *ast.FloatLiteral:
+		// Format float: 'f' format, -1 for smallest necessary precision, 64 for float64
+		builder.WriteString(strconv.FormatFloat(e.Value, 'f', -1, 64))
 
 	case *ast.BooleanLiteral:
 		if e.Value {
@@ -1067,6 +1073,31 @@ func (g *Generator) generateNativeFunctionHelpers(builder *strings.Builder) {
 	builder.WriteString("\t}\n")
 	builder.WriteString("\treturn pwd\n")
 	builder.WriteString("}\n\n")
+
+	// zenoNativeJsonParse
+	builder.WriteString("// zenoNativeJsonParse parses a JSON string and returns the result as interface{}.\n")
+	builder.WriteString("// Returns nil if parsing fails.\n")
+	builder.WriteString("func zenoNativeJsonParse(jsonString string) interface{} {\n")
+	builder.WriteString("	var result interface{}\n")
+	builder.WriteString("	err := json.Unmarshal([]byte(jsonString), &result)\n")
+	builder.WriteString("	if err != nil {\n")
+	builder.WriteString("		fmt.Fprintf(os.Stderr, \"Error parsing JSON string '%s': %v\\n\", jsonString, err)\n")
+	builder.WriteString("		return nil\n")
+	builder.WriteString("	}\n")
+	builder.WriteString("	return result\n")
+	builder.WriteString("}\n\n")
+
+	// zenoNativeJsonStringify
+	builder.WriteString("// zenoNativeJsonStringify converts an interface{} to a JSON string.\n")
+	builder.WriteString("// Returns an empty string if stringification fails.\n")
+	builder.WriteString("func zenoNativeJsonStringify(value interface{}) string {\n")
+	builder.WriteString("	jsonBytes, err := json.Marshal(value)\n")
+	builder.WriteString("	if err != nil {\n")
+	builder.WriteString("		fmt.Fprintf(os.Stderr, \"Error stringifying to JSON for value '%v': %v\\n\", value, err)\n")
+	builder.WriteString("		return \"\"\n")
+	builder.WriteString("	}\n")
+	builder.WriteString("	return string(jsonBytes)\n")
+	builder.WriteString("}\n\n")
 }
 
 // inferType infers the type of an expression
@@ -1078,6 +1109,8 @@ func (g *Generator) inferType(expr ast.Expression) types.Type {
 		return types.IntType
 	case *ast.StringLiteral:
 		return types.StringType
+	case *ast.FloatLiteral: // Added case for FloatLiteral
+		return types.FloatType
 	case *ast.Identifier:
 		// Look up the identifier in the symbol table
 		if symbol, ok := g.symbolTable.Resolve(e.Value); ok {

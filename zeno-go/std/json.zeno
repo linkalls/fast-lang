@@ -1,0 +1,20 @@
+// Standard JSON Module
+
+// Parses a JSON string into a Zeno data structure (represented as 'any').
+// Returns 'null' (or Zeno's nil equivalent) if parsing fails.
+// The actual type of the returned 'any' will be a Zeno representation
+// of a number, string, boolean, list (for JSON arrays), or map (for JSON objects).
+// Accessing elements within the 'any' type will depend on future Zeno language features
+// for type inspection and access of collection elements.
+pub fn parse(jsonString: string): any {
+    return __native_json_parse(jsonString)
+}
+
+// Converts a Zeno data structure (represented as 'any') into a JSON string.
+// The 'any' value should be composed of types that can be marshalled to JSON
+// (numbers, strings, booleans, lists, maps).
+// Returns an empty string if stringification fails (e.g., due to unsupported types
+// or circular references).
+pub fn stringify(value: any): string {
+    return __native_json_stringify(value)
+}

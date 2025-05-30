@@ -151,6 +151,18 @@ func (il *IntegerLiteral) String() string {
 	return fmt.Sprintf("%d", il.Value)
 }
 
+// FloatLiteral represents float literals
+type FloatLiteral struct {
+	Value float64
+}
+
+func (fl *FloatLiteral) expressionNode() {}
+func (fl *FloatLiteral) String() string {
+	// Use a general format that avoids trailing zeros for whole numbers
+	// and preserves precision. %g is often good for this.
+	return fmt.Sprintf("%g", fl.Value)
+}
+
 // StringLiteral represents string literals
 type StringLiteral struct {
 	Value string
