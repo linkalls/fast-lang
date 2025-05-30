@@ -5,7 +5,7 @@
     "version": "0.0.1",
     "publisher": "ZenoLang",
     "engines": {
-        "vscode": "^1.80.0" 
+        "vscode": "^1.80.0"
     },
     "categories": [
         "Programming Languages",
@@ -15,7 +15,7 @@
         "languages": [{
             "id": "zeno",
             "aliases": ["Zeno", "zeno"],
-            "extensions": [".zn", ".zeno"], 
+            "extensions": [".zn", ".zeno"],
             "configuration": "./language/language-configuration.json"
         }],
         "grammars": [{
@@ -31,10 +31,10 @@
     // "activationEvents": [
     //     "onLanguage:zeno"
     // ],
-    // "main": "./zeno/src/extension.js", 
+    // "main": "./zeno/src/extension.js",
     // "scripts": {
-    //     "vscode:prepublish": "npm run compile", 
-    //     "compile": "tsc -p ./zeno/tsconfig.json", 
-    //     "watch": "tsc -watch -p ./zeno/tsconfig.json" 
+    //     "vscode:prepublish": "npm run compile",
+    //     "compile": "tsc -p ./zeno/tsconfig.json",
+    //     "watch": "tsc -watch -p ./zeno/tsconfig.json"
     // }
 }

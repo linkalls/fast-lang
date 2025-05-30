@@ -42,7 +42,7 @@ fn testVoidReturnNested(outer: bool, inner: bool) {
     let innerStr = ""
     if inner { innerStr = "true" } else { innerStr = "false" }
     println("T1.4: Testing with outer=" + outerStr + ", inner=" + innerStr)
-    
+
     if outer {
         if inner {
             println("T1.4: Void return from nested if")
@@ -86,7 +86,7 @@ fn testValReturnFromIf(condition: bool): int {
         return 100
     }
     println("T2.3: Returning 0 as default")
-    return 0 
+    return 0
 }
 
 // T2.4: `if`/`else` 両方から値を返す
@@ -124,7 +124,7 @@ fn main() {
     println("---")
     testVoidReturnNested(true, false)
     println("---")
-    testVoidReturnNested(false, true) 
+    testVoidReturnNested(false, true)
     println("---")
     testVoidReturnNested(false, false)
 

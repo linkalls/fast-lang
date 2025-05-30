@@ -22,7 +22,7 @@ fn main() {
     // 1. Create a file to remove
     println("Creating file for removal test: " + testFileForRemove)
     writeFile(testFileForRemove, testContent)
-    
+
     let contentBeforeRemove = readFile(testFileForRemove)
     if contentBeforeRemove == testContent {
         println("File created successfully for remove test.")
@@ -58,13 +58,13 @@ fn main() {
     let nonExistentFile = "this_file_does_not_exist_for_removal.txt"
     println("Attempting to remove non-existent file: " + nonExistentFile)
     let removeNonExistentSuccess = remove(nonExistentFile)
-    let invertedTest = !removeNonExistentSuccess 
-    if invertedTest { 
+    let invertedTest = !removeNonExistentSuccess
+    if invertedTest {
         println("remove() correctly reported failure for non-existent file.")
     } else {
         println("ERROR: remove() reported success for non-existent file!")
     }
     println("------------------------------------")
-    
+
     println("=== std/io extended features test completed ===")
 }

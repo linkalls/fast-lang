@@ -1,6 +1,9 @@
 package ast
 
-import "fmt"
+import (
+	"fmt"
+	"strings" // Added for strings.Join
+)
 
 // Node represents any node in the AST
 type Node interface {
@@ -151,6 +154,18 @@ func (il *IntegerLiteral) String() string {
 	return fmt.Sprintf("%d", il.Value)
 }
 
+// FloatLiteral represents float literals
+type FloatLiteral struct {
+	Value float64
+}
+
+func (fl *FloatLiteral) expressionNode() {}
+func (fl *FloatLiteral) String() string {
+	// Use a general format that avoids trailing zeros for whole numbers
+	// and preserves precision. %g is often good for this.
+	return fmt.Sprintf("%g", fl.Value)
+}
+
 // StringLiteral represents string literals
 type StringLiteral struct {
 	Value string
@@ -172,6 +187,23 @@ func (bl *BooleanLiteral) String() string {
 		return "true"
 	}
 	return "false"
+}
+
+// ArrayLiteral represents an array literal expression.
+// Example: [1, 2, 3] or ["a", "b", "c"]
+type ArrayLiteral struct {
+	Elements []Expression // The elements of the array
+}
+
+func (al *ArrayLiteral) expressionNode() {}
+func (al *ArrayLiteral) String() string {
+	var elements []string
+	for _, el := range al.Elements {
+		if el != nil { // Add nil check for safety
+			elements = append(elements, el.String())
+		}
+	}
+	return "[" + strings.Join(elements, ", ") + "]"
 }
 
 // Identifier represents identifiers

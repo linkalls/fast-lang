@@ -29,6 +29,9 @@ This file lists planned features and improvements for the Zeno programming langu
 - [x] **Consistent Main Function Generation:** Always generate main function wrapper for all programs
 - [x] **std/io Module Enhancement:** Added `remove` and `pwd` functions.
 - [x] **Parser Bug Fix: `return` statement handling:** Resolved issues related to token consumption/state recovery after `return` statements in various block contexts, ensuring robust parsing. (Verified via `test_return_statements.zeno` and `test_std_io_extended.zeno`)
+- [x] **Standard Library: std/json module:** Implemented basic `parse` and `stringify` functionality.
+- [x] **Language Feature: Floating-point literal support:** Added parsing and generation for float literals (e.g., `3.14`).
+- [x] **Parser Fix: Operator Precedence:** Corrected operator precedence for `&&`, `||` versus comparison operators.
 
 ## High Priority 🚀
 
@@ -50,7 +53,7 @@ This file lists planned features and improvements for the Zeno programming langu
 
 - [ ] **Control Flow Statements:**
     - [x] if statements with type-aware boolean conversion
-    - [ ] if/else if/else statements (full implementation)
+    - [x] if/else if/else statements (full implementation)
     - [ ] while loops (Basic implementation might exist, needs verification for completeness)
     - [ ] loop statements with break/continue (Needs verification for completeness)
     - [ ] for loops (Needs design and implementation)
@@ -69,7 +72,7 @@ This file lists planned features and improvements for the Zeno programming langu
     - [ ] std/string module for string manipulation
     - [ ] std/math module for mathematical functions
     - [ ] std/collections module for data structures
-    - [ ] **(High Priority)** std/json: JSON parsing (e.g., `parse`) and stringification (e.g., `stringify`).
+    - [x] std/json: JSON parsing (e.g., `parse`) and stringification (e.g., `stringify`).
     - [ ] **(High Priority)** std/httpserver: HTTP server framework (Hono-style API: routing, request/response handling).
     - [ ] **(Medium Priority)** std/time: Time-related functionalities (e.g., getting current time, formatting, parsing).
     - [ ] **(Medium Priority)** std/http: HTTP client functionalities (e.g., making GET, POST requests).

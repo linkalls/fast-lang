@@ -114,7 +114,7 @@
             "patterns": [
                 {
                     "name": "storage.type.built-in.zeno",
-                    "match": "\b(int|string|bool|float)\b" 
+                    "match": "\b(int|string|bool|float)\b"
                 }
             ]
         },
