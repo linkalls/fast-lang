@@ -1,0 +1,70 @@
+import { println, print } from "std/fmt"
+import { readFile, writeFile, remove, pwd } from "std/io"
+
+fn main() {
+    println("=== Testing std/io extended features: pwd and remove ===")
+
+    // Test pwd()
+    let currentDir = pwd()
+    print("Current working directory: ")
+    println(currentDir)
+    if currentDir == "" {
+        println("ERROR: pwd() returned an empty string!")
+    } else {
+        println("pwd() test: OK (returned a non-empty path)")
+    }
+    println("------------------------------------")
+
+    // Test remove()
+    let testFileForRemove = "test_remove_me.txt"
+    let testContent = "This file is for testing the remove() function."
+
+    // 1. Create a file to remove
+    println("Creating file for removal test: " + testFileForRemove)
+    writeFile(testFileForRemove, testContent)
+    
+    let contentBeforeRemove = readFile(testFileForRemove)
+    if contentBeforeRemove == testContent {
+        println("File created successfully for remove test.")
+    } else {
+        println("ERROR: File creation/read back failed before remove test!")
+        // return // Temporarily commented out to avoid parser bug
+    }
+    println("------------------------------------")
+
+    // 2. Remove the file
+    println("Attempting to remove: " + testFileForRemove)
+    let removeSuccess = remove(testFileForRemove)
+    if removeSuccess {
+        println("remove() reported success.")
+    } else {
+        println("ERROR: remove() reported failure for existing file!")
+    }
+    println("------------------------------------")
+
+    // 3. Verify removal by trying to read it again
+    println("Attempting to read removed file (should be empty): " + testFileForRemove)
+    let contentAfterRemove = readFile(testFileForRemove)
+    if contentAfterRemove == "" {
+        println("File successfully removed (readFile returned empty).")
+    } else {
+        println("ERROR: File still exists or readFile did not return empty after remove!")
+        print("Content found: ")
+        println(contentAfterRemove)
+    }
+    println("------------------------------------")
+
+    // 4. Try to remove a non-existent file
+    let nonExistentFile = "this_file_does_not_exist_for_removal.txt"
+    println("Attempting to remove non-existent file: " + nonExistentFile)
+    let removeNonExistentSuccess = remove(nonExistentFile)
+    let invertedTest = !removeNonExistentSuccess 
+    if invertedTest { 
+        println("remove() correctly reported failure for non-existent file.")
+    } else {
+        println("ERROR: remove() reported success for non-existent file!")
+    }
+    println("------------------------------------")
+    
+    println("=== std/io extended features test completed ===")
+}

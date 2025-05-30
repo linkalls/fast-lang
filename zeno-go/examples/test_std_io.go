@@ -32,16 +32,38 @@ func zenoNativePrintln(args ...interface{}) {
 	fmt.Println(args...)
 }
 
+// zenoNativeRemove attempts to remove the file or empty directory.
+// Returns true on success, false on failure.
+func zenoNativeRemove(path string) bool {
+	err := os.Remove(path)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error removing %s: %v\n", path, err)
+		return false
+	}
+	return true
+}
+
+// zenoNativeGetCurrentDirectory returns the current working directory path.
+// Returns an empty string on failure.
+func zenoNativeGetCurrentDirectory() string {
+	pwd, err := os.Getwd()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error getting current directory: %v\n", err)
+		return ""
+	}
+	return pwd
+}
+
+func Println(value string) {
+	zenoNativePrintln(value)
+}
+
 func ReadFile(path string) string {
 	return zenoNativeReadFile(path)
 }
 
 func WriteFile(path string, content string) bool {
 	return zenoNativeWriteFile(path, content)
-}
-
-func Println(value string) {
-	zenoNativePrintln(value)
 }
 
 func main() {

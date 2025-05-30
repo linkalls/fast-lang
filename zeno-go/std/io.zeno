@@ -13,3 +13,15 @@ pub fn readFile(path: string): string {
 pub fn writeFile(path: string, content: string): bool {
     return __native_write_file(path, content)
 }
+
+// Removes the specified file or empty directory.
+// Returns true if successful, false otherwise.
+pub fn remove(path: string): bool {
+    return __native_remove(path)
+}
+
+// Returns the current working directory path.
+// Returns an empty string if an error occurs.
+pub fn pwd(): string {
+    return __native_get_current_directory()
+}

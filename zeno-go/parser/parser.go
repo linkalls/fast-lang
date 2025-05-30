@@ -122,6 +122,8 @@ func New(l *lexer.Lexer) *Parser {
 		token.STRING: p.parseStringLiteral,
 		token.TRUE:   p.parseBooleanLiteral,
 		token.FALSE:  p.parseBooleanLiteral,
+		token.BANG:   p.parsePrefixExpression,
+		token.MINUS:  p.parsePrefixExpression,
 	}
 
 	// Initialize infix parse functions
@@ -335,6 +337,27 @@ func (p *Parser) parseStringLiteral() ast.Expression {
 
 func (p *Parser) parseBooleanLiteral() ast.Expression {
 	return &ast.BooleanLiteral{Value: p.currentToken.Type == token.TRUE}
+}
+
+func (p *Parser) parsePrefixExpression() ast.Expression {
+	expr := &ast.UnaryExpression{
+		Operator: tokenToUnaryOperator(p.currentToken.Type),
+	}
+	p.nextToken()
+	expr.Right = p.parseExpression(PREFIX)
+	return expr
+}
+
+// Helper function to convert token type to UnaryOperator
+func tokenToUnaryOperator(tok token.TokenType) ast.UnaryOperator {
+	switch tok {
+	case token.BANG:
+		return ast.UnaryOpBang
+	case token.MINUS:
+		return ast.UnaryOpMinus
+	}
+	// This should not happen if called correctly
+	panic(fmt.Sprintf("tokenToUnaryOperator called with non-unary token: %s", tok))
 }
 
 func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression {

@@ -113,8 +113,9 @@ fn add(a: int, b: int): int {
     return a + b
 }
 
+import { println } from "std/fmt" // この例のためにprintlnがインポートされていると仮定
 fn greet(name: string) {
-    println("Hello, " + name)
+    println("Hello, " + name + "!")
 }
 ```
 
@@ -126,6 +127,8 @@ greet("World")
 
 ### main関数
 ```zeno
+import { println } from "std/fmt" // printlnがインポートされていると仮定
+
 fn main() {
     // プログラムのエントリーポイント
     println("Hello, World!")
@@ -139,7 +142,8 @@ let product = 5 * 6
 let comparison = x > y
 ```
 
-### Print文
+### コンソールへの出力 (std/fmt を使用)
+出力処理は `std/fmt` モジュールの関数によって行われます。使用前にインポートする必要があります。
 ```zeno
 print("Hello")       // import {print} from "std/fmt" が必要
 println("World")     // import {println} from "std/fmt" が必要
@@ -203,6 +207,8 @@ fn main() {
 
 - `writeFile(filename: string, content: string)`: 自動エラーハンドリング付きでファイルにコンテンツを書き込み
 - `readFile(filename: string): string`: ファイル内容を読み込んで文字列として返却、エラー時は空文字列を返却
+- `remove(filename: string): bool`: 指定されたファイルまたは空のディレクトリを削除します。成功時に `true`、失敗時に `false` を返します。
+- `pwd(): string`: 現在の作業ディレクトリを絶対パスとして返します。失敗時には空文字列を返します。
 
 ## 実装されている機能
 
@@ -210,7 +216,7 @@ fn main() {
 - Import文の解析と検証
 - 変数宣言（let）
 - バイナリ式（算術演算、比較演算）
-- Print文の変換
+- [x] Print関数呼び出しへの変換: print/printlnはキーワードから`std/fmt`モジュールの関数に変更
 - 未使用変数検出
 - 多言語エラーメッセージ（英語/日本語）
 - トークン解析（Lexer）
