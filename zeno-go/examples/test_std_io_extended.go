@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"os"
+	"fmt"
 )
 
 // Native function helpers
@@ -98,6 +98,7 @@ func main() {
 		Println("File created successfully for remove test.")
 	} else {
 		Println("ERROR: File creation/read back failed before remove test!")
+		return
 	}
 	Println("------------------------------------")
 	Println(("Attempting to remove: " + testFileForRemove))

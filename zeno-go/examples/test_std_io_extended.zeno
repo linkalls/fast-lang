@@ -28,7 +28,7 @@ fn main() {
         println("File created successfully for remove test.")
     } else {
         println("ERROR: File creation/read back failed before remove test!")
-        // return // Temporarily commented out to avoid parser bug
+        return // This return should now be active
     }
     println("------------------------------------")
 

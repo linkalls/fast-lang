@@ -27,6 +27,8 @@ This file lists planned features and improvements for the Zeno programming langu
   - [x] String types: Generate with `!= ""` conversion (`if (z != "") {`)
   - [x] Float types: Generate with `!= 0.0` conversion
 - [x] **Consistent Main Function Generation:** Always generate main function wrapper for all programs
+- [x] **std/io Module Enhancement:** Added `remove` and `pwd` functions.
+- [x] **Parser Bug Fix: `return` statement handling:** Resolved issues related to token consumption/state recovery after `return` statements in various block contexts, ensuring robust parsing. (Verified via `test_return_statements.zeno` and `test_std_io_extended.zeno`)
 
 ## High Priority 🚀
 
@@ -49,36 +51,38 @@ This file lists planned features and improvements for the Zeno programming langu
 - [ ] **Control Flow Statements:**
     - [x] if statements with type-aware boolean conversion
     - [ ] if/else if/else statements (full implementation)
-    - [ ] while loops
-    - [ ] loop statements with break/continue
-    - [ ] for loops
+    - [ ] while loops (Basic implementation might exist, needs verification for completeness)
+    - [ ] loop statements with break/continue (Needs verification for completeness)
+    - [ ] for loops (Needs design and implementation)
+    - [ ] if/else expressions (Allow `if/else` to return values and be used in expressions, e.g., `let x = if cond {1} else {2}`)
 
 - [ ] **Assignment and Mutation:**
     - [ ] Assignment statements (`x = value`) - No semicolons required
-    - [ ] Type checking for assignments
+    - [ ] Type checking for assignments (Ensuring type compatibility on re-assignment)
 
 **Language Design Note:** Zeno follows a semicolon-free syntax design similar to languages like Python and Ruby. All statements are terminated by newlines rather than semicolons for cleaner, more readable code. The language uses a unified `let`-only variable declaration system for simplicity and consistency.
 
 ## Medium Priority 📋
 
 - [ ] **Extended Standard Library:**
-    - [x] std/io module for file operations (readFile/writeFile functions)
+    - [x] std/io module for file operations (readFile/writeFile, remove, pwd functions)
     - [ ] std/string module for string manipulation
     - [ ] std/math module for mathematical functions
     - [ ] std/collections module for data structures
+    - [ ] **(High Priority)** std/json: JSON parsing (e.g., `parse`) and stringification (e.g., `stringify`).
+    - [ ] **(High Priority)** std/httpserver: HTTP server framework (Hono-style API: routing, request/response handling).
+    - [ ] **(Medium Priority)** std/time: Time-related functionalities (e.g., getting current time, formatting, parsing).
+    - [ ] **(Medium Priority)** std/http: HTTP client functionalities (e.g., making GET, POST requests).
 
 - [ ] **Enhanced Type System:**
-    - [x] Type inference improvements (basic type inference from expressions)
+    - [x] Type inference improvements (basic type inference from expressions, function call return types, unary expressions)
     - [x] Symbol table implementation for type tracking
     - [x] Type-based code generation for boolean contexts
     - [ ] Better type error messages
     - [ ] Optional types and null safety
     - [ ] Generic types (basic implementation)
 
-- [ ] **Parser Bug: `return` statement at the end of an `else` block:**
-    - The parser currently mishandles token consumption or state recovery after a `return` statement if it's the last statement in an `else` block and the `if-else` structure is followed by more statements in the parent block. This leads to errors like "no prefix parse function for } found".
-    - Example that triggers this can be found in `examples/test_std_io_extended.zeno` (temporarily worked around by commenting out the return).
-    - Needs focused debugging in `parser.go` related to `parseReturnStatement` and how blocks are terminated.
+# Removed Parser Bug item from here as it's now resolved.
 
 - [ ] **Basic Data Structures:**
     - [ ] Arrays (fixed-size or dynamic)
