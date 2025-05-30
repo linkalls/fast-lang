@@ -54,20 +54,20 @@ func zenoNativeGetCurrentDirectory() string {
 	return pwd
 }
 
-func Print(value string) {
-	zenoNativePrint(value)
-}
-
-func Println(value string) {
-	zenoNativePrintln(value)
-}
-
 func ReadFile(path string) string {
 	return zenoNativeReadFile(path)
 }
 
 func WriteFile(path string, content string) bool {
 	return zenoNativeWriteFile(path, content)
+}
+
+func Print(value string) {
+	zenoNativePrint(value)
+}
+
+func Println(value string) {
+	zenoNativePrintln(value)
 }
 
 func main() {

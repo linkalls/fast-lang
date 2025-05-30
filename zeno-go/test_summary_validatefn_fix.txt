@@ -1,0 +1,17 @@
+test_return_statements.zeno - Zeno Compile: 1, Go Execute: 1
+
+
+--- Testing examples/comprehensive_io_demo.zeno (Re-run) ---
+Zeno compilation status for examples/comprehensive_io_demo.zeno: 0
+Go execution status for ./examples/comprehensive_io_demo.go: 0
+
+
+--- Testing examples/test_std_io_extended.zeno (Re-run) ---
+Zeno compilation status for examples/test_std_io_extended.zeno: 0
+Go execution status for ./examples/test_std_io_extended.go: 0
+
+
+--- Testing examples/test_unused_functions.zeno (Re-run) ---
+Zeno compilation status for examples/test_unused_functions.zeno: 1
+Skipping Go execution for examples/test_unused_functions.zeno due to Zeno compilation failure.
+Go execution status for examples/test_unused_functions.zeno: 1

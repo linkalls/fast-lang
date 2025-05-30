@@ -335,12 +335,27 @@ func (g *Generator) generateStatement(stmt ast.Statement, builder *strings.Build
 
 		builder.WriteString(" {\n")
 
+		// Create a new scope for the function body
+		originalSymbolTable := g.symbolTable
+		g.symbolTable = types.NewSymbolTable(originalSymbolTable)
+
+		// Register parameters in the new scope
+		for _, param := range s.Parameters {
+			paramType := g.mapASTTypeToType(param.Type)
+			g.symbolTable.Define(param.Name, paramType)
+		}
+
 		// Generate function body
 		for _, bodyStmt := range s.Body {
 			if err := g.generateStatement(bodyStmt, builder, indentLevel+1); err != nil {
+				// Restore symbol table before returning on error
+				g.symbolTable = originalSymbolTable
 				return err
 			}
 		}
+
+		// Restore the original symbol table
+		g.symbolTable = originalSymbolTable
 
 		builder.WriteString(indent(indentLevel))
 		builder.WriteString("}\n")
@@ -1204,37 +1219,37 @@ func (g *Generator) validateFunctionTypes(program *ast.Program) error {
 				}
 			}
 
-			// Only require explicit return type if the function has return statements
-			if g.hasReturnStatement(funcDef.Body) && funcDef.ReturnType == nil {
-				return GenerationError{Message: fmt.Sprintf("Function '%s' contains return statements but has no explicit return type", funcDef.Name)}
+			// Only require explicit return type if the function has return statements *with values*
+			if g.hasValueReturnStatement(funcDef.Body) && funcDef.ReturnType == nil {
+				return GenerationError{Message: fmt.Sprintf("Function '%s' contains return statements with values but has no explicit return type", funcDef.Name)}
 			}
 		}
 	}
 	return nil
 }
 
-// hasReturnStatement checks if a function body contains any return statements
-func (g *Generator) hasReturnStatement(statements []ast.Statement) bool {
+// hasValueReturnStatement checks if a function body contains any return statements that return a value.
+func (g *Generator) hasValueReturnStatement(statements []ast.Statement) bool {
 	for _, stmt := range statements {
-		if _, ok := stmt.(*ast.ReturnStatement); ok {
+		if rs, ok := stmt.(*ast.ReturnStatement); ok && rs.Value != nil {
 			return true
 		}
 		// Check for return statements in nested blocks (if, while, etc.)
 		if ifStmt, ok := stmt.(*ast.IfStatement); ok {
-			if g.hasReturnStatement(ifStmt.ThenBlock.Statements) {
+			if ifStmt.ThenBlock != nil && g.hasValueReturnStatement(ifStmt.ThenBlock.Statements) {
 				return true
 			}
 			for _, elseIfClause := range ifStmt.ElseIfClauses {
-				if g.hasReturnStatement(elseIfClause.Block.Statements) {
+				if elseIfClause.Block != nil && g.hasValueReturnStatement(elseIfClause.Block.Statements) {
 					return true
 				}
 			}
-			if ifStmt.ElseBlock != nil && g.hasReturnStatement(ifStmt.ElseBlock.Statements) {
+			if ifStmt.ElseBlock != nil && g.hasValueReturnStatement(ifStmt.ElseBlock.Statements) {
 				return true
 			}
 		}
 		if whileStmt, ok := stmt.(*ast.WhileStatement); ok {
-			if g.hasReturnStatement(whileStmt.Block.Statements) {
+			if whileStmt.Block != nil && g.hasValueReturnStatement(whileStmt.Block.Statements) {
 				return true
 			}
 		}

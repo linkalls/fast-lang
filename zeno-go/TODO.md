@@ -28,6 +28,7 @@ This file lists planned features and improvements for the Zeno programming langu
   - [x] Float types: Generate with `!= 0.0` conversion
 - [x] **Consistent Main Function Generation:** Always generate main function wrapper for all programs
 - [x] **std/io Module Enhancement:** Added `remove` and `pwd` functions.
+- [x] **Parser Bug Fix: `return` statement handling:** Resolved issues related to token consumption/state recovery after `return` statements in various block contexts, ensuring robust parsing. (Verified via `test_return_statements.zeno` and `test_std_io_extended.zeno`)
 
 ## High Priority 🚀
 
@@ -53,6 +54,7 @@ This file lists planned features and improvements for the Zeno programming langu
     - [ ] while loops (Basic implementation might exist, needs verification for completeness)
     - [ ] loop statements with break/continue (Needs verification for completeness)
     - [ ] for loops (Needs design and implementation)
+    - [ ] if/else expressions (Allow `if/else` to return values and be used in expressions, e.g., `let x = if cond {1} else {2}`)
 
 - [ ] **Assignment and Mutation:**
     - [ ] Assignment statements (`x = value`) - No semicolons required
@@ -80,11 +82,7 @@ This file lists planned features and improvements for the Zeno programming langu
     - [ ] Optional types and null safety
     - [ ] Generic types (basic implementation)
 
-- [ ] **Parser Bug: `return` statement handling:**
-    - The parser currently mishandles token consumption or state recovery after a `return` statement, particularly noticeable when it's the last statement in an `else` block and the `if-else` structure is followed by more statements. This leads to errors like "no prefix parse function for } found".
-    - This issue might be related to a broader problem with how `return` affects scope termination (e.g., exiting from function scopes as well, not just `if` scopes).
-    - Example that triggers this can be found in `examples/test_std_io_extended.zeno` (temporarily worked around by commenting out the return).
-    - Needs focused debugging in `parser.go` related to `parseReturnStatement` and how blocks/scopes are terminated.
+# Removed Parser Bug item from here as it's now resolved.
 
 - [ ] **Basic Data Structures:**
     - [ ] Arrays (fixed-size or dynamic)
