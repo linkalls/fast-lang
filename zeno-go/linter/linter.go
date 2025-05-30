@@ -213,3 +213,24 @@ func (v *linterVisitor) VisitBinaryExpression(node *ast.BinaryExpression) error 
 func (v *linterVisitor) VisitUnaryExpression(node *ast.UnaryExpression) error {
 	return v.applyRules(node)
 }
+
+func (v *linterVisitor) VisitArrayLiteral(node *ast.ArrayLiteral) error {
+	for _, elem := range node.Elements {
+		if err := Walk(elem, v); err != nil {
+			return err
+		}
+	}
+	return v.applyRules(node)
+}
+
+func (v *linterVisitor) VisitMapLiteral(node *ast.MapLiteral) error {
+	for key, val := range node.Pairs {
+		if err := Walk(key, v); err != nil {
+			return err
+		}
+		if err := Walk(val, v); err != nil {
+			return err
+		}
+	}
+	return v.applyRules(node)
+}

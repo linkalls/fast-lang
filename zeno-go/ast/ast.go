@@ -206,6 +206,23 @@ func (al *ArrayLiteral) String() string {
 	return "[" + strings.Join(elements, ", ") + "]"
 }
 
+// MapLiteral represents a map literal expression.
+// Example: {key1: value1, "key2": value2}
+type MapLiteral struct {
+	Pairs map[Expression]Expression // The key-value pairs of the map
+}
+
+func (ml *MapLiteral) expressionNode() {}
+func (ml *MapLiteral) String() string {
+	var pairs []string
+	for k, v := range ml.Pairs {
+		if k != nil && v != nil { // Add nil check for safety
+			pairs = append(pairs, k.String()+": "+v.String())
+		}
+	}
+	return "{" + strings.Join(pairs, ", ") + "}"
+}
+
 // Identifier represents identifiers
 type Identifier struct {
 	Value string
