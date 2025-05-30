@@ -3,8 +3,8 @@ import { println, print } from "std/fmt"
 fn main() {
     println("Testing println: Line 1")
     print("Testing print: Part 1, ")
-    print("Part 2 - with explicit newline in string\n") 
-    
+    print("Part 2 - with explicit newline in string\n")
+
     let number_as_string = "12345"
     print("Number as string: ")
     println(number_as_string)

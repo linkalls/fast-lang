@@ -1,6 +1,9 @@
 package ast
 
-import "fmt"
+import (
+	"fmt"
+	"strings" // Added for strings.Join
+)
 
 // Node represents any node in the AST
 type Node interface {
@@ -184,6 +187,23 @@ func (bl *BooleanLiteral) String() string {
 		return "true"
 	}
 	return "false"
+}
+
+// ArrayLiteral represents an array literal expression.
+// Example: [1, 2, 3] or ["a", "b", "c"]
+type ArrayLiteral struct {
+	Elements []Expression // The elements of the array
+}
+
+func (al *ArrayLiteral) expressionNode() {}
+func (al *ArrayLiteral) String() string {
+	var elements []string
+	for _, el := range al.Elements {
+		if el != nil { // Add nil check for safety
+			elements = append(elements, el.String())
+		}
+	}
+	return "[" + strings.Join(elements, ", ") + "]"
 }
 
 // Identifier represents identifiers

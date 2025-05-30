@@ -4,13 +4,13 @@ import { readFile, writeFile } from "std/io"
 fn main() {
     let testFileName = "test_io_output.txt"
     let testContent = "Hello from Zeno std/io test!"
-    
+
     println("Attempting to write to file...")
     let success = writeFile(testFileName, testContent)
     // Assuming bool 'true' prints as "true" or similar.
     // Depending on how __native_println handles booleans when passed from Zeno.
     // If println now strictly takes string, this might need adjustment:
-    // println(nativeBoolToString(success)) 
+    // println(nativeBoolToString(success))
     // For now, let's assume direct printing works or will be handled by string conversion in Zeno if needed.
     // For simplicity with current println(value: string), let's convert bool to string manually if necessary.
     // However, the native call zenoNativePrintln(args ...interface{}) can handle bools.
@@ -26,7 +26,7 @@ fn main() {
 
     println("Attempting to read from file...")
     let readContent = readFile(testFileName)
-    println(readContent) 
+    println(readContent)
 
     println("Attempting to read non-existent file...")
     let nonExistent = readFile("this_file_should_not_exist.txt")

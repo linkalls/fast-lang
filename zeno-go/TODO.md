@@ -31,7 +31,7 @@ This file lists planned features and improvements for the Zeno programming langu
 - [x] **Parser Bug Fix: `return` statement handling:** Resolved issues related to token consumption/state recovery after `return` statements in various block contexts, ensuring robust parsing. (Verified via `test_return_statements.zeno` and `test_std_io_extended.zeno`)
 - [x] **Standard Library: std/json module:** Implemented basic `parse` and `stringify` functionality.
 - [x] **Language Feature: Floating-point literal support:** Added parsing and generation for float literals (e.g., `3.14`).
-- [x] **Parser Fix: Operator Precedence:** Corrected operator precedence for `&&`, `||` versus comparison operators. 
+- [x] **Parser Fix: Operator Precedence:** Corrected operator precedence for `&&`, `||` versus comparison operators.
 
 ## High Priority 🚀
 

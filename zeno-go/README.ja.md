@@ -274,7 +274,7 @@ fn main() {
     let jsonFromZeno = stringify(zenoData)
     print("Zeno文字列 '単純な文字列' からのJSON: ")
     println(jsonFromZeno) // 期待値: "\"単純な文字列\""
-    
+
     let invalidJson = "{\"key\": value_not_string}" // 注意: この行が有効なZenoの行であるためには、value_not_stringがZeno文字列である必要があります
     let parsedError = parse(invalidJson)
     print("不正なJSONをパースした結果: ")

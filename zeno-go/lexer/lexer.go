@@ -2,7 +2,7 @@ package lexer
 
 import (
 	"github.com/linkalls/zeno-lang/token"
-	"unicode" 
+	"unicode"
 	"strings" // Added: for strings.Builder and strings.Contains (though Contains might not be used anymore)
 	"strconv" // Added: for strconv.ParseInt
 )
@@ -169,8 +169,8 @@ func (l *Lexer) NextToken() token.Token {
 	case '*':
 		tok = newToken(token.MULTIPLY, l.ch)
 	case '/':
-		if l.skipComment() { 
-			return l.NextToken() 
+		if l.skipComment() {
+			return l.NextToken()
 		} else {
 			tok = newToken(token.DIVIDE, l.ch)
 		}
@@ -227,7 +227,7 @@ func (l *Lexer) NextToken() token.Token {
 	case '"':
 		str, ok := l.readString()
 		if !ok {
-			tok = newToken(token.ILLEGAL, l.ch) 
+			tok = newToken(token.ILLEGAL, l.ch)
 		} else {
 			tok.Type = token.STRING
 			tok.Literal = str
@@ -239,12 +239,12 @@ func (l *Lexer) NextToken() token.Token {
 		if isLetter(l.ch) {
 			tok.Literal = l.readIdentifier()
 			tok.Type = token.LookupIdent(tok.Literal)
-			return tok 
+			return tok
 		} else if isDigit(l.ch) {
 			tokenType, literal := l.readNumber()
 			tok.Type = tokenType
 			tok.Literal = literal
-			return tok 
+			return tok
 		} else {
 			tok = newToken(token.ILLEGAL, l.ch)
 		}
@@ -268,10 +268,10 @@ func isDigit(ch byte) bool {
 
 func processEscapeSequence(str string) string {
 	var result strings.Builder
-	result.Grow(len(str)) 
+	result.Grow(len(str))
 	for i := 0; i < len(str); i++ {
 		if str[i] == '\\' && i+1 < len(str) {
-			i++ 
+			i++
 			switch str[i] {
 			case 'n':
 				result.WriteByte('\n')

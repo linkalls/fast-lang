@@ -139,9 +139,9 @@ If a directory is specified, it will be walked recursively for .zeno files.`,
 						fmt.Fprintf(os.Stderr, "  - %s\n", msg)
 					}
 					hasErrors = true
-					continue 
+					continue
 				}
-				
+
 				absFilePath, _ := filepath.Abs(filePath)
 
 
@@ -158,7 +158,7 @@ If a directory is specified, it will be walked recursively for .zeno files.`,
 				issues, err := zenoFrameworkLinter.Lint(program, absFilePath)
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "Linter error in %s: %v\n", filePath, err)
-					hasErrors = true 
+					hasErrors = true
 				}
 
 				if len(issues) > 0 {
@@ -309,7 +309,7 @@ func buildExecutable(filename string) error {
 	if !strings.HasSuffix(filename, ".zeno") && !strings.HasSuffix(filename, ".zn") {
 		return fmt.Errorf("expected .zeno or .zn file, got: %s", filename)
 	}
-	
+
 	content, err := os.ReadFile(filename)
 	if err != nil {
 		return fmt.Errorf("failed to read file %s: %w", filename, err)
@@ -338,7 +338,7 @@ func buildExecutable(filename string) error {
 	if strings.HasSuffix(filename, ".zn") {
 		baseName = strings.TrimSuffix(filename, ".zn")
 	}
-	
+
 	// Create a temporary directory for the build process
 	buildDir, err := os.MkdirTemp("", "zeno_build_*")
 	if err != nil {
@@ -359,7 +359,7 @@ func buildExecutable(filename string) error {
 	cmd.Stdout = os.Stdout // Show build output/errors directly
 	cmd.Stderr = os.Stderr
 	// fmt.Printf("Building executable: %s\n", executableName)
-	
+
 	err = cmd.Run()
 	if err != nil {
 		return fmt.Errorf("failed to build executable: %w", err)

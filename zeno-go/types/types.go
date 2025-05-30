@@ -20,7 +20,23 @@ var (
 	BoolType   = &BasicType{Name: "bool"}
 	StringType = &BasicType{Name: "string"}
 	FloatType  = &BasicType{Name: "float"}
+	AnyType    = &BasicType{Name: "any"}   // Represents any type, similar to interface{}
 )
+
+// ArrayType represents an array type.
+type ArrayType struct {
+	ElementType Type // The type of the elements in the array
+}
+
+// String returns a string representation of the array type.
+func (a *ArrayType) String() string {
+	if a.ElementType == nil || a.ElementType == AnyType {
+		// Represents an array of unknown/any element type, or an empty array
+		// where type couldn't be inferred without context.
+		return "[]any"
+	}
+	return "[]" + a.ElementType.String()
+}
 
 // Symbol represents a variable or function in the symbol table
 type Symbol struct {

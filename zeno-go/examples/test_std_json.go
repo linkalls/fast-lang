@@ -1,9 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"encoding/json"
+	"fmt"
 )
 
 // Native function helpers
@@ -78,20 +78,20 @@ func zenoNativeJsonStringify(value interface{}) string {
 	return string(jsonBytes)
 }
 
-func Print(value string) {
-	zenoNativePrint(value)
-}
-
-func Println(value string) {
-	zenoNativePrintln(value)
-}
-
 func Parse(jsonString string) interface{} {
 	return zenoNativeJsonParse(jsonString)
 }
 
 func Stringify(value interface{}) string {
 	return zenoNativeJsonStringify(value)
+}
+
+func Print(value string) {
+	zenoNativePrint(value)
+}
+
+func Println(value string) {
+	zenoNativePrintln(value)
 }
 
 func main() {

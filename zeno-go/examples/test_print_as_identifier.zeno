@@ -6,5 +6,5 @@ fn main() {
 
     let myPrintlnVar = "This is a string assigned to 'myPrintlnVar'."
     // Call the imported println function with the variable myPrintlnVar
-    println(myPrintlnVar) 
+    println(myPrintlnVar)
 }

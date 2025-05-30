@@ -1,6 +1,6 @@
 // No imports needed for this test if it only defines functions
-fn My_Private_Func() {} 
-pub fn my_Public_Func() {} 
+fn My_Private_Func() {}
+pub fn my_Public_Func() {}
 fn main() {
     // main is excluded from naming checks by the rule
 }

@@ -12,11 +12,11 @@ fn main() {
     println(jsonObjectString)
 
     let parsedObject = parse(jsonObjectString)
-    
+
     let stringifiedObject = stringify(parsedObject)
     print("Stringified Object JSON: ")
     println(stringifiedObject)
-    
+
     if stringifiedObject == "" && jsonObjectString != "{}" {
         println("ERROR: Stringify returned empty for a non-empty parsed object!")
     } else if stringifiedObject == "null" && jsonObjectString != "null" {
@@ -51,29 +51,29 @@ fn main() {
     println("
 --- Test Case 3: Stringify Primitives ---")
     print("Stringify string \"zeno\": ")
-    println(stringify("zeno")) 
-    
+    println(stringify("zeno"))
+
     print("Stringify int 123: ")
-    println(stringify(123))    
-    
-    print("Stringify float 3.14: ") 
-    println(stringify(3.14))   
+    println(stringify(123))
+
+    print("Stringify float 3.14: ")
+    println(stringify(3.14))
 
     print("Stringify bool true: ")
-    println(stringify(true))   
-    
+    println(stringify(true))
+
     // Test Case 4: Parse Invalid JSON
     println("
 --- Test Case 4: Parse Invalid JSON ---")
-    let invalidJson = "{\"name\": \"Zeno\", " 
+    let invalidJson = "{\"name\": \"Zeno\", "
     print("Parsing invalid JSON: '")
     print(invalidJson)
     println("'")
-    let parsedInvalid = parse(invalidJson) 
-    let stringifiedNull = stringify(parsedInvalid) 
+    let parsedInvalid = parse(invalidJson)
+    let stringifiedNull = stringify(parsedInvalid)
     print("Stringified result of invalid parse: ")
-    println(stringifiedNull) 
-    if stringifiedNull == "null" { 
+    println(stringifiedNull)
+    if stringifiedNull == "null" {
         println("Parse Invalid JSON: OK (resulted in JSON null when stringified)")
     } else {
         println("ERROR: Invalid JSON parse did not result in null when stringified! Got: " + stringifiedNull)
@@ -95,7 +95,7 @@ fn main() {
     } else {
         println("ERROR: Valid JSON null parse did not result in null when stringified! Got: " + stringifiedValidNull)
     }
-    
+
     println("
 === std/json module test completed ===")
 }

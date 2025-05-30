@@ -279,7 +279,7 @@ fn main() {
     let jsonFromZeno = stringify(zenoData)
     print("JSON from Zeno string 'a simple string': ")
     println(jsonFromZeno) // Expected: "\"a simple string\""
-    
+
     let invalidJson = "{\"key\": value_not_string}" // Note: value_not_string needs to be a Zeno string for this to be a valid Zeno line
     let parsedError = parse(invalidJson)
     print("Result of parsing invalid JSON: ")
