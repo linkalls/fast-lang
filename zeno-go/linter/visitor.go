@@ -26,6 +26,8 @@ type Visitor interface {
 	VisitFunctionCall(node *ast.FunctionCall) error
 	VisitBinaryExpression(node *ast.BinaryExpression) error
 	VisitUnaryExpression(node *ast.UnaryExpression) error
+	VisitArrayLiteral(node *ast.ArrayLiteral) error   // Added
+	VisitMapLiteral(node *ast.MapLiteral) error     // Added
 	// Note: ast.Parameter is not typically visited standalone by this kind of walker,
 	// it's part of FunctionDefinition. Similarly for ElseIfClause.
 }
@@ -182,6 +184,14 @@ func Walk(node ast.Node, visitor Visitor) error {
 		if err = Walk(n.Right, visitor); err != nil {
 			return fmt.Errorf("in unary expression right: %w", err)
 		}
+	case *ast.ArrayLiteral:
+		// The visitor's VisitArrayLiteral method is responsible for walking children (elements)
+		// and applying rules.
+		err = visitor.VisitArrayLiteral(n)
+	case *ast.MapLiteral:
+		// The visitor's VisitMapLiteral method is responsible for walking children (keys/values)
+		// and applying rules.
+		err = visitor.VisitMapLiteral(n)
 	default:
 		// This case should ideally not be hit if all ast.Node types are covered.
 		// It implies a new AST node was added but not handled in Walk.

@@ -1,0 +1,32 @@
+import { println } from "std/io"
+
+fn main() {
+    println("--- Testing Invalid Array Literals ---")
+
+    // These should cause parser/type-checker errors
+    // The Zeno compiler should report these errors during the parsing phase.
+    // This file is not expected to run.
+
+    let mixed_type_arr_1 = [1, "hello", 2] // Error: Mismatched types INT vs STRING
+    println("Mixed type array 1 (should not print):", mixed_type_arr_1)
+
+    let mixed_type_arr_2 = [true, 1.5, false] // Error: Mismatched types BOOL vs FLOAT
+    println("Mixed type array 2 (should not print):", mixed_type_arr_2)
+
+    let arr_with_ident_primitive = [1, 2, three] // Error: 'three' is an undefined identifier
+                                             // If 'three' was defined as non-primitive, it would be:
+                                             // "array element type is not a primitive type... got *ast.Identifier (expected INT)"
+    println("Array with identifier (should not print):", arr_with_ident_primitive)
+
+    let arr_with_expr = [1, 2 * 2, 3]       // Error: BinaryExpression is not a primitive
+                                             // "array element type is not a primitive type... got *ast.BinaryExpression (expected INT)"
+    println("Array with expression (should not print):", arr_with_expr)
+
+    let first_is_ident = [not_a_primitive, 1, 2] // Error: First element not primitive
+                                                // "array element type is not a primitive type... got *ast.Identifier for first element"
+    println("Array with first element as identifier (should not print):", first_is_ident)
+
+    // Define 'three' as an int to test a different scenario for arr_with_ident_primitive if desired
+    // let three = 3
+    // let arr_with_defined_ident = [1, 2, three] // This should pass if 'three' is int.
+}

@@ -110,6 +110,7 @@ func New(l *lexer.Lexer) *Parser {
 		token.MINUS:    p.parsePrefixExpression,
 		token.FLOAT:    p.parseFloatLiteral,
 		token.LBRACKET: p.parseArrayLiteral, // Added for array literals
+		token.LBRACE:   p.parseMapLiteral,   // Added for map literals
 	}
 	p.infixParseFns = map[token.TokenType]infixParseFn{
 		token.PLUS:     p.parseInfixExpression,
@@ -403,11 +404,17 @@ func (p *Parser) parseCommaSeparatedExpressions(end token.TokenType) []ast.Expre
 	list = append(list, p.parseExpression(LOWEST)) // Parse the first expression.
 
 	// Loop for subsequent comma-separated expressions.
+	// After parsing the first element, p.currentToken is the last token of that element.
+	// p.peekToken is expected to be a COMMA if there are more elements.
 	for p.peekToken.Type == token.COMMA {
-		p.nextToken() // Consume the last token of the previous expression.
-		p.nextToken() // Consume the COMMA. Current token is now COMMA.
-		p.nextToken() // Advance to the start of the next expression.
-		list = append(list, p.parseExpression(LOWEST))
+		p.nextToken() // Consume the last token of the previously parsed expression. p.currentToken is now this last token.
+		              // So, if previous was "1", currentToken is "1". peekToken is ",".
+		              // NO, nextToken advances currentToken to what peekToken was.
+		              // So, if currentToken was "1" (end of first expr), peekToken was ",".
+		              // After this first nextToken(), currentToken becomes ",". peekToken is start of next expr.
+
+		p.nextToken() // Consume the COMMA token itself. p.currentToken is now the first token of the next expression.
+		list = append(list, p.parseExpression(LOWEST)) // Parse the next expression.
 	}
 
 	// Expect and consume the endToken.
@@ -417,11 +424,152 @@ func (p *Parser) parseCommaSeparatedExpressions(end token.TokenType) []ast.Expre
 	return list
 }
 
+// getExpressionPrimitiveType checks if an expression is a known primitive type
+// and returns its type as a string (e.g., "INT", "STRING", "FLOAT", "BOOL").
+// The second return value is true if it's a recognized primitive, false otherwise.
+func getExpressionPrimitiveType(exp ast.Expression) (string, bool) {
+	switch exp.(type) {
+	case *ast.IntegerLiteral:
+		return "INT", true
+	case *ast.FloatLiteral:
+		return "FLOAT", true
+	case *ast.StringLiteral:
+		return "STRING", true
+	case *ast.BooleanLiteral:
+		return "BOOL", true
+	default:
+		// For this phase, we consider anything else as non-primitive or unknown.
+		return fmt.Sprintf("%T", exp), false
+	}
+}
+
 func (p *Parser) parseArrayLiteral() ast.Expression {
-	// currentToken is token.LBRACKET when this prefixParseFn is called.
 	array := &ast.ArrayLiteral{}
+	// currentToken is token.LBRACKET when this prefixParseFn is called.
+	// parseCommaSeparatedExpressions handles the parsing of elements between LBRACKET and RBRACKET.
 	array.Elements = p.parseCommaSeparatedExpressions(token.RBRACKET)
+
+	if array.Elements == nil {
+		// This can happen if parseCommaSeparatedExpressions itself encountered an error
+		// (e.g., missing RBRACKET) and returned nil. Errors would already be recorded.
+		return nil
+	}
+
+	if len(array.Elements) > 0 {
+		firstElementType, isFirstPrimitive := getExpressionPrimitiveType(array.Elements[0])
+		if !isFirstPrimitive {
+			msg := fmt.Sprintf("array element type is not a primitive type (int, float, string, bool), got %s for first element", firstElementType)
+			p.errors = append(p.errors, msg)
+			// Return the array to allow collecting more syntax errors; type errors are semantic.
+			// The generator/type-checker will ultimately decide if this partially valid AST is usable.
+		}
+
+		// We proceed with type checking against the first element's type only if it was primitive.
+		if isFirstPrimitive {
+			for i := 1; i < len(array.Elements); i++ {
+				element := array.Elements[i]
+				elementType, isPrimitive := getExpressionPrimitiveType(element)
+
+				if !isPrimitive {
+					msg := fmt.Sprintf("array element type is not a primitive type (int, float, string, bool), got %s at index %d (expected %s)", elementType, i, firstElementType)
+					p.errors = append(p.errors, msg)
+					continue // Continue to find all non-primitive elements
+				}
+
+				if elementType != firstElementType {
+					msg := fmt.Sprintf("mismatched types in array literal: expected %s, got %s at index %d", firstElementType, elementType, i)
+					p.errors = append(p.errors, msg)
+					// Continue to find all mismatches against the first primitive type
+				}
+			}
+		}
+		// If the first element was not primitive, we've already logged an error for it.
+		// We don't iterate further for mismatches because there's no valid "expected primitive type".
+		// However, we could iterate to find *other* non-primitive types if desired.
+		// For now, the logic is: if first is primitive, all others must match that primitive.
+		// If first is not primitive, that's an error, and further elements are not checked against it.
+	}
 	return array
+}
+
+func (p *Parser) parseMapLiteral() ast.Expression {
+	// currentToken is token.LBRACE when this prefixParseFn is called.
+	mapLiteral := &ast.MapLiteral{Pairs: make(map[ast.Expression]ast.Expression)}
+
+	// Handle empty map {}
+	if p.peekToken.Type == token.RBRACE {
+		p.nextToken() // Consume LBRACE
+		p.nextToken() // Consume RBRACE
+		return mapLiteral
+	}
+
+	p.nextToken() // Consume LBRACE, currentToken is now the first token of the first key.
+
+	for p.currentToken.Type != token.RBRACE && p.currentToken.Type != token.EOF {
+		// Parse Key
+		key := p.parseExpression(LOWEST)
+		if key == nil {
+			// Error already recorded by parseExpression or its children
+			return nil
+		}
+
+		// Validate Key Type
+		switch key.(type) {
+		case *ast.Identifier, *ast.StringLiteral:
+			// Valid key type
+		default:
+			msg := fmt.Sprintf("invalid map key type: expected IDENTIFIER or STRING, got %T", key)
+			p.errors = append(p.errors, msg)
+			return nil
+		}
+
+		if !p.expectPeek(token.COLON) {
+			// Error: "expected next token to be COLON, got <actual_token> instead" already added by expectPeek
+			return nil
+		}
+		p.nextToken() // Consume COLON, currentToken is now the first token of the value.
+
+		// Parse Value
+		value := p.parseExpression(LOWEST)
+		if value == nil {
+			// Error already recorded by parseExpression or its children
+			return nil
+		}
+		mapLiteral.Pairs[key] = value
+
+		// After parsing a value, p.currentToken is the last token of the value expression.
+		// p.peekToken is what comes AFTER the value expression (e.g., COMMA or RBRACE).
+		if p.peekToken.Type == token.COMMA {
+			p.nextToken() // Advances p.currentToken to be the COMMA (it was previously value's end).
+			// Now p.currentToken is COMMA.
+
+			// Check for trailing comma: e.g. {key: value,}
+			if p.peekToken.Type == token.RBRACE {
+				p.nextToken() // Consume COMMA, p.currentToken is now RBRACE.
+				break         // Exit loop, RBRACE is currentToken.
+			}
+			p.nextToken() // Consume COMMA, p.currentToken is now the first token of the next key.
+		} else if p.peekToken.Type == token.RBRACE {
+			p.nextToken() // Advances p.currentToken to be the RBRACE.
+			break         // Exit loop, RBRACE is currentToken.
+		} else if p.peekToken.Type == token.EOF { // Premature EOF
+			msg := fmt.Sprintf("expected ',' or '}' after map value, got EOF")
+			p.errors = append(p.errors, msg)
+			return nil
+		} else { // Unexpected token
+			msg := fmt.Sprintf("expected ',' or '}' after map value, got %s instead", p.peekToken.Type)
+			p.errors = append(p.errors, msg)
+			return nil
+		}
+	} // End of for loop
+
+	if p.currentToken.Type != token.RBRACE {
+		// This error is for cases where the loop terminates due to EOF before a proper RBRACE.
+		// If the loop completed because currentToken became RBRACE (e.g. via break), this won't trigger.
+		p.errors = append(p.errors, fmt.Sprintf("expected '}' to close map literal, got %s instead", p.currentToken.Type))
+		return nil
+	}
+	return mapLiteral
 }
 
 func (p *Parser) parseFunctionCall(functionExpression ast.Expression) ast.Expression {

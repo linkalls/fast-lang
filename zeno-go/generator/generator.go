@@ -167,6 +167,22 @@ func (g *Generator) generateProgram(program *ast.Program) (string, error) {
 
 func indent(level int) string { return strings.Repeat("\t", level) }
 
+// getGoTypeForZenoPrimitiveType converts a Zeno primitive type to its Go equivalent string.
+func getGoTypeForZenoPrimitiveType(zenoType types.Type) string {
+	switch zenoType {
+	case types.IntType:
+		return "int"
+	case types.FloatType:
+		return "float64"
+	case types.StringType:
+		return "string"
+	case types.BoolType:
+		return "bool"
+	default:
+		return "interface{}" // Default for non-primitive or unknown types
+	}
+}
+
 func mapType(zenoType string) string {
 	switch zenoType {
 	case "int": return "int"
@@ -300,32 +316,57 @@ func (g *Generator) generateExpression(expr ast.Expression, builder *strings.Bui
 		} else { builder.WriteString("false") }
 	case *ast.Identifier:
 		builder.WriteString(e.Value)
-	case *ast.ArrayLiteral: // New logic for typed array generation
+	case *ast.ArrayLiteral:
 		if len(e.Elements) == 0 {
-			builder.WriteString("[]interface{}{}")
-			return nil
-		}
-		firstElementType := g.inferType(e.Elements[0])
-		goSliceType := ""
-		switch firstElementType {
-		case types.IntType: goSliceType = "[]int"
-		case types.FloatType: goSliceType = "[]float64"
-		case types.StringType: goSliceType = "[]string"
-		case types.BoolType: goSliceType = "[]bool"
-		default:
-			return GenerationError{Message: fmt.Sprintf("Array elements must be of a consistent primitive type (int, float, string, bool) for typed array generation, got %s for the first element", firstElementType)}
-		}
-		for i := 1; i < len(e.Elements); i++ {
-			elementType := g.inferType(e.Elements[i])
-			if elementType != firstElementType {
-				return GenerationError{Message: fmt.Sprintf("All array elements must be of the same type for typed array generation. Expected %s, got %s at index %d", firstElementType, elementType, i)}
+			builder.WriteString("[]interface{}{}") // Default for empty array
+		} else {
+			// Determine element type based on the first element, as parser ensures homogeneity for primitives.
+			// For generator, if parser passed it, we trust homogeneity for primitives.
+			// If not a primitive type according to parser, it would be an error there,
+			// or it's a more complex type not yet handled for specific Go typing.
+			firstElementZenoType := g.inferType(e.Elements[0])
+			goElementType := getGoTypeForZenoPrimitiveType(firstElementZenoType)
+
+			// If the parser guarantees homogeneity for primitive types, we use that type.
+			// If the elements are not primitives (e.g. identifiers, function calls),
+			// getGoTypeForZenoPrimitiveType will return "interface{}", leading to []interface{}.
+			// This is a safe default if specific typing isn't possible here.
+			builder.WriteString(fmt.Sprintf("[]%s{", goElementType))
+			for i, elem := range e.Elements {
+				if i > 0 {
+					builder.WriteString(", ")
+				}
+				if err := g.generateExpression(elem, builder); err != nil {
+					return err
+				}
 			}
+			builder.WriteString("}")
 		}
-		builder.WriteString(goSliceType)
-		builder.WriteString("{")
-		for i, elem := range e.Elements {
-			if i > 0 { builder.WriteString(", ") }
-			if err := g.generateExpression(elem, builder); err != nil { return err }
+	case *ast.MapLiteral:
+		builder.WriteString("map[string]interface{}{")
+		count := 0
+		for keyExpr, valueExpr := range e.Pairs {
+			if count > 0 {
+				builder.WriteString(", ")
+			}
+			// Process key
+			var keyString string
+			switch k := keyExpr.(type) {
+			case *ast.Identifier:
+				keyString = k.Value
+			case *ast.StringLiteral:
+				keyString = k.Value
+			default:
+				// Should not happen if parser validation is correct
+				return GenerationError{Message: fmt.Sprintf("unsupported map key type: %T", k)}
+			}
+			builder.WriteString(fmt.Sprintf("\"%s\": ", keyString))
+
+			// Process value
+			if err := g.generateExpression(valueExpr, builder); err != nil {
+				return err
+			}
+			count++
 		}
 		builder.WriteString("}")
 	case *ast.UnaryExpression:

@@ -1,0 +1,55 @@
+import { println } from "std/io"
+import { stringify, parse } from "std/json"
+
+fn main() {
+    println("--- Testing JSON Stringify ---")
+
+    let arr_int = [1, 2, 3, 4]
+    let arr_str = ["hello", "zeno", "world"]
+    let arr_bool = [true, false, true]
+    let arr_float = [1.1, 2.2, 3.14]
+    let arr_empty: any[] = [] // Zeno doesn't have typed empty array literals yet, parser makes []interface{}
+                           // Generator makes []interface{} for empty Zeno array.
+
+    let map_simple = {name: "Zeno", version: 0.1, active: true}
+    let map_nested = {
+        user: {
+            id: 123,
+            username: "zeno_user"
+        },
+        tags: ["compiler", "language", "fun"]
+    }
+    let map_empty: map[string]any = {}
+
+    println("Stringify Int Array:", stringify(arr_int))
+    println("Stringify String Array:", stringify(arr_str))
+    println("Stringify Bool Array:", stringify(arr_bool))
+    println("Stringify Float Array:", stringify(arr_float))
+    println("Stringify Empty Array:", stringify(arr_empty))
+
+    println("Stringify Simple Map:", stringify(map_simple))
+    println("Stringify Nested Map:", stringify(map_nested))
+    println("Stringify Empty Map:", stringify(map_empty))
+
+    println("")
+    println("--- Testing JSON Parse ---")
+
+    let json_str_arr = "[10, 20, 30]"
+    let parsed_arr: any = parse(json_str_arr)
+    println("Parsed Array:", stringify(parsed_arr)) // Stringify again to check structure
+
+    let json_str_obj = "{\"fruit\": \"apple\", \"count\": 5, \"organic\": true}"
+    let parsed_obj: any = parse(json_str_obj)
+    println("Parsed Object:", stringify(parsed_obj))
+
+    let json_str_complex = "{ \"id\": 789, \"item\": \"widget\", \"dimensions\": [10, 20, { \"unit\": \"cm\" } ] }"
+    let parsed_complex: any = parse(json_str_complex)
+    println("Parsed Complex:", stringify(parsed_complex))
+
+    // Example of accessing parsed data (requires type assertion or dynamic access in Zeno - conceptual)
+    // This part is more about showing what parse returns, actual field access depends on Zeno features
+    // let data: map[string]any = parsed_obj as map[string]any
+    // if data != nil {
+    //   println("Parsed fruit:", data["fruit"])
+    // }
+}

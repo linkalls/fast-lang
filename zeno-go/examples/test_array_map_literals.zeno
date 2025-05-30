@@ -1,0 +1,44 @@
+import { println } from "std/io"
+import { stringify, parse } from "std/json"
+
+fn main() {
+    println("--- Array Literals ---")
+    let arr_int = [1, 2, 3]
+    let arr_str = ["a", "b", "c"]
+    let arr_bool = [true, false, true]
+    let arr_float = [1.1, 2.2, 3.3]
+    let arr_empty = [] // Parser makes this []ast.Expression, generator makes []interface{}
+
+    println("arr_int:", stringify(arr_int))
+    println("arr_str:", stringify(arr_str))
+    println("arr_bool:", stringify(arr_bool))
+    println("arr_float:", stringify(arr_float))
+    println("arr_empty:", stringify(arr_empty))
+
+    // For direct printing, Zeno would need a way to represent arrays.
+    // Assuming println can handle these via stringify or a similar mechanism for now.
+    // println("Direct arr_int:", arr_int)
+
+    println("")
+    println("--- Map Literals ---")
+    let map_simple = {name: "Zeno", version: 0.1, active: true, count: 100}
+    let map_str_keys = {"key1": "val1", "another key": 100, "is zeno?": true}
+    let map_with_array = {data: [10, 20, 30], label: "numbers"}
+    let map_empty = {}
+
+    println("map_simple:", stringify(map_simple))
+    println("map_str_keys:", stringify(map_str_keys))
+    println("map_with_array:", stringify(map_with_array))
+    println("map_empty:", stringify(map_empty))
+    // println("Direct map_simple:", map_simple)
+
+    println("")
+    println("--- JSON Parse Examples ---")
+    let json_obj_str = "{ \"foo\": \"bar\", \"count\": 42 }"
+    let parsed_obj: any = parse(json_obj_str)
+    println("Parsed JSON object:", stringify(parsed_obj))
+
+    let json_arr_str = "[100, 200, false, \"mixed\"]"
+    let parsed_arr: any = parse(json_arr_str)
+    println("Parsed JSON array:", stringify(parsed_arr))
+}
