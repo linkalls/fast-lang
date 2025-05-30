@@ -22,11 +22,10 @@ pub fn PublicGreet(name: string) {
 }
 
 fn main() {
-    let sum: int = privateAdd(3, 4)
-    let product: int = publicMultiply(5, 6)
+    privateAdd(3, 4) // Call functions
+    publicMultiply(5, 6)
     
-    println("Sum: ", sum)
-    println("Product: ", product)
+    println("Sum and product calculated by private/public functions (not displayed).")
     
     greet("Private User")
     PublicGreet("Public User")

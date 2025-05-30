@@ -32,8 +32,10 @@ type Generator struct {
 	userModules  map[string]map[string]string // user module -> function -> go equivalent
 	moduleASTs   map[string]*ast.Program      // user module -> parsed AST
 	standardLibs map[string]map[string]string // module -> function -> go equivalent
+	nativeFunctionHandlers map[string]string            // native function name -> go function name
 	currentDir   string                       // directory of the current file being compiled
 	symbolTable  *types.SymbolTable           // symbol table for type inference
+	program      *ast.Program                 // The main program AST
 }
 
 // NewGenerator creates a new generator instance
@@ -47,18 +49,18 @@ func NewGenerator() *Generator {
 		userModules:  make(map[string]map[string]string),
 		moduleASTs:   make(map[string]*ast.Program),
 		standardLibs: make(map[string]map[string]string),
+		nativeFunctionHandlers: make(map[string]string),
 		symbolTable:  types.NewSymbolTable(nil),
 	}
 
-	// Define standard library mappings
-	g.standardLibs["std/fmt"] = map[string]string{
-		// Note: print and println are built-in functions, not imported
-	}
+	// Define native function handlers
+	g.nativeFunctionHandlers["__native_read_file"] = "zenoNativeReadFile"
+	g.nativeFunctionHandlers["__native_write_file"] = "zenoNativeWriteFile"
+	g.nativeFunctionHandlers["__native_print"] = "zenoNativePrint"
+	g.nativeFunctionHandlers["__native_println"] = "zenoNativePrintln"
 
-	g.standardLibs["std/io"] = map[string]string{
-		"readFile":  "readFile",
-		"writeFile": "writeFile",
-	}
+	// standardLibs is now populated by processStdModule and processUserModule
+	// g.standardLibs["std/fmt"] = map[string]string{} // Removed
 
 	return g
 }
@@ -77,6 +79,7 @@ func GenerateWithOptions(program *ast.Program) (string, error) {
 func GenerateWithFile(program *ast.Program, sourceFile string) (string, error) {
 	g := NewGenerator()
 	g.currentDir = sourceFile
+	g.program = program // Store the main program AST
 	return g.generateProgram(program)
 }
 
@@ -116,6 +119,8 @@ func (g *Generator) generateProgram(program *ast.Program) (string, error) {
 
 	// Always include fmt for basic functionality
 	requiredImports["fmt"] = true
+	// Always include os because native helpers might need it (e.g. for file I/O)
+	requiredImports["os"] = true
 
 	// Generate import statements
 	for imp := range requiredImports {
@@ -124,10 +129,8 @@ func (g *Generator) generateProgram(program *ast.Program) (string, error) {
 
 	builder.WriteString(")\n\n")
 
-	// Generate std/io helper functions if needed
-	if _, hasStdIo := g.imports["std/io"]; hasStdIo {
-		g.generateStdIoHelpers(&builder)
-	}
+	// Generate native function helpers
+	g.generateNativeFunctionHelpers(&builder)
 
 	// Separate function definitions from other statements
 	var functionDefs []*ast.FunctionDefinition
@@ -224,8 +227,14 @@ func mapType(zenoType string) string {
 		return "bool"
 	case "string":
 		return "string"
+	case "any": // New case
+		return "interface{}"
+	case "void": // New case
+		return "" // Represents void in Go by returning nothing
 	default:
 		// If not a known type, assume it's already a valid Go type
+		// or it might be an error if Zeno parser allows undefined types.
+		// For now, return as is, testing will reveal issues.
 		return zenoType
 	}
 }
@@ -347,32 +356,32 @@ func (g *Generator) generateStatement(stmt ast.Statement, builder *strings.Build
 		}
 		builder.WriteString("\n")
 
-	case *ast.PrintStatement:
-		builder.WriteString(indent(indentLevel))
-		if s.Newline {
-			// Validate that println is imported
-			if err := g.validateImports("println"); err != nil {
-				return err
-			}
-			builder.WriteString("fmt.Println(")
-		} else {
-			// Validate that print is imported
-			if err := g.validateImports("print"); err != nil {
-				return err
-			}
-			builder.WriteString("fmt.Print(")
-		}
+	// case *ast.PrintStatement: // Removed as ast.PrintStatement is removed
+	// 	builder.WriteString(indent(indentLevel))
+	// 	if s.Newline {
+	// 		// Validate that println is imported
+	// 		if err := g.validateImports("println"); err != nil {
+	// 			return err
+	// 		}
+	// 		builder.WriteString("fmt.Println(")
+	// 	} else {
+	// 		// Validate that print is imported
+	// 		if err := g.validateImports("print"); err != nil {
+	// 			return err
+	// 		}
+	// 		builder.WriteString("fmt.Print(")
+	// 	}
 
-		for i, arg := range s.Arguments {
-			if i > 0 {
-				builder.WriteString(", ")
-			}
-			if err := g.generateExpression(arg, builder); err != nil {
-				return err
-			}
-		}
+	// 	for i, arg := range s.Arguments {
+	// 		if i > 0 {
+	// 			builder.WriteString(", ")
+	// 		}
+	// 		if err := g.generateExpression(arg, builder); err != nil {
+	// 			return err
+	// 		}
+	// 	}
 
-		builder.WriteString(")\n")
+	// 	builder.WriteString(")\n")
 
 	case *ast.IfStatement:
 		builder.WriteString(indent(indentLevel))
@@ -464,6 +473,27 @@ func (g *Generator) generateExpression(expr ast.Expression, builder *strings.Bui
 		// Validate that the function is properly imported if it's a standard library function
 		if err := g.validateImports(e.Name); err != nil {
 			return err
+		}
+
+		// Order of checks:
+		// 1. Native function handlers (e.g., __native_print)
+		// 2. Declared functions in the current file
+		// 3. User-defined/standard library modules (which includes std/fmt's print/println now)
+
+		// Check if this is a direct call to a native function (e.g. __native_print)
+		if goFuncName, isNative := g.nativeFunctionHandlers[e.Name]; isNative {
+			builder.WriteString(goFuncName)
+			builder.WriteString("(")
+			for i, arg := range e.Arguments {
+				if i > 0 {
+					builder.WriteString(", ")
+				}
+				if err := g.generateExpression(arg, builder); err != nil {
+					return err
+				}
+			}
+			builder.WriteString(")")
+			return nil // Native function processed, return early
 		}
 
 		// First check if this is a function defined in the current file
@@ -610,7 +640,11 @@ func (g *Generator) collectImportsAndDeclarations(stmt ast.Statement) error {
 	case *ast.ImportStatement:
 		g.imports[s.Module] = s.Imports
 		// If it's a user module (starts with "./" or "../"), process it
-		if strings.HasPrefix(s.Module, "./") || strings.HasPrefix(s.Module, "../") {
+		if strings.HasPrefix(s.Module, "std/") {
+			if err := g.processStdModule(s.Module, s.Imports); err != nil {
+				return err
+			}
+		} else if strings.HasPrefix(s.Module, "./") || strings.HasPrefix(s.Module, "../") {
 			if err := g.processUserModule(s.Module, s.Imports); err != nil {
 				return err
 			}
@@ -655,11 +689,11 @@ func (g *Generator) collectImportsAndDeclarations(stmt ast.Statement) error {
 	case *ast.ExpressionStatement:
 		// Check for variable usage in expressions
 		g.markVariableUsage(s.Expression)
-	case *ast.PrintStatement:
-		// Mark variables used in print statements
-		for _, arg := range s.Arguments {
-			g.markVariableUsage(arg)
-		}
+	// case *ast.PrintStatement: // Removed
+	// 	// Mark variables used in print statements
+	// 	for _, arg := range s.Arguments {
+	// 		g.markVariableUsage(arg)
+	// 	}
 	case *ast.IfStatement:
 		// Mark variables used in if condition
 		g.markVariableUsage(s.Condition)
@@ -781,9 +815,11 @@ func (g *Generator) isPublicFunction(fnName string) bool {
 // validateImports checks that all used functions are properly imported
 func (g *Generator) validateImports(functionName string) error {
 	// Built-in functions don't need to be imported
+	// print and println are no longer built-in keywords/statements in this context.
+	// They must be imported if used as functions.
 	builtinFunctions := map[string]bool{
-		"print":   true,
-		"println": true,
+		// "print":   true, // Removed
+		// "println": true, // Removed
 	}
 
 	if builtinFunctions[functionName] {
@@ -887,11 +923,66 @@ func (g *Generator) processUserModule(modulePath string, importedFunctions []str
 	return nil
 }
 
-// generateStdIoHelpers generates helper functions for std/io module
-func (g *Generator) generateStdIoHelpers(builder *strings.Builder) {
-	// Generate readFile helper function
-	builder.WriteString("// std/io helper functions\n")
-	builder.WriteString("func readFile(filename string) string {\n")
+// processStdModule processes a standard library module and extracts public functions
+func (g *Generator) processStdModule(modulePath string, importedFunctions []string) error {
+	// modulePath will be like "std/io" or "std/fmt"
+	moduleShortName := strings.TrimPrefix(modulePath, "std/")
+	// Construct path relative to a top-level "std" directory.
+	// IMPORTANT: This assumes the compiled Zeno program or the Zeno compiler itself
+	// is run from a directory where "std/io.zeno", "std/fmt.zeno" can be found.
+	// For example, if running from `zeno-go/`, then "std/io.zeno" is correct.
+	zenoFilePath := filepath.Join("std", moduleShortName+".zeno")
+
+	// Read the module file
+	content, err := os.ReadFile(zenoFilePath)
+	if err != nil {
+		msg := fmt.Sprintf("Failed to read module file '%s': %v", zenoFilePath, err)
+		return GenerationError{Message: msg}
+	}
+
+	// Parse the module
+	l := lexer.New(string(content))
+	p := parser.New(l)
+	program := p.ParseProgram()
+
+	if len(p.Errors()) > 0 {
+		msg := fmt.Sprintf("Parse errors in module '%s': %v", zenoFilePath, p.Errors())
+		return GenerationError{Message: msg}
+	}
+
+	// Extract public functions from the module
+	publicFunctions := make(map[string]string)
+	for _, stmt := range program.Statements {
+		if funcDef, ok := stmt.(*ast.FunctionDefinition); ok && funcDef.IsPublic {
+			// Convert function name to Go convention (uppercase first letter)
+			goFuncName := funcDef.Name
+			if len(goFuncName) > 0 {
+				goFuncName = strings.ToUpper(string(goFuncName[0])) + goFuncName[1:]
+			}
+			publicFunctions[funcDef.Name] = goFuncName
+		}
+	}
+
+	// Validate that all imported functions exist and are public
+	for _, importedFunc := range importedFunctions {
+		if _, exists := publicFunctions[importedFunc]; !exists {
+			msg := fmt.Sprintf("Function '%s' is not exported from module '%s'", importedFunc, modulePath)
+			return GenerationError{Message: msg}
+		}
+	}
+
+	// Store the module mapping and AST
+	g.userModules[modulePath] = publicFunctions
+	g.moduleASTs[modulePath] = program
+	return nil
+}
+
+// generateNativeFunctionHelpers generates helper functions for native Zeno operations
+func (g *Generator) generateNativeFunctionHelpers(builder *strings.Builder) {
+	builder.WriteString("// Native function helpers\n")
+
+	// zenoNativeReadFile
+	builder.WriteString("func zenoNativeReadFile(filename string) string {\n")
 	builder.WriteString("\tdata, err := os.ReadFile(filename)\n")
 	builder.WriteString("\tif err != nil {\n")
 	builder.WriteString("\t\tfmt.Printf(\"Error reading file %s: %v\\n\", filename, err)\n")
@@ -900,12 +991,24 @@ func (g *Generator) generateStdIoHelpers(builder *strings.Builder) {
 	builder.WriteString("\treturn string(data)\n")
 	builder.WriteString("}\n\n")
 
-	// Generate writeFile helper function
-	builder.WriteString("func writeFile(filename string, content string) {\n")
+	// zenoNativeWriteFile
+	builder.WriteString("func zenoNativeWriteFile(filename string, content string) bool {\n")
 	builder.WriteString("\terr := os.WriteFile(filename, []byte(content), 0644)\n")
 	builder.WriteString("\tif err != nil {\n")
 	builder.WriteString("\t\tfmt.Printf(\"Error writing file %s: %v\\n\", filename, err)\n")
+	builder.WriteString("\t\treturn false\n")
 	builder.WriteString("\t}\n")
+	builder.WriteString("\treturn true\n")
+	builder.WriteString("}\n\n")
+
+	// zenoNativePrint
+	builder.WriteString("func zenoNativePrint(args ...interface{}) {\n")
+	builder.WriteString("\tfmt.Print(args...)\n")
+	builder.WriteString("}\n\n")
+
+	// zenoNativePrintln
+	builder.WriteString("func zenoNativePrintln(args ...interface{}) {\n")
+	builder.WriteString("\tfmt.Println(args...)\n")
 	builder.WriteString("}\n\n")
 }
 
@@ -943,8 +1046,52 @@ func (g *Generator) inferType(expr ast.Expression) types.Type {
 			return types.BoolType
 		}
 	case *ast.FunctionCall:
-		// For function calls, we'd need to track function return types
-		// For now, default to int
+		var funcDef *ast.FunctionDefinition
+
+		// Check current program's AST first
+		if g.program != nil {
+			for _, stmt := range g.program.Statements {
+				if def, ok := stmt.(*ast.FunctionDefinition); ok && def.Name == e.Name {
+					funcDef = def
+					break
+				}
+			}
+		}
+
+		// If not found in current program, check imported modules
+		if funcDef == nil {
+			for modulePath, moduleAST := range g.moduleASTs {
+				isImportedFromThisModule := false
+				if importedFuncs, exists := g.imports[modulePath]; exists {
+					for _, importedFnName := range importedFuncs {
+						if importedFnName == e.Name {
+							isImportedFromThisModule = true
+							break
+						}
+					}
+				}
+
+				if isImportedFromThisModule {
+					for _, stmt := range moduleAST.Statements {
+						if def, ok := stmt.(*ast.FunctionDefinition); ok && def.Name == e.Name {
+							if def.IsPublic { // Can only call public functions from other modules
+								funcDef = def
+								break
+							}
+						}
+					}
+				}
+				if funcDef != nil {
+					break // Found in this module, stop searching modules
+				}
+			}
+		}
+
+		if funcDef != nil && funcDef.ReturnType != nil {
+			return g.mapASTTypeToType(*funcDef.ReturnType)
+		}
+		// Fallback for unresolved functions or functions without explicit return types
+		fmt.Printf("WARN: Could not accurately determine return type for function call '%s'. Defaulting to IntType.\n", e.Name)
 		return types.IntType
 	}
 	// Default fallback

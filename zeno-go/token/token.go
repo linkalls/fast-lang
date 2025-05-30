@@ -35,8 +35,8 @@ const (
 	RETURN   TokenType = "RETURN"
 	TRUE     TokenType = "TRUE"
 	FALSE    TokenType = "FALSE"
-	PRINT    TokenType = "PRINT"
-	PRINTLN  TokenType = "PRINTLN"
+	// PRINT    TokenType = "PRINT"    // Removed as keyword
+	// PRINTLN  TokenType = "PRINTLN"  // Removed as keyword
 	BREAK    TokenType = "BREAK"
 	CONTINUE TokenType = "CONTINUE"
 
@@ -84,8 +84,8 @@ var keywords = map[string]TokenType{
 	"return":   RETURN,
 	"true":     TRUE,
 	"false":    FALSE,
-	"print":    PRINT,
-	"println":  PRINTLN,
+	// "print":    PRINT,    // Removed as keyword
+	// "println":  PRINTLN,  // Removed as keyword
 	"break":    BREAK,
 	"continue": CONTINUE,
 }

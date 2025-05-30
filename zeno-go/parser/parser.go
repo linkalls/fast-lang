@@ -195,10 +195,10 @@ func (p *Parser) parseStatement() ast.Statement {
 		return p.parseImportStatement()
 	case token.LET:
 		return p.parseLetStatement()
-	case token.PRINT:
-		return p.parsePrintStatement(false)
-	case token.PRINTLN:
-		return p.parsePrintStatement(true)
+	// case token.PRINT: // Removed: PRINT is no longer a keyword
+	// 	return p.parsePrintStatement(false)
+	// case token.PRINTLN: // Removed: PRINTLN is no longer a keyword
+	// 	return p.parsePrintStatement(true)
 	case token.IF:
 		return p.parseIfStatement()
 	case token.PUB:
@@ -417,52 +417,50 @@ func (p *Parser) parseImportStatement() *ast.ImportStatement {
 	}
 }
 
-// parsePrintStatement parses print(...) and println(...) statements
-func (p *Parser) parsePrintStatement(newline bool) *ast.PrintStatement {
-	// Current token is PRINT or PRINTLN
-	if !p.expectPeek(token.LPAREN) {
-		return nil
-	}
+// // parsePrintStatement parses print(...) and println(...) statements
+// func (p *Parser) parsePrintStatement(newline bool) *ast.PrintStatement {
+// 	// Current token is PRINT or PRINTLN
+// 	if !p.expectPeek(token.LPAREN) {
+// 		return nil
+// 	}
 
-	var arguments []ast.Expression
+// 	var arguments []ast.Expression
 
-	// Handle empty argument list
-	if p.peekToken.Type == token.RPAREN {
-		p.nextToken() // consume ')'
-	} else {
-		// Parse first argument
-		p.nextToken()
-		arg := p.parseExpression(LOWEST)
-		if arg != nil {
-			arguments = append(arguments, arg)
-		}
+// 	// Handle empty argument list
+// 	if p.peekToken.Type == token.RPAREN {
+// 		p.nextToken() // consume ')'
+// 	} else {
+// 		// Parse first argument
+// 		p.nextToken()
+// 		arg := p.parseExpression(LOWEST)
+// 		if arg != nil {
+// 			arguments = append(arguments, arg)
+// 		}
 
-		// Parse additional arguments separated by commas
-		for p.peekToken.Type == token.COMMA {
-			p.nextToken() // consume comma
-			p.nextToken() // move to next expression
-			arg := p.parseExpression(LOWEST)
-			if arg != nil {
-				arguments = append(arguments, arg)
-			}
-		}
+// 		// Parse additional arguments separated by commas
+// 		for p.peekToken.Type == token.COMMA {
+// 			p.nextToken() // consume comma
+// 			p.nextToken() // move to next expression
+// 			arg := p.parseExpression(LOWEST)
+// 			if arg != nil {
+// 				arguments = append(arguments, arg)
+// 			}
+// 		}
 
-		if !p.expectPeek(token.RPAREN) {
-			return nil
-		}
-	}
+// 		if !p.expectPeek(token.RPAREN) {
+// 			return nil
+// 		}
+// 	}
 
-	return &ast.PrintStatement{
-		Arguments: arguments,
-		Newline:   newline,
-	}
-}
+// 	return &ast.PrintStatement{
+// 		Arguments: arguments,
+// 		Newline:   newline,
+// 	}
+// }
 
 // isValidImportIdentifier checks if the current token can be used as an identifier in import statements
 func (p *Parser) isValidImportIdentifier() bool {
-	return p.currentToken.Type == token.IDENT ||
-		p.currentToken.Type == token.PRINTLN ||
-		p.currentToken.Type == token.PRINT
+	return p.currentToken.Type == token.IDENT
 }
 
 // parseFunctionDefinition parses function definitions

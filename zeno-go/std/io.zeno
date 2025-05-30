@@ -1,0 +1,15 @@
+// Standard I/O Module
+
+// Reads the entire content of a file.
+// Returns the file content as a string.
+// If an error occurs (e.g., file not found), returns an empty string.
+pub fn readFile(path: string): string {
+    return __native_read_file(path)
+}
+
+// Writes content to a file.
+// Overwrites the file if it already exists. Creates it if it doesn't.
+// Returns true if writing was successful, false otherwise.
+pub fn writeFile(path: string, content: string): bool {
+    return __native_write_file(path, content)
+}

@@ -226,29 +226,29 @@ func (is *ImportStatement) String() string {
 	return result
 }
 
-// PrintStatement represents print and println statements
-type PrintStatement struct {
-	Arguments []Expression // Arguments to print
-	Newline   bool         // true for println, false for print
-}
+// // PrintStatement represents print and println statements
+// type PrintStatement struct {
+// 	Arguments []Expression // Arguments to print
+// 	Newline   bool         // true for println, false for print
+// }
 
-func (ps *PrintStatement) statementNode() {}
-func (ps *PrintStatement) String() string {
-	var result string
-	if ps.Newline {
-		result = "println("
-	} else {
-		result = "print("
-	}
-	for i, arg := range ps.Arguments {
-		if i > 0 {
-			result += ", "
-		}
-		result += arg.String()
-	}
-	result += ")"
-	return result
-}
+// func (ps *PrintStatement) statementNode() {}
+// func (ps *PrintStatement) String() string {
+// 	var result string
+// 	if ps.Newline {
+// 		result = "println("
+// 	} else {
+// 		result = "print("
+// 	}
+// 	for i, arg := range ps.Arguments {
+// 		if i > 0 {
+// 			result += ", "
+// 		}
+// 		result += arg.String()
+// 	}
+// 	result += ")"
+// 	return result
+// }
 
 // Parameter represents a function parameter
 type Parameter struct {
