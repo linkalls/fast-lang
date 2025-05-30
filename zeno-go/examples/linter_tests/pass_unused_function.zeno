@@ -1,0 +1,9 @@
+import { println } from "std/fmt"
+
+fn usedPrivateHelper() {
+    println("I am called.")
+}
+
+fn main() {
+    usedPrivateHelper()
+}

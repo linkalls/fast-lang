@@ -9,250 +9,363 @@ import (
 
 	"github.com/linkalls/zeno-lang/generator"
 	"github.com/linkalls/zeno-lang/lexer"
+	"github.com/linkalls/zeno-lang/linter"
 	"github.com/linkalls/zeno-lang/parser"
+	"github.com/spf13/cobra"
 )
 
-func main() {
-	fmt.Println("=== Zeno Language Compiler ===")
-
-	args := os.Args[1:] // Replace flag.Args() with os.Args[1:]
-	if len(args) < 1 {
-		fmt.Println("Error: No command or file specified")
-		fmt.Println("Usage:")
-		fmt.Println("  zeno run <filename.zeno>      # Compile and run")
-		fmt.Println("  zeno compile <filename.zeno>  # Compile to Go file")
-		fmt.Println("  zeno build <filename.zeno>    # Compile to executable")
-		os.Exit(1)
-	}
-
-	command := args[0]
-
-	switch command {
-	case "run":
-		if len(args) < 2 {
-			fmt.Println("Error: 'run' command requires a filename")
-			fmt.Println("Usage: zeno run <filename.zeno>")
-			os.Exit(1)
+var rootCmd = &cobra.Command{
+	Use:   "zeno",
+	Short: "Zeno Language Compiler and Tools",
+	Long:  `Zeno is a programming language. This CLI provides tools to compile, run, build, and lint Zeno source files.`,
+	Run: func(cmd *cobra.Command, args []string) {
+		// Default behavior if no subcommand is given, or print help
+		if len(args) == 0 {
+			cmd.Help()
+			os.Exit(0)
 		}
-		fmt.Printf("=== Zeno Run Command ===\n")
-		err := runFile(args[1])
-		if err != nil {
-			fmt.Printf("Run failed: %v\n", err)
-			os.Exit(1)
-		}
-	case "compile":
-		if len(args) < 2 {
-			fmt.Println("Error: 'compile' command requires a filename")
-			fmt.Println("Usage: zeno compile <filename.zeno>")
-			os.Exit(1)
-		}
-		err := compileFile(args[1])
-		if err != nil {
-			fmt.Printf("Compilation failed: %v\n", err)
-			os.Exit(1)
-		}
-	case "build":
-		if len(args) < 2 {
-			fmt.Println("Error: 'build' command requires a filename")
-			fmt.Println("Usage: zeno build <filename.zeno>")
-			os.Exit(1)
-		}
-		err := buildExecutable(args[1])
-		if err != nil {
-			fmt.Printf("Build failed: %v\n", err)
-			os.Exit(1)
-		}
-	default:
-		// Backward compatibility: if first arg is a .zeno file, run it
-		if strings.HasSuffix(command, ".zeno") {
-			fmt.Printf("=== Zeno Run Command ===\n")
-			err := runFile(command)
-			if err != nil {
-				fmt.Printf("Run failed: %v\n", err)
-				os.Exit(1)
-			}
+		// Backward compatibility: if first arg is a .zeno file, try to run it
+		if strings.HasSuffix(args[0], ".zeno") {
+			fmt.Println("Executing default action (run) for .zeno file.")
+			runCmd.Run(cmd, args)
 		} else {
-			fmt.Printf("Error: Unknown command '%s'\n", command)
-			fmt.Println("Usage:")
-			fmt.Println("  zeno run <filename.zeno>      # Compile and run")
-			fmt.Println("  zeno compile <filename.zeno>  # Compile to Go file")
-			fmt.Println("  zeno build <filename.zeno>    # Compile to executable")
+			cmd.Help()
+		}
+	},
+}
+
+var runCmd = &cobra.Command{
+	Use:   "run <filename.zeno>",
+	Short: "Compile and run a Zeno file",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Printf("=== Zeno Run Command ===\n")
+		if err := runFile(args[0]); err != nil {
+			fmt.Fprintf(os.Stderr, "Run failed: %v\n", err)
 			os.Exit(1)
 		}
+	},
+}
+
+var compileCmd = &cobra.Command{
+	Use:   "compile <filename.zeno>",
+	Short: "Compile a Zeno file to Go",
+	Long:  `Compiles a Zeno source file (.zeno) into a Go source file (.go) in the same directory.`,
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Printf("=== Zeno Compile Command ===\n")
+		if err := compileFile(args[0]); err != nil {
+			fmt.Fprintf(os.Stderr, "Compilation failed: %v\n", err)
+			os.Exit(1)
+		}
+	},
+}
+
+var buildCmd = &cobra.Command{
+	Use:   "build <filename.zeno>",
+	Short: "Compile a Zeno file to an executable",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Printf("=== Zeno Build Command ===\n")
+		if err := buildExecutable(args[0]); err != nil {
+			fmt.Fprintf(os.Stderr, "Build failed: %v\n", err)
+			os.Exit(1)
+		}
+	},
+}
+
+var lintCmd = &cobra.Command{
+	Use:   "lint [filepath or directory]",
+	Short: "Lints Zeno source files for potential issues.",
+	Long: `Lints Zeno source files (.zeno) for potential issues, including naming conventions,
+unused variables, unused functions, and unused imports.
+You can specify one or more file paths or directories.
+If a directory is specified, it will be walked recursively for .zeno files.`,
+	Args: cobra.MinimumNArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Printf("=== Zeno Lint Command ===\n")
+		var allIssues []linter.Issue
+		hasErrors := false
+
+		for _, pathArg := range args {
+			info, err := os.Stat(pathArg)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error accessing path %s: %v\n", pathArg, err)
+				hasErrors = true
+				continue
+			}
+
+			var filesToLint []string
+			if info.IsDir() {
+				err := filepath.WalkDir(pathArg, func(currentPath string, d os.DirEntry, err error) error {
+					if err != nil {
+						return err
+					}
+					if !d.IsDir() && (strings.HasSuffix(currentPath, ".zeno") || strings.HasSuffix(currentPath, ".zn")) {
+						filesToLint = append(filesToLint, currentPath)
+					}
+					return nil
+				})
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Error walking directory %s: %v\n", pathArg, err)
+					hasErrors = true
+					continue
+				}
+			} else {
+				if strings.HasSuffix(pathArg, ".zeno") || strings.HasSuffix(pathArg, ".zn") {
+					filesToLint = append(filesToLint, pathArg)
+				} else {
+					fmt.Fprintf(os.Stderr, "Skipping non-Zeno file: %s\n", pathArg)
+					continue
+				}
+			}
+
+			for _, filePath := range filesToLint {
+				fmt.Printf("Linting file: %s\n", filePath)
+				content, err := os.ReadFile(filePath)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Error reading file %s: %v\n", filePath, err)
+					hasErrors = true
+					continue
+				}
+
+				l := lexer.New(string(content))
+				p := parser.New(l)
+				program := p.ParseProgram()
+
+				if len(p.Errors()) > 0 {
+					fmt.Fprintf(os.Stderr, "Parser errors in %s:\n", filePath)
+					for _, msg := range p.Errors() {
+						fmt.Fprintf(os.Stderr, "  - %s\n", msg)
+					}
+					hasErrors = true
+					continue 
+				}
+				
+				absFilePath, _ := filepath.Abs(filePath)
+
+
+				// Initialize linter and register rules
+				rules := []linter.Rule{
+					&linter.UnusedVariableRule{},
+					&linter.UnusedFunctionRule{},
+					&linter.FunctionNameRule{},
+					&linter.VariableNameRule{},
+					&linter.UnusedImportRule{},
+				}
+				zenoFrameworkLinter := linter.NewLinter(rules)
+
+				issues, err := zenoFrameworkLinter.Lint(program, absFilePath)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Linter error in %s: %v\n", filePath, err)
+					hasErrors = true 
+				}
+
+				if len(issues) > 0 {
+					allIssues = append(allIssues, issues...)
+				}
+			}
+		}
+
+		if len(allIssues) > 0 {
+			fmt.Printf("\nFound %d linting issue(s):\n", len(allIssues))
+			for _, issue := range allIssues {
+				// Use 1 if line/col is 0 from placeholder
+				line := issue.Line
+				if line == 0 { line = 1}
+				col := issue.Column
+				if col == 0 { col = 1}
+				fmt.Printf("%s:%d:%d: [%s] %s\n", issue.Filepath, line, col, issue.RuleName, issue.Message)
+			}
+			hasErrors = true // Ensure exit code reflects issues found
+		} else {
+			fmt.Println("No linting issues found.")
+		}
+
+		if hasErrors {
+			os.Exit(1)
+		}
+	},
+}
+
+func init() {
+	rootCmd.AddCommand(runCmd)
+	rootCmd.AddCommand(compileCmd)
+	rootCmd.AddCommand(buildCmd)
+	rootCmd.AddCommand(lintCmd)
+	// Potentially add flags here, e.g., for -jp (Japanese error messages) if Cobra handles them globally
+}
+
+func main() {
+	// The old main logic is now handled by Cobra commands.
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error executing command: %v\n", err)
+		os.Exit(1)
 	}
 }
 
+// --- Existing helper functions (compileFile, runFile, buildExecutable) ---
+// These are kept as they are called by the new Cobra commands.
+
 func compileFile(filename string) error {
-	// Read the Zeno source file
 	content, err := os.ReadFile(filename)
 	if err != nil {
 		return fmt.Errorf("failed to read file %s: %w", filename, err)
 	}
+	// fmt.Printf("Compiling file: %s\n", filename) // Cobra command will print this
+	// fmt.Printf("Source code:\n%s\n", string(content)) // Too verbose for default compile
 
-	fmt.Printf("Compiling file: %s\n", filename)
-	fmt.Printf("Source code:\n%s\n", string(content))
-
-	// Parse the Zeno code
 	l := lexer.New(string(content))
 	p := parser.New(l)
 	program := p.ParseProgram()
 
 	if len(p.Errors()) > 0 {
-		return fmt.Errorf("parser errors: %v", p.Errors())
+		fmt.Fprintf(os.Stderr, "Parser errors in %s:\n", filename)
+		for _, msg := range p.Errors() {
+			fmt.Fprintf(os.Stderr, "  - %s\n", msg)
+		}
+		return fmt.Errorf("parser errors found")
 	}
 
-	// Generate Go code
 	goCode, err := generator.GenerateWithFile(program, filename)
 	if err != nil {
 		return fmt.Errorf("generation error: %w", err)
 	}
 
-	// Output file name (replace .zeno with .go)
 	outputFile := strings.TrimSuffix(filename, ".zeno") + ".go"
+	if strings.HasSuffix(filename, ".zn") { // also handle .zn
+		outputFile = strings.TrimSuffix(filename, ".zn") + ".go"
+	}
 
-	// Write the generated Go code
+
 	err = os.WriteFile(outputFile, []byte(goCode), 0644)
 	if err != nil {
 		return fmt.Errorf("failed to write output file %s: %w", outputFile, err)
 	}
 
-	fmt.Printf("✅ Successfully compiled to: %s\n", outputFile)
+	fmt.Printf("✅ Successfully compiled %s to: %s\n", filename, outputFile)
 	return nil
 }
 
 func runFile(filename string) error {
-	if !strings.HasSuffix(filename, ".zeno") {
-		return fmt.Errorf("expected .zeno file, got: %s", filename)
+	if !strings.HasSuffix(filename, ".zeno") && !strings.HasSuffix(filename, ".zn") {
+		return fmt.Errorf("expected .zeno or .zn file, got: %s", filename)
 	}
 
-	// Read the Zeno source file
 	content, err := os.ReadFile(filename)
 	if err != nil {
 		return fmt.Errorf("failed to read file %s: %w", filename, err)
 	}
+	// fmt.Printf("Running file: %s\n", filename) // Cobra command will print this
 
-	fmt.Printf("Running file: %s\n", filename)
-
-	// Parse the Zeno code
 	l := lexer.New(string(content))
 	p := parser.New(l)
 	program := p.ParseProgram()
 
 	if len(p.Errors()) > 0 {
-		fmt.Printf("Parser errors found:\n")
-		for _, err := range p.Errors() {
-			fmt.Printf("  - %s\n", err)
+		fmt.Fprintf(os.Stderr, "Parser errors in %s:\n", filename)
+		for _, msg := range p.Errors() {
+			fmt.Fprintf(os.Stderr, "  - %s\n", msg)
 		}
-		return fmt.Errorf("parser errors: %v", p.Errors())
+		return fmt.Errorf("parser errors found")
 	}
 
-	// Generate Go code
-	fmt.Printf("Generating Go code...\n")
+	// fmt.Printf("Generating Go code...\n") // Too verbose
 	goCode, err := generator.GenerateWithFile(program, filename)
 	if err != nil {
-		fmt.Printf("Generation error details: %v\n", err)
+		// fmt.Printf("Generation error details: %v\n", err) // Too verbose
 		return fmt.Errorf("generation error: %w", err)
 	}
 
-	// Create temporary Go file
 	tempDir := os.TempDir()
 	baseName := strings.TrimSuffix(filepath.Base(filename), ".zeno")
+	if strings.HasSuffix(filepath.Base(filename), ".zn") {
+		baseName = strings.TrimSuffix(filepath.Base(filename), ".zn")
+	}
 	tempGoFile := filepath.Join(tempDir, baseName+".go")
 
-	// Write the generated Go code to temporary file
 	err = os.WriteFile(tempGoFile, []byte(goCode), 0644)
 	if err != nil {
 		return fmt.Errorf("failed to write temporary file %s: %w", tempGoFile, err)
 	}
-
-	// Clean up temporary file when done
 	defer os.Remove(tempGoFile)
+	// fmt.Printf("Generated temporary Go file: %s\n", tempGoFile)
 
-	fmt.Printf("Generated temporary Go file: %s\n", tempGoFile)
-
-	// Run the Go file
 	cmd := exec.Command("go", "run", tempGoFile)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
 	fmt.Println("\n--- Program Output ---")
 	err = cmd.Run()
+	fmt.Println("--- End Output ---")
 	if err != nil {
-		fmt.Printf("Go command failed: %v\n", err)
+		// fmt.Printf("Go command failed: %v\n", err) // Error is usually printed by cmd.Stderr
 		return fmt.Errorf("failed to run Go program: %w", err)
 	}
-
-	fmt.Println("--- End Output ---")
 	return nil
 }
 
 func buildExecutable(filename string) error {
-	if !strings.HasSuffix(filename, ".zeno") {
-		return fmt.Errorf("expected .zeno file, got: %s", filename)
+	if !strings.HasSuffix(filename, ".zeno") && !strings.HasSuffix(filename, ".zn") {
+		return fmt.Errorf("expected .zeno or .zn file, got: %s", filename)
 	}
-
-	// Read the Zeno source file
+	
 	content, err := os.ReadFile(filename)
 	if err != nil {
 		return fmt.Errorf("failed to read file %s: %w", filename, err)
 	}
+	// fmt.Printf("Building executable from: %s\n", filename) // Cobra command handles this
 
-	fmt.Printf("Building executable from: %s\n", filename)
-
-	// Parse the Zeno code
 	l := lexer.New(string(content))
 	p := parser.New(l)
 	program := p.ParseProgram()
 
 	if len(p.Errors()) > 0 {
-		fmt.Printf("Parser errors found:\n")
-		for _, err := range p.Errors() {
-			fmt.Printf("  - %s\n", err)
+		fmt.Fprintf(os.Stderr, "Parser errors in %s:\n", filename)
+		for _, msg := range p.Errors() {
+			fmt.Fprintf(os.Stderr, "  - %s\n", msg)
 		}
-		return fmt.Errorf("parser errors: %v", p.Errors())
+		return fmt.Errorf("parser errors found")
 	}
 
-	// Generate Go code
-	fmt.Printf("Generating Go code...\n")
+	// fmt.Printf("Generating Go code...\n")
 	goCode, err := generator.GenerateWithFile(program, filename)
 	if err != nil {
-		fmt.Printf("Generation error details: %v\n", err)
 		return fmt.Errorf("generation error: %w", err)
 	}
 
-	// Output file names
 	baseName := strings.TrimSuffix(filename, ".zeno")
-	goFile := baseName + ".go"
-	executableName := baseName
+	if strings.HasSuffix(filename, ".zn") {
+		baseName = strings.TrimSuffix(filename, ".zn")
+	}
+	
+	// Create a temporary directory for the build process
+	buildDir, err := os.MkdirTemp("", "zeno_build_*")
+	if err != nil {
+		return fmt.Errorf("failed to create temporary build directory: %w", err)
+	}
+	defer os.RemoveAll(buildDir) // Clean up the temporary directory
 
-	// Write the generated Go code
+	goFile := filepath.Join(buildDir, filepath.Base(baseName)+".go")
+	executableName := filepath.Base(baseName) // Executable in current dir, not temp
+
 	err = os.WriteFile(goFile, []byte(goCode), 0644)
 	if err != nil {
 		return fmt.Errorf("failed to write Go file %s: %w", goFile, err)
 	}
+	// fmt.Printf("Generated Go file: %s\n", goFile)
 
-	fmt.Printf("Generated Go file: %s\n", goFile)
-
-	// Build the executable using go build
 	cmd := exec.Command("go", "build", "-o", executableName, goFile)
-	cmd.Stdout = os.Stdout
+	cmd.Stdout = os.Stdout // Show build output/errors directly
 	cmd.Stderr = os.Stderr
-
-	fmt.Printf("Building executable: %s\n", executableName)
+	// fmt.Printf("Building executable: %s\n", executableName)
+	
 	err = cmd.Run()
 	if err != nil {
-		fmt.Printf("Go build failed: %v\n", err)
 		return fmt.Errorf("failed to build executable: %w", err)
 	}
 
 	fmt.Printf("✅ Successfully built executable: %s\n", executableName)
 	fmt.Printf("   You can run it with: ./%s\n", executableName)
-
-	// Clean up the temporary Go file
-	err = os.Remove(goFile)
-	if err != nil {
-		fmt.Printf("Warning: Failed to remove temporary Go file %s: %v\n", goFile, err)
-	}
-
 	return nil
 }
