@@ -67,6 +67,7 @@ pub fn add(a: int, b: int): int {
     return a + b
 }
 
+import { println } from "std/fmt" // Assuming println is imported for this example
 pub fn greet(name: string) {
     println("Hello, " + name)
 }
@@ -101,6 +102,8 @@ greet("World")
 
 ### Main Function
 ```zeno
+import { println } from "std/fmt" // Assuming println is imported
+
 fn main() {
     // Program entry point
     println("Hello, World!")
@@ -114,7 +117,8 @@ let product = 5 * 6
 let comparison = x > y
 ```
 
-### Print Statements
+### Printing to Console (using std/fmt)
+Printing is handled by functions from the `std/fmt` module. These must be imported before use.
 ```zeno
 print("Hello")       // Requires: import {print} from "std/fmt"
 println("World")     // Requires: import {println} from "std/fmt"

@@ -13,7 +13,7 @@ This file lists planned features and improvements for the Zeno programming langu
 - [x] **Type Annotations:** Optional type annotations support
 - [x] **Generator Restructure:** Struct-based generator with scope tracking
 - [x] **Variable Usage Analysis:** Two-pass compilation for proper validation
-- [x] **Standard Library Definition:** Basic std/fmt module with print/println
+    - [x] **Print/Println as Functions:** Changed print/println from keywords to regular functions provided by the `std/fmt` module. This involved removing `PRINT`/`PRINTLN` tokens, `ast.PrintStatement`, and related parser/generator logic. All print operations now require importing from `std/fmt`.
 - [x] **std/io Module:** File I/O operations with readFile/writeFile functions
 - [x] **String Escape Sequences:** Proper handling of \n, \t, \", \\ in string literals
 - [x] **Public Function Declarations:** `pub fn` keyword for function visibility
