@@ -1,0 +1,40 @@
+{
+    "name": "zeno-language-features",
+    "displayName": "Zeno Language Features",
+    "description": "Provides syntax highlighting, snippets, and basic language features for the Zeno programming language.",
+    "version": "0.0.1",
+    "publisher": "ZenoLang",
+    "engines": {
+        "vscode": "^1.80.0" 
+    },
+    "categories": [
+        "Programming Languages",
+        "Snippets"
+    ],
+    "contributes": {
+        "languages": [{
+            "id": "zeno",
+            "aliases": ["Zeno", "zeno"],
+            "extensions": [".zn", ".zeno"], 
+            "configuration": "./language/language-configuration.json"
+        }],
+        "grammars": [{
+            "language": "zeno",
+            "scopeName": "source.zeno",
+            "path": "./syntaxes/zeno.tmLanguage.json"
+        }],
+        "snippets": [{
+            "language": "zeno",
+            "path": "./zeno/snippets/zeno.json"
+        }]
+    }
+    // "activationEvents": [
+    //     "onLanguage:zeno"
+    // ],
+    // "main": "./zeno/src/extension.js", 
+    // "scripts": {
+    //     "vscode:prepublish": "npm run compile", 
+    //     "compile": "tsc -p ./zeno/tsconfig.json", 
+    //     "watch": "tsc -watch -p ./zeno/tsconfig.json" 
+    // }
+}
