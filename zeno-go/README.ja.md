@@ -207,6 +207,8 @@ fn main() {
 
 - `writeFile(filename: string, content: string)`: 自動エラーハンドリング付きでファイルにコンテンツを書き込み
 - `readFile(filename: string): string`: ファイル内容を読み込んで文字列として返却、エラー時は空文字列を返却
+- `remove(filename: string): bool`: 指定されたファイルまたは空のディレクトリを削除します。成功時に `true`、失敗時に `false` を返します。
+- `pwd(): string`: 現在の作業ディレクトリを絶対パスとして返します。失敗時には空文字列を返します。
 
 ## 実装されている機能
 

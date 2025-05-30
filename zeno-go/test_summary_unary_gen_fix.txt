@@ -1,0 +1,62 @@
+
+
+--- Testing examples/comprehensive_io_demo.zeno (After Unary Gen Fix) ---
+Zeno compilation status for examples/comprehensive_io_demo.zeno: 0
+Go execution status for ./examples/comprehensive_io_demo.go: 0
+
+
+--- Testing examples/test_std_io.zeno (After Unary Gen Fix) ---
+Zeno compilation status for examples/test_std_io.zeno: 0
+Go execution status for ./examples/test_std_io.go: 0
+
+
+--- Testing examples/test_std_fmt.zeno (After Unary Gen Fix) ---
+Zeno compilation status for examples/test_std_fmt.zeno: 0
+Go execution status for ./examples/test_std_fmt.go: 0
+
+
+--- Testing examples/test_print_as_identifier.zeno (After Unary Gen Fix) ---
+Zeno compilation status for examples/test_print_as_identifier.zeno: 0
+Go execution status for ./examples/test_print_as_identifier.go: 0
+
+
+--- Testing examples/test_std_io_extended.zeno (After Unary Gen Fix) ---
+Zeno compilation status for examples/test_std_io_extended.zeno: 1
+Skipping Go execution for examples/test_std_io_extended.zeno due to Zeno compilation failure.
+Go execution status for examples/test_std_io_extended.zeno: 1
+
+
+--- Testing examples/math_utils.zeno (After Unary Gen Fix) ---
+Zeno compilation status for examples/math_utils.zeno: 0
+Go execution status for ./examples/math_utils.go: 0
+
+
+--- Testing examples/test_file_io.zeno (After Unary Gen Fix) ---
+Zeno compilation status for examples/test_file_io.zeno: 0
+Go execution status for ./examples/test_file_io.go: 0
+
+
+--- Testing examples/test_io_advanced.zeno (After Unary Gen Fix) ---
+Zeno compilation status for examples/test_io_advanced.zeno: 0
+Go execution status for ./examples/test_io_advanced.go: 0
+
+
+--- Testing examples/test_module_import.zeno (After Unary Gen Fix) ---
+Zeno compilation status for examples/test_module_import.zeno: 0
+Go execution status for ./examples/test_module_import.go: 0
+
+
+--- Testing examples/test_pub_functions.zeno (After Unary Gen Fix) ---
+Zeno compilation status for examples/test_pub_functions.zeno: 0
+Go execution status for ./examples/test_pub_functions.go: 0
+
+
+--- Testing examples/test_string_escapes.zeno (After Unary Gen Fix) ---
+Zeno compilation status for examples/test_string_escapes.zeno: 0
+Go execution status for ./examples/test_string_escapes.go: 0
+
+
+--- Testing examples/test_unused_functions.zeno (After Unary Gen Fix) ---
+Zeno compilation status for examples/test_unused_functions.zeno: 1
+Skipping Go execution for examples/test_unused_functions.zeno due to Zeno compilation failure.
+Go execution status for examples/test_unused_functions.zeno: 1

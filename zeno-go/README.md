@@ -245,6 +245,8 @@ fn main() {
 
 - `writeFile(filename: string, content: string)`: Writes content to a file with automatic error handling
 - `readFile(filename: string): string`: Reads file content and returns it as a string, returns empty string on error
+- `remove(filename: string): bool`: Removes the specified file or empty directory. Returns `true` on success, `false` on failure.
+- `pwd(): string`: Returns the current working directory as an absolute path. Returns an empty string on failure.
 
 ## Using the Zeno Compiler
 

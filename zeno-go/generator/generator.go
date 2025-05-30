@@ -13,6 +13,17 @@ import (
 	"github.com/linkalls/zeno-lang/types"
 )
 
+// snakeToCamel converts snake_case to UpperCamelCase.
+func snakeToCamel(s string) string {
+	parts := strings.Split(s, "_")
+	for i, part := range parts {
+		if len(part) > 0 {
+			parts[i] = strings.ToUpper(string(part[0])) + part[1:]
+		}
+	}
+	return strings.Join(parts, "")
+}
+
 // GenerationError represents errors during code generation
 type GenerationError struct {
 	Message string
@@ -32,7 +43,7 @@ type Generator struct {
 	userModules  map[string]map[string]string // user module -> function -> go equivalent
 	moduleASTs   map[string]*ast.Program      // user module -> parsed AST
 	standardLibs map[string]map[string]string // module -> function -> go equivalent
-	nativeFunctionHandlers map[string]string            // native function name -> go function name
+	// nativeFunctionHandlers map[string]string         // DELETED: Replaced by automatic __native_ mapping
 	currentDir   string                       // directory of the current file being compiled
 	symbolTable  *types.SymbolTable           // symbol table for type inference
 	program      *ast.Program                 // The main program AST
@@ -49,15 +60,11 @@ func NewGenerator() *Generator {
 		userModules:  make(map[string]map[string]string),
 		moduleASTs:   make(map[string]*ast.Program),
 		standardLibs: make(map[string]map[string]string),
-		nativeFunctionHandlers: make(map[string]string),
+		// nativeFunctionHandlers: make(map[string]string), // DELETED
 		symbolTable:  types.NewSymbolTable(nil),
 	}
 
-	// Define native function handlers
-	g.nativeFunctionHandlers["__native_read_file"] = "zenoNativeReadFile"
-	g.nativeFunctionHandlers["__native_write_file"] = "zenoNativeWriteFile"
-	g.nativeFunctionHandlers["__native_print"] = "zenoNativePrint"
-	g.nativeFunctionHandlers["__native_println"] = "zenoNativePrintln"
+	// DELETED: Native function handlers are now mapped automatically based on __native_ prefix
 
 	// standardLibs is now populated by processStdModule and processUserModule
 	// g.standardLibs["std/fmt"] = map[string]string{} // Removed
@@ -456,6 +463,14 @@ func (g *Generator) generateExpression(expr ast.Expression, builder *strings.Bui
 	case *ast.Identifier:
 		builder.WriteString(e.Value)
 
+	case *ast.UnaryExpression:
+		builder.WriteString("(")
+		builder.WriteString(e.Operator.String()) // Assumes UnaryOperator has String() returning "!" or "-"
+		if err := g.generateExpression(e.Right, builder); err != nil {
+			return err
+		}
+		builder.WriteString(")")
+	
 	case *ast.BinaryExpression:
 		builder.WriteString("(")
 		if err := g.generateExpression(e.Left, builder); err != nil {
@@ -480,8 +495,11 @@ func (g *Generator) generateExpression(expr ast.Expression, builder *strings.Bui
 		// 2. Declared functions in the current file
 		// 3. User-defined/standard library modules (which includes std/fmt's print/println now)
 
-		// Check if this is a direct call to a native function (e.g. __native_print)
-		if goFuncName, isNative := g.nativeFunctionHandlers[e.Name]; isNative {
+		// Automatic __native_ prefix mapping
+		if strings.HasPrefix(e.Name, "__native_") {
+			baseName := strings.TrimPrefix(e.Name, "__native_")
+			goFuncName := "zenoNative" + snakeToCamel(baseName)
+
 			builder.WriteString(goFuncName)
 			builder.WriteString("(")
 			for i, arg := range e.Arguments {
@@ -493,10 +511,10 @@ func (g *Generator) generateExpression(expr ast.Expression, builder *strings.Bui
 				}
 			}
 			builder.WriteString(")")
-			return nil // Native function processed, return early
+			return nil // Processed as a native call, return early.
 		}
 
-		// First check if this is a function defined in the current file
+		// If not a __native_ call, proceed to check declaredFns, userModules, etc.
 		functionName := e.Name
 		if goFuncName, exists := g.declaredFns[functionName]; exists {
 			functionName = goFuncName
@@ -1010,6 +1028,30 @@ func (g *Generator) generateNativeFunctionHelpers(builder *strings.Builder) {
 	builder.WriteString("func zenoNativePrintln(args ...interface{}) {\n")
 	builder.WriteString("\tfmt.Println(args...)\n")
 	builder.WriteString("}\n\n")
+
+	// zenoNativeRemove
+	builder.WriteString("// zenoNativeRemove attempts to remove the file or empty directory.\n")
+	builder.WriteString("// Returns true on success, false on failure.\n")
+	builder.WriteString("func zenoNativeRemove(path string) bool {\n")
+	builder.WriteString("\terr := os.Remove(path)\n")
+	builder.WriteString("\tif err != nil {\n")
+	builder.WriteString("\t\tfmt.Fprintf(os.Stderr, \"Error removing %s: %v\\n\", path, err)\n")
+	builder.WriteString("\t\treturn false\n")
+	builder.WriteString("\t}\n")
+	builder.WriteString("\treturn true\n")
+	builder.WriteString("}\n\n")
+
+	// zenoNativeGetCurrentDirectory
+	builder.WriteString("// zenoNativeGetCurrentDirectory returns the current working directory path.\n")
+	builder.WriteString("// Returns an empty string on failure.\n")
+	builder.WriteString("func zenoNativeGetCurrentDirectory() string {\n")
+	builder.WriteString("\tpwd, err := os.Getwd()\n")
+	builder.WriteString("\tif err != nil {\n")
+	builder.WriteString("\t\tfmt.Fprintf(os.Stderr, \"Error getting current directory: %v\\n\", err)\n")
+	builder.WriteString("\t\treturn \"\"\n")
+	builder.WriteString("\t}\n")
+	builder.WriteString("\treturn pwd\n")
+	builder.WriteString("}\n\n")
 }
 
 // inferType infers the type of an expression
@@ -1093,6 +1135,21 @@ func (g *Generator) inferType(expr ast.Expression) types.Type {
 		// Fallback for unresolved functions or functions without explicit return types
 		fmt.Printf("WARN: Could not accurately determine return type for function call '%s'. Defaulting to IntType.\n", e.Name)
 		return types.IntType
+	case *ast.UnaryExpression:
+		// The type of a unary expression depends on the operator and operand.
+		// For '!', the result is always boolean.
+		// For '-', the result type is the same as the operand type.
+		// More advanced type checking would ensure the operand is valid for the operator.
+		switch e.Operator {
+		case ast.UnaryOpBang:
+			return types.BoolType
+		case ast.UnaryOpMinus:
+			return g.inferType(e.Right) // Type is the same as the operand's type
+		default:
+			// Should not happen with current unary operators
+			fmt.Printf("WARN: Could not determine type for unary operator '%s', defaulting to IntType.\n", e.Operator.String())
+			return types.IntType
+		}
 	}
 	// Default fallback
 	return types.IntType

@@ -75,6 +75,11 @@ This file lists planned features and improvements for the Zeno programming langu
     - [ ] Optional types and null safety
     - [ ] Generic types (basic implementation)
 
+- [ ] **Parser Bug: `return` statement at the end of an `else` block:**
+    - The parser currently mishandles token consumption or state recovery after a `return` statement if it's the last statement in an `else` block and the `if-else` structure is followed by more statements in the parent block. This leads to errors like "no prefix parse function for } found".
+    - Example that triggers this can be found in `examples/test_std_io_extended.zeno` (temporarily worked around by commenting out the return).
+    - Needs focused debugging in `parser.go` related to `parseReturnStatement` and how blocks are terminated.
+
 - [ ] **Basic Data Structures:**
     - [ ] Arrays (fixed-size or dynamic)
     - [ ] Structs or record types
