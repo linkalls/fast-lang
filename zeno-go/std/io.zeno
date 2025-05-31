@@ -25,3 +25,4 @@ pub fn remove(path: string): bool {
 pub fn pwd(): string {
     return __native_get_current_directory()
 }
+// Explicit newline at EOF

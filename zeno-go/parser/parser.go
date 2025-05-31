@@ -133,8 +133,10 @@ func New(l *lexer.Lexer) *Parser {
 }
 
 func (p *Parser) nextToken() {
+	fmt.Printf("nextToken() called. currentToken before: %s, peekToken before: %s\n", p.currentToken.Type, p.peekToken.Type)
 	p.currentToken = p.peekToken
 	p.peekToken = p.l.NextToken()
+	fmt.Printf("nextToken() finished. currentToken after: %s, peekToken after: %s\n", p.currentToken.Type, p.peekToken.Type)
 }
 
 func (p *Parser) Errors() []string { return p.errors }
@@ -154,18 +156,24 @@ func (p *Parser) expectPeek(t token.TokenType) bool {
 }
 
 func (p *Parser) ParseProgram() *ast.Program {
+	fmt.Println("ParseProgram START")
 	program := &ast.Program{Statements: []ast.Statement{}}
 	for p.currentToken.Type != token.EOF {
+		fmt.Printf("ParseProgram loop: currentToken: %s ('%s')\n", p.currentToken.Type, p.currentToken.Literal)
 		stmt := p.parseStatement()
 		if stmt != nil {
 			program.Statements = append(program.Statements, stmt)
+			fmt.Printf("ParseProgram loop: parsed statement: %T\n", stmt)
 		}
+		fmt.Printf("ParseProgram loop: calling nextToken() after parsing statement\n")
 		p.nextToken()
 	}
+	fmt.Println("ParseProgram END")
 	return program
 }
 
 func (p *Parser) parseStatement() ast.Statement {
+	fmt.Printf("parseStatement START: currentToken: %s ('%s')\n", p.currentToken.Type, p.currentToken.Literal)
 	var stmt ast.Statement
 	switch p.currentToken.Type {
 	case token.IMPORT:
@@ -191,6 +199,7 @@ func (p *Parser) parseStatement() ast.Statement {
 	default:
 		stmt = p.parseExpressionStatement()
 	}
+	fmt.Printf("parseStatement END: returning stmt: %T\n", stmt)
 	return stmt
 }
 
@@ -342,6 +351,7 @@ func (p *Parser) parsePublicDeclaration() ast.Statement {
 }
 
 func (p *Parser) parseFunctionDefinitionWithVisibility(isPublic bool) *ast.FunctionDefinition {
+	fmt.Printf("parseFunctionDefinitionWithVisibility START: currentToken: %s ('%s')\n", p.currentToken.Type, p.currentToken.Literal)
 	if !p.expectPeek(token.IDENT) { return nil }
 	name := p.currentToken.Literal
 	if !p.expectPeek(token.LPAREN) { return nil }
@@ -372,19 +382,26 @@ func (p *Parser) parseFunctionDefinitionWithVisibility(isPublic bool) *ast.Funct
 		retType := p.currentToken.Literal
 		returnType = &retType
 	}
+	fmt.Printf("parseFunctionDefinitionWithVisibility: About to expect LBRACE. currentToken: %s, peekToken: %s\n", p.currentToken.Type, p.peekToken.Type)
 	if !p.expectPeek(token.LBRACE) { return nil }
+	fmt.Printf("parseFunctionDefinitionWithVisibility: Calling parseBlockStatement. currentToken: %s\n", p.currentToken.Type)
 	bodyBlock := p.parseBlockStatement()
+	fmt.Printf("parseFunctionDefinitionWithVisibility: Returned from parseBlockStatement. currentToken: %s, bodyBlock is nil: %t\n", p.currentToken.Type, bodyBlock == nil)
 	if bodyBlock == nil { return nil }
+	fmt.Printf("parseFunctionDefinitionWithVisibility END: currentToken: %s\n", p.currentToken.Type)
 	return &ast.FunctionDefinition{Name: name, Parameters: parameters, ReturnType: returnType, Body: bodyBlock.Statements, IsPublic: isPublic}
 }
 
 func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
+	fmt.Printf("parseReturnStatement START: currentToken: %s ('%s')\n", p.currentToken.Type, p.currentToken.Literal)
 	var value ast.Expression
 	if p.peekToken.Type != token.SEMICOLON && p.peekToken.Type != token.EOF && p.peekToken.Type != token.RBRACE {
 		p.nextToken()
 		value = p.parseExpression(LOWEST)
 	}
-	if p.peekToken.Type == token.SEMICOLON { p.nextToken() }
+	fmt.Printf("parseReturnStatement: Parsed value. currentToken: %s, peekToken: %s\n", p.currentToken.Type, p.peekToken.Type)
+	// Removed: if p.peekToken.Type == token.SEMICOLON { p.nextToken() }
+	fmt.Printf("parseReturnStatement END: currentToken: %s\n", p.currentToken.Type)
 	return &ast.ReturnStatement{Value: value}
 }
 
@@ -394,10 +411,10 @@ func (p *Parser) parseCommaSeparatedExpressions(end token.TokenType) []ast.Expre
 	list := []ast.Expression{}
 
 	// If the next token is the end token, it's an empty list (e.g., "[]" or "()").
+	// e.g. currentToken is '(', peekToken is ')'
 	if p.peekToken.Type == end {
-		p.nextToken() // Consume the opening token (e.g., LBRACKET or LPAREN).
-		p.nextToken() // Consume the closing end token (e.g., RBRACKET or RPAREN).
-		return list
+		p.nextToken() // Consume peekToken (the 'end' token) -> currentToken is now 'end' (e.g. RPAREN)
+		return list   // Return. currentToken is the 'end' token (e.g. RPAREN)
 	}
 
 	p.nextToken() // Consume the opening token. Current token is now the first token of the first expression.
@@ -616,19 +633,27 @@ func (p *Parser) parseIfStatement() *ast.IfStatement {
 }
 
 func (p *Parser) parseBlockStatement() *ast.Block {
+	fmt.Printf("parseBlockStatement START: currentToken: %s ('%s')\n", p.currentToken.Type, p.currentToken.Literal)
 	block := &ast.Block{}
 	p.nextToken() // move past LBRACE
+	fmt.Printf("parseBlockStatement: After consuming LBRACE. currentToken: %s ('%s')\n", p.currentToken.Type, p.currentToken.Literal)
 	for p.currentToken.Type != token.RBRACE && p.currentToken.Type != token.EOF {
+		fmt.Printf("parseBlockStatement loop: currentToken: %s ('%s')\n", p.currentToken.Type, p.currentToken.Literal)
 		stmt := p.parseStatement()
 		if stmt != nil {
+			fmt.Printf("parseBlockStatement loop: Parsed statement in block: %T\n", stmt)
 			block.Statements = append(block.Statements, stmt)
 		}
+		fmt.Printf("parseBlockStatement loop: Calling nextToken() after parsing statement in block. currentToken before: %s, peekToken before: %s\n", p.currentToken.Type, p.peekToken.Type)
 		p.nextToken()
 	}
+	fmt.Printf("parseBlockStatement: Loop finished. currentToken: %s ('%s'), peekToken: %s ('%s')\n", p.currentToken.Type, p.currentToken.Literal, p.peekToken.Type, p.peekToken.Literal)
+	fmt.Printf("parseBlockStatement: Checking for RBRACE. currentToken: %s ('%s')\n", p.currentToken.Type, p.currentToken.Literal)
 	if p.currentToken.Type != token.RBRACE {
 		p.errors = append(p.errors, "expected '}' to close block")
 		return nil
 	}
+	fmt.Printf("parseBlockStatement END: currentToken: %s ('%s')\n", p.currentToken.Type, p.currentToken.Literal)
 	return block
 }
 

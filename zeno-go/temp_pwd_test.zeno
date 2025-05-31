@@ -1,0 +1,5 @@
+// Temporary test file for pwd() parsing debug
+
+pub fn pwd(): string {
+    return __native_get_current_directory()
+}
