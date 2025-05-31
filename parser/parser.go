@@ -4,11 +4,52 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/linkalls/zeno-lang/ast"
 	"github.com/linkalls/zeno-lang/lexer"
 	"github.com/linkalls/zeno-lang/token"
 )
+
+// ParseError represents a detailed parser error with position information
+type ParseError struct {
+	Message    string
+	Line       int
+	Column     int
+	Token      token.Token
+	Expected   string
+	Got        string
+	Context    string
+	Suggestion string
+}
+
+func (e ParseError) String() string {
+	var builder strings.Builder
+	
+	// Error header with position
+	builder.WriteString(fmt.Sprintf("error: %s\n", e.Message))
+	
+	if e.Line > 0 {
+		builder.WriteString(fmt.Sprintf("  --> line %d, column %d\n", e.Line, e.Column))
+	}
+	
+	// Context information
+	if e.Context != "" {
+		builder.WriteString(fmt.Sprintf("   | %s\n", e.Context))
+	}
+	
+	// Expected vs Got
+	if e.Expected != "" && e.Got != "" {
+		builder.WriteString(fmt.Sprintf("   = expected %s, but got %s\n", e.Expected, e.Got))
+	}
+	
+	// Suggestion
+	if e.Suggestion != "" {
+		builder.WriteString(fmt.Sprintf("help: %s\n", e.Suggestion))
+	}
+	
+	return builder.String()
+}
 
 // Precedence levels for operator precedence parsing
 const (
@@ -48,7 +89,10 @@ type Parser struct {
 	currentToken token.Token
 	peekToken    token.Token
 
-	errors []string
+	errors       []string
+	detailedErrors []ParseError
+	filename     string
+	input        string
 
 	prefixParseFns map[token.TokenType]prefixParseFn
 	infixParseFns  map[token.TokenType]infixParseFn
@@ -96,9 +140,10 @@ func (p *Parser) curPrecedence() int {
 
 func New(l *lexer.Lexer) *Parser {
 	p := &Parser{
-		l:            l,
-		errors:       []string{},
-		currentUntil: token.SEMICOLON,
+		l:              l,
+		errors:         []string{},
+		detailedErrors: []ParseError{},
+		currentUntil:   token.SEMICOLON,
 	}
 	p.prefixParseFns = map[token.TokenType]prefixParseFn{
 		token.IDENT:    p.parseIdentifier,
@@ -132,6 +177,14 @@ func New(l *lexer.Lexer) *Parser {
 	return p
 }
 
+// NewWithInput creates a parser with filename and input for better error reporting
+func NewWithInput(l *lexer.Lexer, filename, input string) *Parser {
+	p := New(l)
+	p.filename = filename
+	p.input = input
+	return p
+}
+
 func (p *Parser) nextToken() {
 	p.currentToken = p.peekToken
 	p.peekToken = p.l.NextToken()
@@ -139,9 +192,68 @@ func (p *Parser) nextToken() {
 
 func (p *Parser) Errors() []string { return p.errors }
 
+// DetailedErrors returns the list of detailed ParseError structs
+func (p *Parser) DetailedErrors() []ParseError { return p.detailedErrors }
+
+// addDetailedError adds a detailed error with position information
+func (p *Parser) addDetailedError(message, expected, got, context, suggestion string) {
+	// Calculate line and column from current token position
+	line, column := p.getTokenPosition()
+	
+	detailedErr := ParseError{
+		Message:    message,
+		Line:       line,
+		Column:     column,
+		Token:      p.currentToken,
+		Expected:   expected,
+		Got:        got,
+		Context:    context,
+		Suggestion: suggestion,
+	}
+	
+	p.detailedErrors = append(p.detailedErrors, detailedErr)
+	// Also add to simple errors for backward compatibility
+	p.errors = append(p.errors, message)
+}
+
+// getTokenPosition calculates line and column from token position
+func (p *Parser) getTokenPosition() (int, int) {
+	if p.input == "" {
+		return 0, 0
+	}
+	
+	// Simple line/column calculation - can be improved with lexer position tracking
+	lines := strings.Split(p.input[:min(len(p.input), len(p.currentToken.Literal))], "\n")
+	line := len(lines)
+	column := len(lines[len(lines)-1]) + 1
+	return line, column
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 func (p *Parser) peekError(t token.TokenType) {
-	msg := fmt.Sprintf("expected next token to be %s, got %s instead", t, p.peekToken.Type)
-	p.errors = append(p.errors, msg)
+	expected := string(t)
+	got := string(p.peekToken.Type)
+	message := "expected next token to be " + expected + ", got " + got + " instead"
+	
+	context := ""
+	if p.peekToken.Literal != "" {
+		context = "near '" + p.peekToken.Literal + "'"
+	}
+	
+	suggestion := ""
+	if t == token.RPAREN && p.peekToken.Type == token.EOF {
+		suggestion = "add missing ')' to close function call or expression"
+	} else if t == token.RBRACE && p.peekToken.Type == token.EOF {
+		suggestion = "add missing '}' to close block"
+	}
+	
+	p.addDetailedError(message, expected, got, context, suggestion)
 }
 
 func (p *Parser) expectPeek(t token.TokenType) bool {
@@ -296,7 +408,25 @@ func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression {
 	return expr
 }
 
-func (p *Parser) noPrefixParseFnError(t token.TokenType) { p.errors = append(p.errors, fmt.Sprintf("no prefix parse function for %s found", t)) }
+func (p *Parser) noPrefixParseFnError(t token.TokenType) {
+	message := "no prefix parse function for " + string(t) + " found"
+	expected := "expression"
+	got := string(t)
+	
+	context := ""
+	if p.currentToken.Literal != "" {
+		context = "at '" + p.currentToken.Literal + "'"
+	}
+	
+	suggestion := ""
+	if t == token.RPAREN {
+		suggestion = "unexpected ')' - check for empty function call like 'println()'"
+	} else if t == token.EOF {
+		suggestion = "unexpected end of file - check for incomplete expression"
+	}
+	
+	p.addDetailedError(message, expected, got, context, suggestion)
+}
 
 func ParseExpression(input string) (ast.Expression, error) {
 	l := lexer.New(input)
@@ -370,7 +500,8 @@ func (p *Parser) parseFunctionDefinitionWithVisibility(isPublic bool) *ast.Funct
 			// Variadic parameter must be the last one
 			if variadic {
 				if p.peekToken.Type == token.COMMA {
-					p.errors = append(p.errors, "variadic parameter must be the last parameter")
+					message := "variadic parameter must be the last parameter"
+					p.addDetailedError(message, "no more parameters", "comma", "after variadic parameter", "move variadic parameter to the end")
 					return nil
 				}
 				break
@@ -413,7 +544,6 @@ func (p *Parser) parseCommaSeparatedExpressions(end token.TokenType) []ast.Expre
 
 	// If the next token is the end token, it's an empty list (e.g., "[]" or "()").
 	if p.peekToken.Type == end {
-		p.nextToken() // Consume the opening token (e.g., LBRACKET or LPAREN).
 		p.nextToken() // Consume the closing end token (e.g., RBRACKET or RPAREN).
 		return list
 	}
@@ -571,7 +701,7 @@ func (p *Parser) parseMapLiteral() ast.Expression {
 			p.nextToken() // Advances p.currentToken to be the RBRACE.
 			break         // Exit loop, RBRACE is currentToken.
 		} else if p.peekToken.Type == token.EOF { // Premature EOF
-			msg := fmt.Sprintf("expected ',' or '}' after map value, got EOF")
+			msg := "expected ',' or '}' after map value, got EOF"
 			p.errors = append(p.errors, msg)
 			return nil
 		} else { // Unexpected token
@@ -582,9 +712,18 @@ func (p *Parser) parseMapLiteral() ast.Expression {
 	} // End of for loop
 
 	if p.currentToken.Type != token.RBRACE {
-		// This error is for cases where the loop terminates due to EOF before a proper RBRACE.
-		// If the loop completed because currentToken became RBRACE (e.g. via break), this won't trigger.
-		p.errors = append(p.errors, fmt.Sprintf("expected '}' to close map literal, got %s instead", p.currentToken.Type))
+		// Only report block close error if no prior errors
+		if len(p.detailedErrors) == 0 {
+			message := "expected '}' to close block"
+			expected := "}"
+			got := string(p.currentToken.Type)
+			context := ""
+			if p.currentToken.Literal != "" {
+				context = "found '" + p.currentToken.Literal + "'"
+			}
+			suggestion := "add missing '}' to close block"
+			p.addDetailedError(message, expected, got, context, suggestion)
+		}
 		return nil
 	}
 	return mapLiteral
@@ -597,12 +736,29 @@ func (p *Parser) parseFunctionCall(functionExpression ast.Expression) ast.Expres
 		functionName = ident.Value
 	} else {
 		// This shouldn't happen in current Zeno language design, but let's handle it gracefully
-		p.errors = append(p.errors, "function call on non-identifier expression not supported")
+		message := "function call on non-identifier expression not supported"
+		p.addDetailedError(message, "identifier", "expression", "", "use a function name instead of expression")
 		return nil
 	}
 	
 	call := &ast.FunctionCall{Name: functionName}
 	call.Arguments = p.parseCommaSeparatedExpressions(token.RPAREN)
+	
+	// Handle parsing errors from parseCommaSeparatedExpressions
+	if call.Arguments == nil {
+		call.Arguments = []ast.Expression{} // Ensure it's not nil
+	}
+	
+	// Special check for empty function calls to provide better error messages
+	if len(call.Arguments) == 0 {
+		// Check if this is a function that requires arguments
+		if functionName == "println" || functionName == "print" {
+			message := "function '" + functionName + "' requires at least one argument"
+			p.addDetailedError(message, "at least one argument", "empty call", "in function call", "add an argument like println(\"Hello\")")
+			// Return the call anyway to allow parser to continue
+		}
+	}
+	
 	return call
 }
 
@@ -653,7 +809,18 @@ func (p *Parser) parseBlockStatement() *ast.Block {
 		p.nextToken()
 	}
 	if p.currentToken.Type != token.RBRACE {
-		p.errors = append(p.errors, "expected '}' to close block")
+		// Only report block close error if no prior errors
+		if len(p.detailedErrors) == 0 {
+			message := "expected '}' to close block"
+			expected := "}"
+			got := string(p.currentToken.Type)
+			context := ""
+			if p.currentToken.Literal != "" {
+				context = "found '" + p.currentToken.Literal + "'"
+			}
+			suggestion := "add missing '}' to close block"
+			p.addDetailedError(message, expected, got, context, suggestion)
+		}
 		return nil
 	}
 	return block

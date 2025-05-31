@@ -130,13 +130,23 @@ If a directory is specified, it will be walked recursively for .zeno files.`,
 				}
 
 				l := lexer.New(string(content))
-				p := parser.New(l)
+				p := parser.NewWithInput(l, filePath, string(content))
 				program := p.ParseProgram()
 
 				if len(p.Errors()) > 0 {
-					fmt.Fprintf(os.Stderr, "Parser errors in %s:\n", filePath)
-					for _, msg := range p.Errors() {
-						fmt.Fprintf(os.Stderr, "  - %s\n", msg)
+					fmt.Fprintf(os.Stderr, "Parser errors in %s:\n\n", filePath)
+					// Display detailed errors if available
+					detailedErrors := p.DetailedErrors()
+					if len(detailedErrors) > 0 {
+						for _, err := range detailedErrors {
+							fmt.Fprintf(os.Stderr, "%s", err.String())
+							fmt.Fprintf(os.Stderr, "\n")
+						}
+					} else {
+						// Fallback to simple errors
+						for _, msg := range p.Errors() {
+							fmt.Fprintf(os.Stderr, "  - %s\n", msg)
+						}
 					}
 					hasErrors = true
 					continue
@@ -216,13 +226,21 @@ func compileFile(filename string) error {
 	// fmt.Printf("Source code:\n%s\n", string(content)) // Too verbose for default compile
 
 	l := lexer.New(string(content))
-	p := parser.New(l)
+	p := parser.NewWithInput(l, filename, string(content))
 	program := p.ParseProgram()
 
 	if len(p.Errors()) > 0 {
-		fmt.Fprintf(os.Stderr, "Parser errors in %s:\n", filename)
-		for _, msg := range p.Errors() {
-			fmt.Fprintf(os.Stderr, "  - %s\n", msg)
+		fmt.Fprintf(os.Stderr, "Parser errors in %s:\n\n", filename)
+		detailedErrors := p.DetailedErrors()
+		if len(detailedErrors) > 0 {
+			for _, err := range detailedErrors {
+				fmt.Fprintf(os.Stderr, "%s", err.String())
+				fmt.Fprintf(os.Stderr, "\n")
+			}
+		} else {
+			for _, msg := range p.Errors() {
+				fmt.Fprintf(os.Stderr, "  - %s\n", msg)
+			}
 		}
 		return fmt.Errorf("parser errors found")
 	}
@@ -259,13 +277,21 @@ func runFile(filename string) error {
 	// fmt.Printf("Running file: %s\n", filename) // Cobra command will print this
 
 	l := lexer.New(string(content))
-	p := parser.New(l)
+	p := parser.NewWithInput(l, filename, string(content))
 	program := p.ParseProgram()
 
 	if len(p.Errors()) > 0 {
-		fmt.Fprintf(os.Stderr, "Parser errors in %s:\n", filename)
-		for _, msg := range p.Errors() {
-			fmt.Fprintf(os.Stderr, "  - %s\n", msg)
+		fmt.Fprintf(os.Stderr, "Parser errors in %s:\n\n", filename)
+		detailedErrors := p.DetailedErrors()
+		if len(detailedErrors) > 0 {
+			for _, err := range detailedErrors {
+				fmt.Fprintf(os.Stderr, "%s", err.String())
+				fmt.Fprintf(os.Stderr, "\n")
+			}
+		} else {
+			for _, msg := range p.Errors() {
+				fmt.Fprintf(os.Stderr, "  - %s\n", msg)
+			}
 		}
 		return fmt.Errorf("parser errors found")
 	}
@@ -317,13 +343,21 @@ func buildExecutable(filename string) error {
 	// fmt.Printf("Building executable from: %s\n", filename) // Cobra command handles this
 
 	l := lexer.New(string(content))
-	p := parser.New(l)
+	p := parser.NewWithInput(l, filename, string(content))
 	program := p.ParseProgram()
 
 	if len(p.Errors()) > 0 {
-		fmt.Fprintf(os.Stderr, "Parser errors in %s:\n", filename)
-		for _, msg := range p.Errors() {
-			fmt.Fprintf(os.Stderr, "  - %s\n", msg)
+		fmt.Fprintf(os.Stderr, "Parser errors in %s:\n\n", filename)
+		detailedErrors := p.DetailedErrors()
+		if len(detailedErrors) > 0 {
+			for _, err := range detailedErrors {
+				fmt.Fprintf(os.Stderr, "%s", err.String())
+				fmt.Fprintf(os.Stderr, "\n")
+			}
+		} else {
+			for _, msg := range p.Errors() {
+				fmt.Fprintf(os.Stderr, "  - %s\n", msg)
+			}
 		}
 		return fmt.Errorf("parser errors found")
 	}
