@@ -1,0 +1,82 @@
+import {println} from "std/fmt"
+
+// Result型の定義（標準ライブラリで提供される想定）
+// type Result<T> = {
+//     ok: bool
+//     value: T?
+//     error: string
+// }
+
+// 除算関数 - Result型を返す
+fn divide(a: int, b: int): Result<int> {
+    if b == 0 {
+        return Result{ok: false, value: null, error: "division by zero"}
+    }
+    return Result{ok: true, value: a / b, error: ""}
+}
+
+// ファイル読み取り関数のシミュレーション
+fn readFile(path: string): Result<string> {
+    if path == "" {
+        return Result{ok: false, value: null, error: "empty path"}
+    }
+    if path == "notfound.txt" {
+        return Result{ok: false, value: null, error: "file not found"}
+    }
+    return Result{ok: true, value: "file content", error: ""}
+}
+
+// Result型をチェックするヘルパー関数
+fn checkResult(result: Result<int>) {
+    if result.ok {
+        println("Success: " + result.value)
+    } else {
+        println("Error: " + result.error)
+    }
+}
+
+fn checkFileResult(result: Result<string>) {
+    if result.ok {
+        println("File content: " + result.value)
+    } else {
+        println("File error: " + result.error)
+    }
+}
+
+fn main() {
+    println("=== Result型エラーハンドリングのテスト ===")
+    
+    // 成功ケース
+    let result1 = divide(10, 2)
+    println("Test 1 - 10 / 2:")
+    checkResult(result1)
+    
+    // エラーケース
+    let result2 = divide(10, 0)
+    println("Test 2 - 10 / 0:")
+    checkResult(result2)
+    
+    // ファイル読み取り - 成功ケース
+    let fileResult1 = readFile("test.txt")
+    println("Test 3 - readFile('test.txt'):")
+    checkFileResult(fileResult1)
+    
+    // ファイル読み取り - エラーケース
+    let fileResult2 = readFile("notfound.txt")
+    println("Test 4 - readFile('notfound.txt'):")
+    checkFileResult(fileResult2)
+    
+    // ファイル読み取り - 空パスエラー
+    let fileResult3 = readFile("")
+    println("Test 5 - readFile(''):")
+    checkFileResult(fileResult3)
+    
+    // 直接チェック例
+    let result3 = divide(15, 3)
+    if result3.ok {
+        let value = result3.value
+        println("Direct check - Result: " + value)
+    } else {
+        println("Direct check - Error: " + result3.error)
+    }
+}

@@ -1,0 +1,11 @@
+import {println} from "std/fmt"
+
+// Simple generic function test
+fn identity<T>(x: T): T {
+    return x
+}
+
+fn main() {
+    let result = identity(42)
+    println("Result: " + result)
+}

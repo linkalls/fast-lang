@@ -294,6 +294,8 @@ func (p *Parser) ParseProgram() *ast.Program {
 func (p *Parser) parseStatement() ast.Statement {
 	var stmt ast.Statement
 	switch p.currentToken.Type {
+	case token.TYPE:
+		return p.parseTypeDeclaration()
 	case token.IMPORT:
 		stmt = p.parseImportStatement()
 	case token.LET:
@@ -331,7 +333,18 @@ func (p *Parser) parseLetStatement() *ast.LetDeclaration {
 		if !p.expectPeek(token.IDENT) {
 			return nil
 		}
-		annotation := p.currentToken.Literal
+		// parse basic and generic type annotations (e.g., Result<int>)
+		typeStr := p.currentToken.Literal
+		if p.peekToken.Type == token.LT {
+			for p.peekToken.Type != token.GT {
+				p.nextToken()
+				typeStr += p.currentToken.Literal
+			}
+			// consume '>'
+			p.nextToken()
+			typeStr += p.currentToken.Literal
+		}
+		annotation := typeStr
 		typeAnn = &annotation
 	}
 	if !p.expectPeek(token.ASSIGN) {
@@ -524,9 +537,30 @@ func (p *Parser) parseFunctionDefinitionWithVisibility(isPublic bool) *ast.Funct
 		return nil
 	}
 	name := p.currentToken.Literal
+	// Parse generic type parameters, e.g., <T, U>
+	var generics []string
+	if p.peekToken.Type == token.LT {
+		p.nextToken() // consume '<'
+		for {
+			if !p.expectPeek(token.IDENT) {
+				return nil
+			}
+			generics = append(generics, p.currentToken.Literal)
+			if p.peekToken.Type == token.COMMA {
+				p.nextToken() // consume ','
+				continue
+			}
+			break
+		}
+		if !p.expectPeek(token.GT) {
+			return nil
+		}
+	}
+	// Expect '(' for parameters
 	if !p.expectPeek(token.LPAREN) {
 		return nil
 	}
+
 	var parameters []ast.Parameter
 	if p.peekToken.Type != token.RPAREN {
 		p.nextToken()
@@ -550,7 +584,27 @@ func (p *Parser) parseFunctionDefinitionWithVisibility(isPublic bool) *ast.Funct
 			if !p.expectPeek(token.IDENT) {
 				return nil
 			}
+			// Parse parameter type (may include generics like Result<T>)
 			paramType := p.currentToken.Literal
+			
+			// Check if this is a generic type
+			if p.peekToken.Type == token.LT {
+				p.nextToken() // consume '<'
+				paramType += p.currentToken.Literal
+				
+				// Parse everything until we find the matching '>'
+				depth := 1
+				for depth > 0 && p.peekToken.Type != token.EOF {
+					p.nextToken()
+					paramType += p.currentToken.Literal
+					if p.currentToken.Type == token.LT {
+						depth++
+					} else if p.currentToken.Type == token.GT {
+						depth--
+					}
+				}
+			}
+			
 			parameters = append(parameters, ast.Parameter{Name: paramName, Type: paramType, Variadic: variadic})
 
 			// Variadic parameter must be the last one
@@ -580,7 +634,28 @@ func (p *Parser) parseFunctionDefinitionWithVisibility(isPublic bool) *ast.Funct
 		if !p.expectPeek(token.IDENT) {
 			return nil
 		}
-		retType := p.currentToken.Literal
+		// Start with the identifier (e.g., "Result" or "int")
+		typeStr := p.currentToken.Literal
+		
+		// Check if this is a generic type (e.g., Result<T>)
+		if p.peekToken.Type == token.LT {
+			p.nextToken() // consume '<'
+			typeStr += p.currentToken.Literal
+			
+			// Parse everything until we find the matching '>'
+			depth := 1
+			for depth > 0 && p.peekToken.Type != token.EOF {
+				p.nextToken()
+				typeStr += p.currentToken.Literal
+				if p.currentToken.Type == token.LT {
+					depth++
+				} else if p.currentToken.Type == token.GT {
+					depth--
+				}
+			}
+		}
+		
+		retType := typeStr
 		returnType = &retType
 	}
 	if !p.expectPeek(token.LBRACE) {
@@ -590,7 +665,7 @@ func (p *Parser) parseFunctionDefinitionWithVisibility(isPublic bool) *ast.Funct
 	if bodyBlock == nil {
 		return nil
 	}
-	return &ast.FunctionDefinition{Name: name, Parameters: parameters, ReturnType: returnType, Body: bodyBlock.Statements, IsPublic: isPublic}
+	return &ast.FunctionDefinition{Name: name, Generics: generics, Parameters: parameters, ReturnType: returnType, Body: bodyBlock.Statements, IsPublic: isPublic}
 }
 
 func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
@@ -921,4 +996,45 @@ func (p *Parser) parseWhileStatement() *ast.WhileStatement {
 		return nil
 	}
 	return &ast.WhileStatement{Condition: condition, Block: block}
+}
+
+// parseTypeDeclaration parses 'type Name<Generics> = { ... }'
+func (p *Parser) parseTypeDeclaration() *ast.TypeDeclaration {
+	// currentToken is TYPE
+	if !p.expectPeek(token.IDENT) {
+		return nil
+	}
+	name := p.currentToken.Literal
+	var generics []string
+	if p.peekToken.Type == token.LT {
+		// consume '<'
+		p.nextToken()
+		for p.peekToken.Type != token.GT && p.peekToken.Type != token.EOF {
+			p.nextToken()
+			if p.currentToken.Type == token.IDENT {
+				generics = append(generics, p.currentToken.Literal)
+			}
+		}
+		// consume '>'
+		p.nextToken()
+	}
+	// expect '='
+	if !p.expectPeek(token.ASSIGN) {
+		return nil
+	}
+	// expect '{'
+	if !p.expectPeek(token.LBRACE) {
+		return nil
+	}
+	// skip until matching '}'
+	depth := 1
+	for depth > 0 && p.currentToken.Type != token.EOF {
+		p.nextToken()
+		if p.currentToken.Type == token.LBRACE {
+			depth++
+		} else if p.currentToken.Type == token.RBRACE {
+			depth--
+		}
+	}
+	return &ast.TypeDeclaration{Name: name, Generics: generics, Fields: nil}
 }

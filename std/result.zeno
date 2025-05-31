@@ -1,0 +1,62 @@
+// std/result - Result型エラーハンドリングライブラリ
+
+import {panic} from "std/fmt"
+
+// Result型の定義
+type Result<T> = {
+    ok: bool      // 成功かどうか
+    value: T      // 成功の場合の値（失敗の場合はnull）
+    error: string // エラーメッセージ（成功の場合は空文字列）
+}
+
+// 成功のResultを作成
+pub fn ok<T>(value: T): Result<T> {
+    return Result{ok: true, value: value, error: ""}
+}
+
+// エラーのResultを作成
+pub fn error<T>(message: string): Result<T> {
+    return Result{ok: false, value: null, error: message}
+}
+
+// Resultが成功かどうかをチェック
+pub fn isOk<T>(result: Result<T>): bool {
+    return result.ok
+}
+
+// Resultがエラーかどうかをチェック
+pub fn isError<T>(result: Result<T>): bool {
+    return !result.ok
+}
+
+// Resultから値を取得（エラーの場合はパニック）
+pub fn unwrap<T>(result: Result<T>): T {
+    if result.ok {
+        return result.value
+    }
+    panic("called unwrap on an error Result: " + result.error)
+}
+
+// Resultから値を取得（エラーの場合はデフォルト値を返す）
+pub fn unwrapOr<T>(result: Result<T>, defaultValue: T): T {
+    if result.ok {
+        return result.value
+    }
+    return defaultValue
+}
+
+// Result型の値をマップ
+pub fn map<T, U>(result: Result<T>, mapper: fn(T): U): Result<U> {
+    if result.ok {
+        return ok(mapper(result.value))
+    }
+    return error(result.error)
+}
+
+// Result型をフラットマップ
+pub fn flatMap<T, U>(result: Result<T>, mapper: fn(T): Result<U>): Result<U> {
+    if result.ok {
+        return mapper(result.value)
+    }
+    return error(result.error)
+}

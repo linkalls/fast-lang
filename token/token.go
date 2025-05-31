@@ -39,6 +39,7 @@ const (
 	// PRINTLN  TokenType = "PRINTLN"  // Removed as keyword
 	BREAK    TokenType = "BREAK"
 	CONTINUE TokenType = "CONTINUE"
+	TYPE     TokenType = "TYPE"
 
 	// Operators
 	ASSIGN   TokenType = "="
@@ -61,6 +62,7 @@ const (
 	COMMA     TokenType = ","
 	SEMICOLON TokenType = ""
 	COLON     TokenType = ":"
+	DOT       TokenType = "."
 	DOTDOTDOT TokenType = "..."
 	LPAREN    TokenType = "("
 	RPAREN    TokenType = ")"
@@ -68,6 +70,7 @@ const (
 	RBRACE    TokenType = "}"
 	LBRACKET  TokenType = "["
 	RBRACKET  TokenType = "]"
+	QUESTION  TokenType = "?"
 )
 
 // keywords maps string literals to their token types
@@ -83,12 +86,7 @@ var keywords = map[string]TokenType{
 	"for":    FOR,
 	"fn":     FN,
 	"return": RETURN,
-	"true":   TRUE,
-	"false":  FALSE,
-	// "print":    PRINT,    // Removed as keyword
-	// "println":  PRINTLN,  // Removed as keyword
-	"break":    BREAK,
-	"continue": CONTINUE,
+	"type":   TYPE,
 }
 
 // LookupIdent checks if the identifier is a keyword

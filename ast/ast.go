@@ -109,7 +109,7 @@ func (op UnaryOperator) String() string {
 // LetDeclaration represents let declarations
 type LetDeclaration struct {
 	Name            string
-	TypeAnn         *string // Optional type annotation
+	TypeAnn         *string  // allow generic type annotations
 	ValueExpression Expression
 }
 
@@ -223,6 +223,25 @@ func (ml *MapLiteral) String() string {
 	return "{" + strings.Join(pairs, ", ") + "}"
 }
 
+// ResultLiteral represents a Result literal expression
+// Example: Result{ok: true, value: 42, error: ""}
+type ResultLiteral struct {
+	Ok    bool        // Whether this is a success or error result
+	Value Expression  // The value (for success) or nil (for error)
+	Error string      // The error message (for error) or empty (for success)
+}
+
+func (rl *ResultLiteral) expressionNode() {}
+func (rl *ResultLiteral) String() string {
+	if rl.Ok {
+		if rl.Value != nil {
+			return fmt.Sprintf("Result{ok: true, value: %s, error: \"\"}", rl.Value.String())
+		}
+		return "Result{ok: true, value: null, error: \"\"}"
+	}
+	return fmt.Sprintf("Result{ok: false, value: null, error: \"%s\"}", rl.Error)
+}
+
 // Identifier represents identifiers
 type Identifier struct {
 	Value string
@@ -316,8 +335,9 @@ func (p *Parameter) String() string {
 // FunctionDefinition represents function definitions
 type FunctionDefinition struct {
 	Name       string
+	Generics   []string  // generic type parameters
 	Parameters []Parameter
-	ReturnType *string // Optional return type
+	ReturnType *string  // allow generic type annotations
 	Body       []Statement
 	IsPublic   bool // Whether the function is public (pub fn)
 }
@@ -427,4 +447,31 @@ type WhileStatement struct {
 func (ws *WhileStatement) statementNode() {}
 func (ws *WhileStatement) String() string {
 	return "while " + ws.Condition.String() + " " + ws.Block.String()
+}
+
+// TypeField represents a field in a type declaration
+type TypeField struct {
+	Name    string
+	TypeAnn string
+}
+
+// TypeDeclaration represents type declarations
+type TypeDeclaration struct {
+	Name     string
+	Generics []string
+	Fields   []TypeField
+}
+
+func (td *TypeDeclaration) statementNode() {}
+func (td *TypeDeclaration) String() string {
+	result := "type " + td.Name
+	if len(td.Generics) > 0 {
+		result += "<" + strings.Join(td.Generics, ", ") + ">"
+	}
+	result += " {\n"
+	for _, field := range td.Fields {
+		result += "  " + field.Name + ": " + field.TypeAnn + "\n"
+	}
+	result += "}"
+	return result
 }

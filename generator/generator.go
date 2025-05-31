@@ -107,6 +107,18 @@ func (g *Generator) generateProgram(program *ast.Program) (string, error) {
 		builder.WriteString(fmt.Sprintf("\t\"%s\"\n", imp))
 	}
 	builder.WriteString(")\n\n")
+	// Generate Go generic type alias for Zeno 'Result<T>'
+	for _, stmt := range program.Statements {
+		if tdecl, ok := stmt.(*ast.TypeDeclaration); ok && tdecl.Name == "Result" && len(tdecl.Generics) == 1 {
+			gen := tdecl.Generics[0]
+			builder.WriteString(fmt.Sprintf("type Result[%s any] struct {\n", gen))
+			builder.WriteString("\tOk bool\n")
+			builder.WriteString(fmt.Sprintf("\tValue %s\n", gen))
+			builder.WriteString("\tError string\n")
+			builder.WriteString("}\n\n")
+			break
+		}
+	}
 	g.generateNativeFunctionHelpers(&builder)
 	var functionDefs []*ast.FunctionDefinition
 	var otherStmts []ast.Statement
@@ -208,6 +220,9 @@ func mapType(zenoType string) string {
 
 func (g *Generator) generateStatement(stmt ast.Statement, builder *strings.Builder, indentLevel int) error {
 	switch s := stmt.(type) {
+	case *ast.TypeDeclaration:
+		// skip type declarations
+		return nil
 	case *ast.ImportStatement:
 		return nil
 	case *ast.LetDeclaration:
@@ -254,6 +269,18 @@ func (g *Generator) generateStatement(stmt ast.Statement, builder *strings.Build
 			}
 		}
 		builder.WriteString(functionName)
+		// Generic type parameters
+		if len(s.Generics) > 0 {
+			builder.WriteString("[")
+			for i, gen := range s.Generics {
+				if i > 0 {
+					builder.WriteString(", ")
+				}
+				builder.WriteString(gen)
+				builder.WriteString(" any")
+			}
+			builder.WriteString("]")
+		}
 		builder.WriteString("(")
 		for i, param := range s.Parameters {
 			if i > 0 {

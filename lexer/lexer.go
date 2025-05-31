@@ -226,7 +226,7 @@ func (l *Lexer) NextToken() token.Token {
 				tok = newToken(token.ILLEGAL, l.ch)
 			}
 		} else {
-			tok = newToken(token.ILLEGAL, l.ch) // Single dot not supported yet
+			tok = newToken(token.DOT, l.ch) // Single dot for field access
 		}
 	case '(':
 		tok = newToken(token.LPAREN, l.ch)
@@ -240,6 +240,8 @@ func (l *Lexer) NextToken() token.Token {
 		tok = newToken(token.LBRACKET, l.ch)
 	case ']':
 		tok = newToken(token.RBRACKET, l.ch)
+	case '?':
+		tok = newToken(token.QUESTION, l.ch)
 	case '"':
 		str, ok := l.readString()
 		if !ok {

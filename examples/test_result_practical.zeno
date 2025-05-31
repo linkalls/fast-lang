@@ -1,0 +1,117 @@
+import {println} from "std/fmt"
+import {ok, error, unwrap, unwrapOr, isOk} from "std/result"
+
+// より実用的なResult型の使用例
+
+// 数値の解析
+fn parseInt(s: string): Result<int> {
+    if s == "" {
+        return error("empty string")
+    }
+    if s == "123" {
+        return ok(123)
+    }
+    if s == "456" {
+        return ok(456)
+    }
+    if s == "-10" {
+        return ok(-10)
+    }
+    return error("invalid number format: " + s)
+}
+
+// 安全な配列アクセス
+fn safeGet(arr: [int], index: int): Result<int> {
+    if index < 0 {
+        return error("negative index")
+    }
+    if index >= 3 {  // 簡単のため固定サイズと仮定
+        return error("index out of bounds")
+    }
+    // 実際の実装では arr[index] を返す
+    if index == 0 {
+        return ok(10)
+    }
+    if index == 1 {
+        return ok(20)
+    }
+    if index == 2 {
+        return ok(30)
+    }
+    return error("unknown error")
+}
+
+// チェーンした処理
+fn processNumber(s: string): Result<int> {
+    let parseResult = parseInt(s)
+    if !isOk(parseResult) {
+        return parseResult
+    }
+    
+    let num = unwrap(parseResult)
+    if num < 0 {
+        return error("negative numbers not allowed")
+    }
+    
+    return ok(num * 2)
+}
+
+fn main() {
+    println("=== 実用的なResult型の使用例 ===")
+    
+    // 数値解析のテスト
+    println("\n--- parseInt テスト ---")
+    let numbers = ["123", "456", "-10", "abc", ""]
+    
+    for i in [0, 1, 2, 3, 4] {
+        let s = ""
+        if i == 0 { s = "123" }
+        if i == 1 { s = "456" }
+        if i == 2 { s = "-10" }
+        if i == 3 { s = "abc" }
+        if i == 4 { s = "" }
+        
+        let result = parseInt(s)
+        if isOk(result) {
+            println("parseInt('" + s + "') = " + unwrap(result))
+        } else {
+            println("parseInt('" + s + "') failed: " + result.error)
+        }
+    }
+    
+    // 配列アクセステスト
+    println("\n--- safeGet テスト ---")
+    for i in [-1, 0, 1, 2, 3, 5] {
+        let result = safeGet([10, 20, 30], i)
+        if isOk(result) {
+            println("arr[" + i + "] = " + unwrap(result))
+        } else {
+            println("arr[" + i + "] failed: " + result.error)
+        }
+    }
+    
+    // チェーンした処理のテスト
+    println("\n--- processNumber テスト ---")
+    let testCases = ["123", "456", "-10", "abc"]
+    
+    for i in [0, 1, 2, 3] {
+        let s = ""
+        if i == 0 { s = "123" }
+        if i == 1 { s = "456" }
+        if i == 2 { s = "-10" }
+        if i == 3 { s = "abc" }
+        
+        let result = processNumber(s)
+        if isOk(result) {
+            println("processNumber('" + s + "') = " + unwrap(result))
+        } else {
+            println("processNumber('" + s + "') failed: " + result.error)
+        }
+    }
+    
+    // unwrapOrの使用例
+    println("\n--- unwrapOr テスト ---")
+    let errorResult = parseInt("invalid")
+    let value = unwrapOr(errorResult, 0)
+    println("unwrapOr with default 0: " + value)
+}

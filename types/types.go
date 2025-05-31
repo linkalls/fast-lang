@@ -38,6 +38,16 @@ func (a *ArrayType) String() string {
 	return "[]" + a.ElementType.String()
 }
 
+// ResultType represents a Result<T> type for error handling
+type ResultType struct {
+	ValueType Type // The type of the success value
+}
+
+// String returns a string representation of the result type.
+func (r *ResultType) String() string {
+	return "Result<" + r.ValueType.String() + ">"
+}
+
 // Symbol represents a variable or function in the symbol table
 type Symbol struct {
 	Name string
