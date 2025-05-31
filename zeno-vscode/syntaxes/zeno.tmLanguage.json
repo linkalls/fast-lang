@@ -1,28 +1,61 @@
 {
+    "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+    "name": "Zeno",
     "scopeName": "source.zeno",
     "patterns": [
         { "include": "#comments" },
+        { "include": "#function_definition" },
+        { "include": "#variable_declaration" },
         { "include": "#keywords" },
         { "include": "#strings" },
         { "include": "#numbers" },
         { "include": "#operators" },
-        { "include": "#punctuation" },
         { "include": "#types" },
-        { "include": "#functions" }
+        { "include": "#function_calls" },
+        { "include": "#identifiers" },
+        { "include": "#punctuation" }
     ],
     "repository": {
         "comments": {
             "patterns": [
                 {
                     "name": "comment.line.double-slash.zeno",
-                    "match": "//.*"
+                    "match": "//.*$",
+                    "captures": {
+                        "0": { "name": "punctuation.definition.comment.zeno" }
+                    }
                 },
                 {
                     "name": "comment.block.zeno",
-                    "begin": "/\*",
-                    "end": "\*/",
+                    "begin": "/\\*",
+                    "end": "\\*/",
                     "captures": {
                         "0": { "name": "punctuation.definition.comment.zeno" }
+                    }
+                }
+            ]
+        },
+        "function_definition": {
+            "patterns": [
+                {
+                    "match": "\\b(pub\\s+)?(fn)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\(",
+                    "captures": {
+                        "1": { "name": "storage.modifier.zeno" },
+                        "2": { "name": "storage.type.function.zeno" },
+                        "3": { "name": "entity.name.function.definition.zeno" }
+                    }
+                }
+            ]
+        },
+        "variable_declaration": {
+            "patterns": [
+                {
+                    "match": "\\b(let)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*(:)?\\s*([a-zA-Z_][a-zA-Z0-9_]*)?",
+                    "captures": {
+                        "1": { "name": "storage.type.variable.zeno" },
+                        "2": { "name": "variable.other.declaration.zeno" },
+                        "3": { "name": "punctuation.separator.type.zeno" },
+                        "4": { "name": "entity.name.type.zeno" }
                     }
                 }
             ]
@@ -30,35 +63,61 @@
         "keywords": {
             "patterns": [
                 {
-                    "name": "keyword.control.zeno",
-                    "match": "\b(if|else|return|while|loop|for|break|continue)\b"
+                    "name": "keyword.control.conditional.zeno",
+                    "match": "\\b(if|else)\\b"
+                },
+                {
+                    "name": "keyword.control.loop.zeno",
+                    "match": "\\b(while|for|in)\\b"
+                },
+                {
+                    "name": "keyword.control.flow.zeno",
+                    "match": "\\b(return|break|continue)\\b"
+                },
+                {
+                    "name": "keyword.control.import.zeno",
+                    "match": "\\b(import|from)\\b"
+                },
+                {
+                    "name": "storage.modifier.visibility.zeno",
+                    "match": "\\b(pub)\\b"
                 },
                 {
                     "name": "storage.type.function.zeno",
-                    "match": "\b(fn|pub)\b"
+                    "match": "\\b(fn)\\b"
                 },
                 {
-                    "name": "keyword.declaration.zeno",
-                    "match": "\b(let)\b"
-                },
-                {
-                    "name": "keyword.module.zeno",
-                    "match": "\b(import|from)\b"
+                    "name": "storage.type.variable.zeno",
+                    "match": "\\b(let)\\b"
                 },
                 {
                     "name": "constant.language.boolean.zeno",
-                    "match": "\b(true|false)\b"
+                    "match": "\\b(true|false)\\b"
+                },
+                {
+                    "name": "constant.language.null.zeno",
+                    "match": "\\b(null)\\b"
                 }
             ]
         },
         "strings": {
-            "name": "string.quoted.double.zeno",
-            "begin": "\"",
-            "end": "\"",
             "patterns": [
                 {
-                    "name": "constant.character.escape.zeno",
-                    "match": "\\\\(n|t|r|\\\\|\"|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2})"
+                    "name": "string.quoted.double.zeno",
+                    "begin": "\"",
+                    "end": "\"",
+                    "beginCaptures": {
+                        "0": { "name": "punctuation.definition.string.begin.zeno" }
+                    },
+                    "endCaptures": {
+                        "0": { "name": "punctuation.definition.string.end.zeno" }
+                    },
+                    "patterns": [
+                        {
+                            "name": "constant.character.escape.zeno",
+                            "match": "\\\\(n|t|r|\\\\|\"|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}|.)"
+                        }
+                    ]
                 }
             ]
         },
@@ -66,11 +125,19 @@
             "patterns": [
                 {
                     "name": "constant.numeric.float.zeno",
-                    "match": "\b[0-9]+\.[0-9]+\b"
+                    "match": "\\b([0-9]+\\.[0-9]+([eE][+-]?[0-9]+)?)\\b"
                 },
                 {
-                    "name": "constant.numeric.integer.zeno",
-                    "match": "\b[0-9]+\b"
+                    "name": "constant.numeric.integer.decimal.zeno",
+                    "match": "\\b([0-9]+)\\b"
+                },
+                {
+                    "name": "constant.numeric.integer.hexadecimal.zeno",
+                    "match": "\\b(0[xX][0-9a-fA-F]+)\\b"
+                },
+                {
+                    "name": "constant.numeric.integer.binary.zeno",
+                    "match": "\\b(0[bB][01]+)\\b"
                 }
             ]
         },
@@ -78,7 +145,7 @@
             "patterns": [
                 {
                     "name": "keyword.operator.arithmetic.zeno",
-                    "match": "(\+|\-|\*|\/|%)"
+                    "match": "(\\+|\\-|\\*|\\/|%)"
                 },
                 {
                     "name": "keyword.operator.comparison.zeno",
@@ -86,43 +153,89 @@
                 },
                 {
                     "name": "keyword.operator.logical.zeno",
-                    "match": "(&&|\|\||!)"
+                    "match": "(&&|\\|\\||!)"
                 },
                 {
                     "name": "keyword.operator.assignment.zeno",
-                    "match": "="
-                }
-            ]
-        },
-        "punctuation": {
-             "patterns": [
-                {
-                    "name": "punctuation.separator.comma.zeno",
-                    "match": ","
+                    "match": "(=|\\+=|\\-=|\\*=|\\/=|%=)"
                 },
                 {
-                    "name": "punctuation.accessor.zeno",
-                    "match": "\."
-                },
-                 {
-                    "name": "punctuation.definition.type.annotation.zeno",
-                    "match": ":"
+                    "name": "keyword.operator.bitwise.zeno",
+                    "match": "(&|\\||\\^|<<|>>|~)"
                 }
             ]
         },
         "types": {
             "patterns": [
                 {
-                    "name": "storage.type.built-in.zeno",
-                    "match": "\b(int|string|bool|float)\b"
+                    "name": "entity.name.type.primitive.zeno",
+                    "match": "\\b(int|string|bool|float|array|map)\\b"
+                },
+                {
+                    "name": "entity.name.type.custom.zeno",
+                    "match": "\\b([A-Z][a-zA-Z0-9_]*)\\b"
                 }
             ]
         },
-        "functions": {
+        "function_calls": {
             "patterns": [
                 {
-                    "name": "entity.name.function.zeno",
-                    "match": "\b([a-zA-Z_][a-zA-Z0-9_]*)(?=\s*\()"
+                    "match": "\\b([a-zA-Z_][a-zA-Z0-9_]*)\\s*(?=\\()",
+                    "captures": {
+                        "1": { "name": "entity.name.function.call.zeno" }
+                    }
+                }
+            ]
+        },
+        "identifiers": {
+            "patterns": [
+                {
+                    "name": "variable.other.readwrite.zeno",
+                    "match": "\\b([a-z_][a-zA-Z0-9_]*)\\b"
+                }
+            ]
+        },
+        "punctuation": {
+            "patterns": [
+                {
+                    "name": "punctuation.section.block.begin.bracket.curly.zeno",
+                    "match": "\\{"
+                },
+                {
+                    "name": "punctuation.section.block.end.bracket.curly.zeno",
+                    "match": "\\}"
+                },
+                {
+                    "name": "punctuation.section.group.begin.bracket.round.zeno",
+                    "match": "\\("
+                },
+                {
+                    "name": "punctuation.section.group.end.bracket.round.zeno",
+                    "match": "\\)"
+                },
+                {
+                    "name": "punctuation.section.brackets.begin.zeno",
+                    "match": "\\["
+                },
+                {
+                    "name": "punctuation.section.brackets.end.zeno",
+                    "match": "\\]"
+                },
+                {
+                    "name": "punctuation.separator.comma.zeno",
+                    "match": ","
+                },
+                {
+                    "name": "punctuation.separator.semicolon.zeno",
+                    "match": ";"
+                },
+                {
+                    "name": "punctuation.accessor.dot.zeno",
+                    "match": "\\."
+                },
+                {
+                    "name": "punctuation.separator.type.annotation.zeno",
+                    "match": ":"
                 }
             ]
         }

@@ -1,0 +1,30 @@
+// Zeno Language Test File
+import {println} from "std/fmt"
+
+fn test():int {
+    return 42
+}
+
+fn demo(){
+    let x:int = test()
+    let name:string = "Zeno"
+    let isActive:bool = true
+    println("Test result: ", x)
+    println("Language: ", name)
+    
+    if isActive {
+        println("Language is active!")
+    }
+}
+
+
+
+fn main() {
+    println("Debug test")
+    demo()
+    
+    let numbers = [1, 2, 3, 4, 5]
+    for num in numbers {
+        println("Number: ", num)
+    }
+}

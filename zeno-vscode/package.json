@@ -5,8 +5,11 @@
     "version": "0.0.1",
     "publisher": "ZenoLang",
     "engines": {
-        "vscode": "^1.80.0"
+        "vscode": "^1.100.0"
     },
+    "repository": {
+        "type": "git",
+        "url": ""},
     "categories": [
         "Programming Languages",
         "Snippets"
@@ -27,14 +30,26 @@
             "language": "zeno",
             "path": "./zeno/snippets/zeno.json"
         }]
+    },
+    "activationEvents": [
+        "onLanguage:zeno"
+    ],
+
+    "main": "./zeno/out/extension.js",
+    "scripts": {
+        "vscode:prepublish": "bun run compile",
+        "compile": "tsc -p ./zeno/tsconfig.json",
+        "watch": "tsc -watch -p ./zeno/tsconfig.json",
+        "test": "bun test"
+    },
+    "dependencies": {
+        "vscode-languageclient": "^9.0.1",
+        "vscode-languageserver": "^9.0.1",
+        "vscode-languageserver-textdocument": "^1.0.12"
+    },
+    "devDependencies": {
+        "@types/node": "^22.15.29",
+        "@types/vscode": "^1.100.0",
+        "typescript": "^5.8.3"
     }
-    // "activationEvents": [
-    //     "onLanguage:zeno"
-    // ],
-    // "main": "./zeno/src/extension.js",
-    // "scripts": {
-    //     "vscode:prepublish": "npm run compile",
-    //     "compile": "tsc -p ./zeno/tsconfig.json",
-    //     "watch": "tsc -watch -p ./zeno/tsconfig.json"
-    // }
 }

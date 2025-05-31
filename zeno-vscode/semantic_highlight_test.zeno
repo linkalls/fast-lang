@@ -1,0 +1,69 @@
+// セマンティックハイライトのテストファイル
+// このファイルはZeno言語の様々な構文要素を含んでいます
+
+// 関数定義
+fn calculate_area(width: int, height: int): int {
+    return width * height
+}
+
+fn greet_user(name: string): string {
+    return "Hello, " + name + "!"
+}
+
+// 変数定義
+let x: int = 42
+let message: string = "World"
+let pi: float = 3.14159
+let is_active = true
+
+// 配列の例
+let numbers: array = [1, 2, 3, 4, 5]
+let words: array = ["hello", "world", "zeno"]
+
+// 条件分岐
+if x > 0 {
+    println("x is positive")
+} else if x < 0 {
+    println("x is negative")  
+} else {
+    println("x is zero")
+}
+
+// ループ
+while x > 0 {
+    x = x - 1
+    println(x)
+}
+
+for i in numbers {
+    println(i)
+}
+
+// 関数呼び出し
+let area = calculate_area(10, 20)
+let greeting = greet_user(message)
+
+// 標準ライブラリ関数の使用
+print("Area: ")
+println(area)
+print("Greeting: ")
+println(greeting)
+
+// コメント例
+// これは行コメントです
+
+/* これは将来のブロックコメントです */
+
+// 型推論の例
+let inferred_number = 123  // intと推論される
+let inferred_text = "hello"  // stringと推論される
+let inferred_flag = true  // boolと推論される
+
+// モジュールのインポート例
+import std.fmt
+from std.io import read_line, write_file
+
+// パブリック関数
+pub fn public_function(): int {
+    return 100
+}

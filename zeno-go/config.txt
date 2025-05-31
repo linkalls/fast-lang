@@ -1,4 +1,0 @@
-# Zeno Configuration
-name=MyApp
-version=1.0
-debug=true
