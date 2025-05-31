@@ -212,6 +212,21 @@ func (l *Lexer) NextToken() token.Token {
 		tok = newToken(token.COMMA, l.ch)
 	case ':':
 		tok = newToken(token.COLON, l.ch)
+	case '.':
+		if l.peekChar() == '.' {
+			// Look ahead one more character to check for ...
+			nextPos := l.readPosition + 1
+			if nextPos < len(l.input) && l.input[nextPos] == '.' {
+				// It's a variadic operator ...
+				l.readChar() // consume second .
+				l.readChar() // consume third .
+				tok = token.Token{Type: token.DOTDOTDOT, Literal: "..."}
+			} else {
+				tok = newToken(token.ILLEGAL, l.ch)
+			}
+		} else {
+			tok = newToken(token.ILLEGAL, l.ch) // Single dot not supported yet
+		}
 	case '(':
 		tok = newToken(token.LPAREN, l.ch)
 	case ')':

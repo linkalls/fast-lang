@@ -237,6 +237,9 @@ func (g *Generator) generateStatement(stmt ast.Statement, builder *strings.Build
 			if i > 0 { builder.WriteString(", ") }
 			builder.WriteString(param.Name)
 			builder.WriteString(" ")
+			if param.Variadic {
+				builder.WriteString("...")
+			}
 			builder.WriteString(mapType(param.Type))
 		}
 		builder.WriteString(")")
@@ -427,11 +430,40 @@ func (g *Generator) generateExpression(expr ast.Expression, builder *strings.Bui
 				}
 			}
 		}
+		
+		// Check if this is a variadic function call (print or println)
+		isVariadicFunc := functionName == "print" || functionName == "println" || 
+						  functionName == "zenoNativePrintVariadic" || functionName == "zenoNativePrintlnVariadic"
+		
+		isVariadicWithFirstFunc := functionName == "zenoNativePrintVariadicWithFirst" || functionName == "zenoNativePrintlnVariadicWithFirst"
+		
 		builder.WriteString(functionName)
 		builder.WriteString("(")
-		for i, arg := range e.Arguments {
-			if i > 0 { builder.WriteString(", ") }
-			if err := g.generateExpression(arg, builder); err != nil { return err }
+		
+		if isVariadicWithFirstFunc && len(e.Arguments) > 0 {
+			// For variadic functions that require at least one argument
+			// Pass first argument directly, then wrap rest in a slice
+			if err := g.generateExpression(e.Arguments[0], builder); err != nil { return err }
+			builder.WriteString(", []interface{}{")
+			for i := 1; i < len(e.Arguments); i++ {
+				if i > 1 { builder.WriteString(", ") }
+				if err := g.generateExpression(e.Arguments[i], builder); err != nil { return err }
+			}
+			builder.WriteString("}")
+		} else if isVariadicFunc && len(e.Arguments) > 0 {
+			// For variadic functions, wrap arguments in a slice
+			builder.WriteString("[]interface{}{")
+			for i, arg := range e.Arguments {
+				if i > 0 { builder.WriteString(", ") }
+				if err := g.generateExpression(arg, builder); err != nil { return err }
+			}
+			builder.WriteString("}")
+		} else {
+			// For regular functions, pass arguments normally
+			for i, arg := range e.Arguments {
+				if i > 0 { builder.WriteString(", ") }
+				if err := g.generateExpression(arg, builder); err != nil { return err }
+			}
 		}
 		builder.WriteString(")")
 	default:
@@ -692,6 +724,14 @@ func (g *Generator) generateNativeFunctionHelpers(builder *strings.Builder) {
 	builder.WriteString("func zenoNativeWriteFile(filename string, content string) bool {\n\terr := os.WriteFile(filename, []byte(content), 0644)\n\tif err != nil {\n\t\tfmt.Printf(\"Error writing file %s: %v\\n\", filename, err)\n\t\treturn false\n\t}\n\treturn true\n}\n\n")
 	builder.WriteString("func zenoNativePrint(args ...interface{}) {\n\tfmt.Print(args...)\n}\n\n")
 	builder.WriteString("func zenoNativePrintln(args ...interface{}) {\n\tfmt.Println(args...)\n}\n\n")
+	
+	// Variadic versions that handle slices of any type
+	builder.WriteString("func zenoNativePrintVariadic(args []interface{}) {\n\tfmt.Print(args...)\n}\n\n")
+	builder.WriteString("func zenoNativePrintlnVariadic(args []interface{}) {\n\tfmt.Println(args...)\n}\n\n")
+	
+	// Variadic versions that require at least one argument
+	builder.WriteString("func zenoNativePrintVariadicWithFirst(first interface{}, rest []interface{}) {\n\tfmt.Print(first)\n\tfor _, arg := range rest {\n\t\tfmt.Print(\" \", arg)\n\t}\n}\n\n")
+	builder.WriteString("func zenoNativePrintlnVariadicWithFirst(first interface{}, rest []interface{}) {\n\tfmt.Print(first)\n\tfor _, arg := range rest {\n\t\tfmt.Print(\" \", arg)\n\t}\n\tfmt.Println()\n}\n\n")
 	builder.WriteString("func zenoNativeRemove(path string) bool {\n\terr := os.Remove(path)\n\tif err != nil {\n\t\tfmt.Fprintf(os.Stderr, \"Error removing %s: %v\\n\", path, err)\n\t\treturn false\n\t}\n\treturn true\n}\n\n")
 	builder.WriteString("func zenoNativeGetCurrentDirectory() string {\n\tpwd, err := os.Getwd()\n\tif err != nil {\n\t\tfmt.Fprintf(os.Stderr, \"Error getting current directory: %v\\n\", err)\n\t\treturn \"\"\n\t}\n\treturn pwd\n}\n\n")
 	builder.WriteString("func zenoNativeJsonParse(jsonString string) interface{} {\n\tvar result interface{}\n\terr := json.Unmarshal([]byte(jsonString), &result)\n\tif err != nil {\n\t\tfmt.Fprintf(os.Stderr, \"Error parsing JSON string '%s': %v\\n\", jsonString, err)\n\t\treturn nil\n\t}\n\treturn result\n}\n\n")

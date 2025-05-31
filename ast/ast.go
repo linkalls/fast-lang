@@ -301,11 +301,15 @@ func (is *ImportStatement) String() string {
 
 // Parameter represents a function parameter
 type Parameter struct {
-	Name string
-	Type string
+	Name     string
+	Type     string
+	Variadic bool // true if this is a variadic parameter (...)
 }
 
 func (p *Parameter) String() string {
+	if p.Variadic {
+		return "..." + p.Name + ": " + p.Type
+	}
 	return p.Name + ": " + p.Type
 }
 

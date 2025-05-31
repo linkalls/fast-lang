@@ -6,7 +6,20 @@ export function activate(context: vscode.ExtensionContext) {
   // ホバープロバイダーを直接登録
   const hoverProvider = vscode.languages.registerHoverProvider('zeno', {
     provideHover(document, position, token) {
-      const range = document.getWordRangeAtPosition(position);
+    // 標準ライブラリ関数（より詳細）
+  const stdFunctions = [
+    { 
+      name: 'println', 
+      detail: 'fn println(...args: any): void', 
+      doc: 'Prints arguments to standard output followed by a newline\n\n**Accepts**: Any number of arguments of any type\n\n**Examples:**\n```zeno\nprintln("Hello, World!")\nprintln("Value:", x, "Status:", active)\nprintln(42, true, 3.14, "text")\n```',
+      snippet: 'println($1)'
+    },
+    { 
+      name: 'print', 
+      detail: 'fn print(...args: any): void', 
+      doc: 'Prints arguments to standard output without a trailing newline\n\n**Accepts**: Any number of arguments of any type\n\n**Examples:**\n```zeno\nprint("Hello, ")\nprint("Value:", x, ", Status:", active)\nprint(1, 2, 3, "end")\n```',
+      snippet: 'print($1)'
+    },e = document.getWordRangeAtPosition(position);
       if (!range) return undefined;
 
       const word = document.getText(range);
@@ -163,17 +176,17 @@ function getTypeInfo(word: string, document: vscode.TextDocument, position: vsco
   // 5. 標準ライブラリ関数の場合（TypeScript風の詳細情報）
   const stdFunctions = {
     'println': {
-      signature: 'fn println(message: string): void',
-      description: 'Prints a message to standard output followed by a newline',
-      module: 'built-in',
-      example: 'println("Hello, World!")',
+      signature: 'fn println(...args: any): void',
+      description: 'Prints arguments to standard output followed by a newline. Accepts any number of arguments of any type.',
+      module: 'std/fmt',
+      example: 'println("Hello", x, 42, true)',
       returns: 'void'
     },
     'print': {
-      signature: 'fn print(message: string): void',
-      description: 'Prints a message to standard output without a trailing newline',
-      module: 'built-in',
-      example: 'print("Hello, ")',
+      signature: 'fn print(...args: any): void', 
+      description: 'Prints arguments to standard output without a trailing newline. Accepts any number of arguments of any type.',
+      module: 'std/fmt',
+      example: 'print("Value: ", x, ", Status: ", active)',
       returns: 'void'
     },
     'read_line': {

@@ -1,0 +1,45 @@
+import { println } from "std/fmt"
+
+// 関数定義
+fn calculate_area(width: int, height: int): int {
+    return width * height
+}
+
+fn greet_user(name: string): string {
+    return "Hello, " + name + "!"
+}
+
+fn main() {
+    // 変数定義を関数内に移動
+    let x: int = 42
+    let message: string = "World"
+    let pi: float = 3.14159
+    let is_active: bool = true
+    
+    let area = calculate_area(10, 20)
+    let greeting = greet_user(message)
+    
+    println("Testing Zeno language features")
+    println(greeting)
+    
+    // 変数を使用
+    if x > 0 {
+        println("x is positive")
+    }
+    
+    if is_active {
+        println("System is active")
+    }
+    
+    if pi > 3.0 {
+        println("Pi is greater than 3")
+    }
+    
+    if area > 100 {
+        println("Area is large")
+    }
+}
+
+pub fn public_function(): int {
+    return 100
+}

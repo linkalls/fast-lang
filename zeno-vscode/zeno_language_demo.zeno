@@ -11,14 +11,15 @@ fn greet_user(name: string): string {
     return "Hello, " + name + "!"
 }
 
-// 変数定義
+fn main() {
+    // 変数定義
 let x: int = 42
 let message: string = "World"
 let pi: float = 3.14159
 let is_active: bool = true
+println("pi:",pi,area,is_active)
 
-// 条件分岐
-fn test_conditions() {
+    // 条件分岐
     if x > 0 {
         println("x is positive")
     } else {
@@ -28,15 +29,21 @@ fn test_conditions() {
             println("x is zero")
         }
     }
-}
 
-// 関数呼び出し
-fn main() {
+    // 関数呼び出し
     let area = calculate_area(10, 20)
     let greeting = greet_user(message)
 
+
+    // 型推論の例
+    let inferred_number = 123
+    let inferred_text = "hello"
+    let inferred_flag = true
+     let area = calculate_area(10, 20)
+    let greeting = greet_user(message)
+
     // 標準ライブラリ関数の使用
-    print("Area: ")
+    print("Area: ",area)
     println("200")
     print("Greeting: ")
     println(greeting)
@@ -45,11 +52,8 @@ fn main() {
     let inferred_number = 123
     let inferred_text = "hello"
     let inferred_flag = true
+    println("Type Inference: ", inferred_number, ", ", inferred_text, ", ", inferred_flag)
 
-    test_conditions()
+    // test_conditions()
 }
 
-// パブリック関数
-pub fn public_function(): int {
-    return 100
-}

@@ -349,15 +349,33 @@ func (p *Parser) parseFunctionDefinitionWithVisibility(isPublic bool) *ast.Funct
 	if p.peekToken.Type != token.RPAREN {
 		p.nextToken()
 		for {
-			if p.currentToken.Type != token.IDENT {
+			// Check for variadic parameter (...)
+			variadic := false
+			if p.currentToken.Type == token.DOTDOTDOT {
+				variadic = true
+				if !p.expectPeek(token.IDENT) {
+					return nil
+				}
+			} else if p.currentToken.Type != token.IDENT {
 				p.errors = append(p.errors, "expected parameter name")
 				return nil
 			}
+			
 			paramName := p.currentToken.Literal
 			if !p.expectPeek(token.COLON) { return nil }
 			if !p.expectPeek(token.IDENT) { return nil }
 			paramType := p.currentToken.Literal
-			parameters = append(parameters, ast.Parameter{Name: paramName, Type: paramType})
+			parameters = append(parameters, ast.Parameter{Name: paramName, Type: paramType, Variadic: variadic})
+			
+			// Variadic parameter must be the last one
+			if variadic {
+				if p.peekToken.Type == token.COMMA {
+					p.errors = append(p.errors, "variadic parameter must be the last parameter")
+					return nil
+				}
+				break
+			}
+			
 			if p.peekToken.Type == token.COMMA {
 				p.nextToken()
 				p.nextToken()
@@ -574,7 +592,16 @@ func (p *Parser) parseMapLiteral() ast.Expression {
 
 func (p *Parser) parseFunctionCall(functionExpression ast.Expression) ast.Expression {
 	// currentToken is LPAREN when this (infixParseFn) is called.
-	call := &ast.FunctionCall{Name: functionExpression.(*ast.Identifier).Value}
+	var functionName string
+	if ident, ok := functionExpression.(*ast.Identifier); ok {
+		functionName = ident.Value
+	} else {
+		// This shouldn't happen in current Zeno language design, but let's handle it gracefully
+		p.errors = append(p.errors, "function call on non-identifier expression not supported")
+		return nil
+	}
+	
+	call := &ast.FunctionCall{Name: functionName}
 	call.Arguments = p.parseCommaSeparatedExpressions(token.RPAREN)
 	return call
 }

@@ -61,6 +61,7 @@ const (
 	COMMA     TokenType = ","
 	SEMICOLON TokenType = ""
 	COLON     TokenType = ":"
+	DOTDOTDOT TokenType = "..."
 	LPAREN    TokenType = "("
 	RPAREN    TokenType = ")"
 	LBRACE    TokenType = "{"
