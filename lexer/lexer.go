@@ -1,10 +1,11 @@
 package lexer
 
 import (
-	"github.com/linkalls/zeno-lang/token"
-	"unicode"
-	"strings" // Added: for strings.Builder and strings.Contains (though Contains might not be used anymore)
 	"strconv" // Added: for strconv.ParseInt
+	"strings" // Added: for strings.Builder and strings.Contains (though Contains might not be used anymore)
+	"unicode"
+
+	"github.com/linkalls/zeno-lang/token"
 )
 
 // Lexer represents the lexical analyzer

@@ -1,0 +1,7 @@
+import {println,print} from "std/fmt"
+
+fn main() {
+  let x = 1
+ println("This is a test for the debug parser")
+}
+

@@ -22,19 +22,19 @@ const (
 	STRING TokenType = "STRING" // "foobar"
 
 	// Keywords
-	LET      TokenType = "LET"
-	PUB      TokenType = "PUB"
-	IMPORT   TokenType = "IMPORT"
-	FROM     TokenType = "FROM"
-	IF       TokenType = "IF"
-	ELSE     TokenType = "ELSE"
-	LOOP     TokenType = "LOOP"
-	WHILE    TokenType = "WHILE"
-	FOR      TokenType = "FOR"
-	FN       TokenType = "FN"
-	RETURN   TokenType = "RETURN"
-	TRUE     TokenType = "TRUE"
-	FALSE    TokenType = "FALSE"
+	LET    TokenType = "LET"
+	PUB    TokenType = "PUB"
+	IMPORT TokenType = "IMPORT"
+	FROM   TokenType = "FROM"
+	IF     TokenType = "IF"
+	ELSE   TokenType = "ELSE"
+	LOOP   TokenType = "LOOP"
+	WHILE  TokenType = "WHILE"
+	FOR    TokenType = "FOR"
+	FN     TokenType = "FN"
+	RETURN TokenType = "RETURN"
+	TRUE   TokenType = "TRUE"
+	FALSE  TokenType = "FALSE"
 	// PRINT    TokenType = "PRINT"    // Removed as keyword
 	// PRINTLN  TokenType = "PRINTLN"  // Removed as keyword
 	BREAK    TokenType = "BREAK"
@@ -72,19 +72,19 @@ const (
 
 // keywords maps string literals to their token types
 var keywords = map[string]TokenType{
-	"let":      LET,
-	"pub":      PUB,
-	"import":   IMPORT,
-	"from":     FROM,
-	"if":       IF,
-	"else":     ELSE,
-	"loop":     LOOP,
-	"while":    WHILE,
-	"for":      FOR,
-	"fn":       FN,
-	"return":   RETURN,
-	"true":     TRUE,
-	"false":    FALSE,
+	"let":    LET,
+	"pub":    PUB,
+	"import": IMPORT,
+	"from":   FROM,
+	"if":     IF,
+	"else":   ELSE,
+	"loop":   LOOP,
+	"while":  WHILE,
+	"for":    FOR,
+	"fn":     FN,
+	"return": RETURN,
+	"true":   TRUE,
+	"false":  FALSE,
 	// "print":    PRINT,    // Removed as keyword
 	// "println":  PRINTLN,  // Removed as keyword
 	"break":    BREAK,

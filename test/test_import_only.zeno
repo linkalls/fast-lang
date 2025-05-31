@@ -1,0 +1,4 @@
+import {println} from "std/fmt"
+
+fn main() {
+}

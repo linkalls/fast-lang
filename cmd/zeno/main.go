@@ -154,7 +154,6 @@ If a directory is specified, it will be walked recursively for .zeno files.`,
 
 				absFilePath, _ := filepath.Abs(filePath)
 
-
 				// Initialize linter and register rules
 				rules := []linter.Rule{
 					&linter.UnusedVariableRule{},
@@ -182,9 +181,13 @@ If a directory is specified, it will be walked recursively for .zeno files.`,
 			for _, issue := range allIssues {
 				// Use 1 if line/col is 0 from placeholder
 				line := issue.Line
-				if line == 0 { line = 1}
+				if line == 0 {
+					line = 1
+				}
 				col := issue.Column
-				if col == 0 { col = 1}
+				if col == 0 {
+					col = 1
+				}
 				fmt.Printf("%s:%d:%d: [%s] %s\n", issue.Filepath, line, col, issue.RuleName, issue.Message)
 			}
 			hasErrors = true // Ensure exit code reflects issues found
@@ -254,7 +257,6 @@ func compileFile(filename string) error {
 	if strings.HasSuffix(filename, ".zn") { // also handle .zn
 		outputFile = strings.TrimSuffix(filename, ".zn") + ".go"
 	}
-
 
 	err = os.WriteFile(outputFile, []byte(goCode), 0644)
 	if err != nil {

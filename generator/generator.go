@@ -160,8 +160,12 @@ func (g *Generator) generateProgram(program *ast.Program) (string, error) {
 		}
 	}
 	builder.WriteString("}\n")
-	if err := g.checkUnusedVariables(); err != nil { return "", err }
-	if err := g.checkUnusedFunctions(); err != nil { return "", err }
+	if err := g.checkUnusedVariables(); err != nil {
+		return "", err
+	}
+	if err := g.checkUnusedFunctions(); err != nil {
+		return "", err
+	}
 	return builder.String(), nil
 }
 
@@ -185,13 +189,20 @@ func getGoTypeForZenoPrimitiveType(zenoType types.Type) string {
 
 func mapType(zenoType string) string {
 	switch zenoType {
-	case "int": return "int"
-	case "float": return "float64"
-	case "bool": return "bool"
-	case "string": return "string"
-	case "any": return "interface{}"
-	case "void": return ""
-	default: return zenoType
+	case "int":
+		return "int"
+	case "float":
+		return "float64"
+	case "bool":
+		return "bool"
+	case "string":
+		return "string"
+	case "any":
+		return "interface{}"
+	case "void":
+		return ""
+	default:
+		return zenoType
 	}
 }
 
@@ -201,8 +212,11 @@ func (g *Generator) generateStatement(stmt ast.Statement, builder *strings.Build
 		return nil
 	case *ast.LetDeclaration:
 		var varType types.Type
-		if s.TypeAnn != nil { varType = g.mapASTTypeToType(*s.TypeAnn)
-		} else { varType = g.inferType(s.ValueExpression) }
+		if s.TypeAnn != nil {
+			varType = g.mapASTTypeToType(*s.TypeAnn)
+		} else {
+			varType = g.inferType(s.ValueExpression)
+		}
 		g.registerVariableWithType(s.Name, varType)
 		builder.WriteString(indent(indentLevel))
 		builder.WriteString("var ")
@@ -212,7 +226,9 @@ func (g *Generator) generateStatement(stmt ast.Statement, builder *strings.Build
 			builder.WriteString(mapType(*s.TypeAnn))
 		}
 		builder.WriteString(" = ")
-		if err := g.generateExpression(s.ValueExpression, builder); err != nil { return err }
+		if err := g.generateExpression(s.ValueExpression, builder); err != nil {
+			return err
+		}
 		builder.WriteString("\n")
 	case *ast.AssignmentStatement:
 		g.usedVars[s.Name] = true
@@ -220,21 +236,29 @@ func (g *Generator) generateStatement(stmt ast.Statement, builder *strings.Build
 		builder.WriteString(indent(indentLevel))
 		builder.WriteString(s.Name)
 		builder.WriteString(" = ")
-		if err := g.generateExpression(s.Value, builder); err != nil { return err }
+		if err := g.generateExpression(s.Value, builder); err != nil {
+			return err
+		}
 		builder.WriteString("\n")
 	case *ast.FunctionDefinition:
 		builder.WriteString(indent(indentLevel))
 		builder.WriteString("func ")
 		functionName := s.Name
 		if s.IsPublic {
-			if len(functionName) > 0 { functionName = strings.ToUpper(string(functionName[0])) + functionName[1:] }
+			if len(functionName) > 0 {
+				functionName = strings.ToUpper(string(functionName[0])) + functionName[1:]
+			}
 		} else {
-			if functionName != "main" && len(functionName) > 0 { functionName = strings.ToLower(string(functionName[0])) + functionName[1:] }
+			if functionName != "main" && len(functionName) > 0 {
+				functionName = strings.ToLower(string(functionName[0])) + functionName[1:]
+			}
 		}
 		builder.WriteString(functionName)
 		builder.WriteString("(")
 		for i, param := range s.Parameters {
-			if i > 0 { builder.WriteString(", ") }
+			if i > 0 {
+				builder.WriteString(", ")
+			}
 			builder.WriteString(param.Name)
 			builder.WriteString(" ")
 			if param.Variadic {
@@ -268,36 +292,54 @@ func (g *Generator) generateStatement(stmt ast.Statement, builder *strings.Build
 		builder.WriteString("return")
 		if s.Value != nil {
 			builder.WriteString(" ")
-			if err := g.generateExpression(s.Value, builder); err != nil { return err }
+			if err := g.generateExpression(s.Value, builder); err != nil {
+				return err
+			}
 		}
 		builder.WriteString("\n")
 	case *ast.ExpressionStatement:
 		builder.WriteString(indent(indentLevel))
-		if err := g.generateExpression(s.Expression, builder); err != nil { return err }
+		if err := g.generateExpression(s.Expression, builder); err != nil {
+			return err
+		}
 		builder.WriteString("\n")
 	case *ast.IfStatement:
 		builder.WriteString(indent(indentLevel))
 		builder.WriteString("if ")
-		if err := g.generateCondition(s.Condition, builder); err != nil { return err }
+		if err := g.generateCondition(s.Condition, builder); err != nil {
+			return err
+		}
 		builder.WriteString(" ")
-		if err := g.generateBlock(s.ThenBlock, builder, indentLevel); err != nil { return err }
+		if err := g.generateBlock(s.ThenBlock, builder, indentLevel); err != nil {
+			return err
+		}
 		for _, elseIf := range s.ElseIfClauses {
 			builder.WriteString(" else if ")
-			if err := g.generateCondition(elseIf.Condition, builder); err != nil { return err }
+			if err := g.generateCondition(elseIf.Condition, builder); err != nil {
+				return err
+			}
 			builder.WriteString(" ")
-			if err := g.generateBlock(elseIf.Block, builder, indentLevel); err != nil { return err }
+			if err := g.generateBlock(elseIf.Block, builder, indentLevel); err != nil {
+				return err
+			}
 		}
 		if s.ElseBlock != nil {
 			builder.WriteString(" else ")
-			if err := g.generateBlock(s.ElseBlock, builder, indentLevel); err != nil { return err }
+			if err := g.generateBlock(s.ElseBlock, builder, indentLevel); err != nil {
+				return err
+			}
 		}
 		builder.WriteString("\n")
 	case *ast.WhileStatement:
 		builder.WriteString(indent(indentLevel))
 		builder.WriteString("for ")
-		if err := g.generateCondition(s.Condition, builder); err != nil { return err }
+		if err := g.generateCondition(s.Condition, builder); err != nil {
+			return err
+		}
 		builder.WriteString(" ")
-		if err := g.generateBlock(s.Block, builder, indentLevel); err != nil { return err }
+		if err := g.generateBlock(s.Block, builder, indentLevel); err != nil {
+			return err
+		}
 		builder.WriteString("\n")
 	default:
 		return GenerationError{Message: fmt.Sprintf("Unsupported statement type: %T", stmt)}
@@ -315,8 +357,11 @@ func (g *Generator) generateExpression(expr ast.Expression, builder *strings.Bui
 	case *ast.FloatLiteral:
 		builder.WriteString(strconv.FormatFloat(e.Value, 'f', -1, 64))
 	case *ast.BooleanLiteral:
-		if e.Value { builder.WriteString("true")
-		} else { builder.WriteString("false") }
+		if e.Value {
+			builder.WriteString("true")
+		} else {
+			builder.WriteString("false")
+		}
 	case *ast.Identifier:
 		builder.WriteString(e.Value)
 	case *ast.ArrayLiteral:
@@ -375,26 +420,38 @@ func (g *Generator) generateExpression(expr ast.Expression, builder *strings.Bui
 	case *ast.UnaryExpression:
 		builder.WriteString("(")
 		builder.WriteString(e.Operator.String())
-		if err := g.generateExpression(e.Right, builder); err != nil { return err }
+		if err := g.generateExpression(e.Right, builder); err != nil {
+			return err
+		}
 		builder.WriteString(")")
 	case *ast.BinaryExpression:
 		builder.WriteString("(")
-		if err := g.generateExpression(e.Left, builder); err != nil { return err }
+		if err := g.generateExpression(e.Left, builder); err != nil {
+			return err
+		}
 		builder.WriteString(" ")
 		builder.WriteString(e.Operator.String())
 		builder.WriteString(" ")
-		if err := g.generateExpression(e.Right, builder); err != nil { return err }
+		if err := g.generateExpression(e.Right, builder); err != nil {
+			return err
+		}
 		builder.WriteString(")")
 	case *ast.FunctionCall:
-		if err := g.validateImports(e.Name); err != nil { return err }
+		if err := g.validateImports(e.Name); err != nil {
+			return err
+		}
 		if strings.HasPrefix(e.Name, "__native_") {
 			baseName := strings.TrimPrefix(e.Name, "__native_")
 			goFuncName := "zenoNative" + snakeToCamel(baseName)
 			builder.WriteString(goFuncName)
 			builder.WriteString("(")
 			for i, arg := range e.Arguments {
-				if i > 0 { builder.WriteString(", ") }
-				if err := g.generateExpression(arg, builder); err != nil { return err }
+				if i > 0 {
+					builder.WriteString(", ")
+				}
+				if err := g.generateExpression(arg, builder); err != nil {
+					return err
+				}
 			}
 			builder.WriteString(")")
 			return nil
@@ -430,39 +487,53 @@ func (g *Generator) generateExpression(expr ast.Expression, builder *strings.Bui
 				}
 			}
 		}
-		
+
 		// Check if this is a variadic function call (print or println)
-		isVariadicFunc := functionName == "print" || functionName == "println" || 
-						  functionName == "zenoNativePrintVariadic" || functionName == "zenoNativePrintlnVariadic"
-		
+		isVariadicFunc := functionName == "print" || functionName == "println" ||
+			functionName == "zenoNativePrintVariadic" || functionName == "zenoNativePrintlnVariadic"
+
 		isVariadicWithFirstFunc := functionName == "zenoNativePrintVariadicWithFirst" || functionName == "zenoNativePrintlnVariadicWithFirst"
-		
+
 		builder.WriteString(functionName)
 		builder.WriteString("(")
-		
+
 		if isVariadicWithFirstFunc && len(e.Arguments) > 0 {
 			// For variadic functions that require at least one argument
 			// Pass first argument directly, then wrap rest in a slice
-			if err := g.generateExpression(e.Arguments[0], builder); err != nil { return err }
+			if err := g.generateExpression(e.Arguments[0], builder); err != nil {
+				return err
+			}
 			builder.WriteString(", []interface{}{")
 			for i := 1; i < len(e.Arguments); i++ {
-				if i > 1 { builder.WriteString(", ") }
-				if err := g.generateExpression(e.Arguments[i], builder); err != nil { return err }
+				if i > 1 {
+					builder.WriteString(", ")
+				}
+				if err := g.generateExpression(e.Arguments[i], builder); err != nil {
+					return err
+				}
 			}
 			builder.WriteString("}")
 		} else if isVariadicFunc && len(e.Arguments) > 0 {
 			// For variadic functions, wrap arguments in a slice
 			builder.WriteString("[]interface{}{")
 			for i, arg := range e.Arguments {
-				if i > 0 { builder.WriteString(", ") }
-				if err := g.generateExpression(arg, builder); err != nil { return err }
+				if i > 0 {
+					builder.WriteString(", ")
+				}
+				if err := g.generateExpression(arg, builder); err != nil {
+					return err
+				}
 			}
 			builder.WriteString("}")
 		} else {
 			// For regular functions, pass arguments normally
 			for i, arg := range e.Arguments {
-				if i > 0 { builder.WriteString(", ") }
-				if err := g.generateExpression(arg, builder); err != nil { return err }
+				if i > 0 {
+					builder.WriteString(", ")
+				}
+				if err := g.generateExpression(arg, builder); err != nil {
+					return err
+				}
 			}
 		}
 		builder.WriteString(")")
@@ -481,7 +552,9 @@ func (g *Generator) generateCondition(expr ast.Expression, builder *strings.Buil
 		return g.generateExpression(expr, builder)
 	case *ast.IntegerLiteral:
 		builder.WriteString("(")
-		if err := g.generateExpression(expr, builder); err != nil { return err }
+		if err := g.generateExpression(expr, builder); err != nil {
+			return err
+		}
 		builder.WriteString(" != 0)")
 		return nil
 	case *ast.Identifier:
@@ -492,17 +565,23 @@ func (g *Generator) generateCondition(expr ast.Expression, builder *strings.Buil
 			return g.generateExpression(expr, builder)
 		case types.IntType:
 			builder.WriteString("(")
-			if err := g.generateExpression(expr, builder); err != nil { return err }
+			if err := g.generateExpression(expr, builder); err != nil {
+				return err
+			}
 			builder.WriteString(" != 0)")
 			return nil
 		case types.StringType:
 			builder.WriteString("(")
-			if err := g.generateExpression(expr, builder); err != nil { return err }
+			if err := g.generateExpression(expr, builder); err != nil {
+				return err
+			}
 			builder.WriteString(" != \"\")")
 			return nil
 		case types.FloatType:
 			builder.WriteString("(")
-			if err := g.generateExpression(expr, builder); err != nil { return err }
+			if err := g.generateExpression(expr, builder); err != nil {
+				return err
+			}
 			builder.WriteString(" != 0.0)")
 			return nil
 		default:
@@ -536,42 +615,65 @@ func (g *Generator) collectImportsAndDeclarations(stmt ast.Statement) error {
 	case *ast.ImportStatement:
 		g.imports[s.Module] = s.Imports
 		if strings.HasPrefix(s.Module, "std/") {
-			if err := g.processStdModule(s.Module, s.Imports); err != nil { return err }
+			if err := g.processStdModule(s.Module, s.Imports); err != nil {
+				return err
+			}
 		} else if strings.HasPrefix(s.Module, "./") || strings.HasPrefix(s.Module, "../") {
-			if err := g.processUserModule(s.Module, s.Imports); err != nil { return err }
+			if err := g.processUserModule(s.Module, s.Imports); err != nil {
+				return err
+			}
 		}
 	case *ast.LetDeclaration:
 		g.declaredVars[s.Name] = true
 		var varType types.Type
-		if s.TypeAnn != nil { varType = g.mapASTTypeToType(*s.TypeAnn)
-		} else { varType = g.inferType(s.ValueExpression) }
+		if s.TypeAnn != nil {
+			varType = g.mapASTTypeToType(*s.TypeAnn)
+		} else {
+			varType = g.inferType(s.ValueExpression)
+		}
 		g.registerVariableWithType(s.Name, varType)
-		if s.ValueExpression != nil { g.markVariableUsage(s.ValueExpression) }
+		if s.ValueExpression != nil {
+			g.markVariableUsage(s.ValueExpression)
+		}
 	case *ast.AssignmentStatement:
 		g.usedVars[s.Name] = true
 		g.markVariableUsage(s.Value)
 	case *ast.FunctionDefinition:
 		goFuncName := s.Name
 		if s.IsPublic {
-			if len(goFuncName) > 0 { goFuncName = strings.ToUpper(s.Name[:1]) + s.Name[1:] }
+			if len(goFuncName) > 0 {
+				goFuncName = strings.ToUpper(s.Name[:1]) + s.Name[1:]
+			}
 		}
 		g.declaredFns[s.Name] = goFuncName
-		for _, bodyStmt := range s.Body { g.collectImportsAndDeclarations(bodyStmt) }
+		for _, bodyStmt := range s.Body {
+			g.collectImportsAndDeclarations(bodyStmt)
+		}
 	case *ast.ReturnStatement:
-		if s.Value != nil { g.markVariableUsage(s.Value) }
+		if s.Value != nil {
+			g.markVariableUsage(s.Value)
+		}
 	case *ast.ExpressionStatement:
 		g.markVariableUsage(s.Expression)
 	case *ast.IfStatement:
 		g.markVariableUsage(s.Condition)
-		if s.ThenBlock != nil { g.markBlockUsage(s.ThenBlock) }
+		if s.ThenBlock != nil {
+			g.markBlockUsage(s.ThenBlock)
+		}
 		for _, elseIf := range s.ElseIfClauses {
 			g.markVariableUsage(elseIf.Condition)
-			if elseIf.Block != nil { g.markBlockUsage(elseIf.Block) }
+			if elseIf.Block != nil {
+				g.markBlockUsage(elseIf.Block)
+			}
 		}
-		if s.ElseBlock != nil { g.markBlockUsage(s.ElseBlock) }
+		if s.ElseBlock != nil {
+			g.markBlockUsage(s.ElseBlock)
+		}
 	case *ast.WhileStatement:
 		g.markVariableUsage(s.Condition)
-		if s.Block != nil { g.markBlockUsage(s.Block) }
+		if s.Block != nil {
+			g.markBlockUsage(s.Block)
+		}
 	}
 	return nil
 }
@@ -590,13 +692,17 @@ func (g *Generator) markVariableUsage(expr ast.Expression) {
 		g.markVariableUsage(e.Right)
 	case *ast.FunctionCall:
 		g.usedFns[e.Name] = true
-		for _, arg := range e.Arguments { g.markVariableUsage(arg) }
+		for _, arg := range e.Arguments {
+			g.markVariableUsage(arg)
+		}
 	}
 }
 
 func (g *Generator) markBlockUsage(block *ast.Block) {
 	// ... (content remains the same as fetched in Turn 61) ...
-	if block == nil { return }
+	if block == nil {
+		return
+	}
 	for _, stmt := range block.Statements {
 		g.collectImportsAndDeclarations(stmt)
 	}
@@ -606,9 +712,13 @@ func (g *Generator) checkUnusedVariables() error {
 	// ... (content remains the same as fetched in Turn 61) ...
 	var unusedVars []string
 	for varName := range g.declaredVars {
-		if !g.usedVars[varName] { unusedVars = append(unusedVars, varName) }
+		if !g.usedVars[varName] {
+			unusedVars = append(unusedVars, varName)
+		}
 	}
-	if len(unusedVars) > 0 { return GenerationError{Message: fmt.Sprintf("Unused variables found: %s", strings.Join(unusedVars, ", "))} }
+	if len(unusedVars) > 0 {
+		return GenerationError{Message: fmt.Sprintf("Unused variables found: %s", strings.Join(unusedVars, ", "))}
+	}
 	return nil
 }
 
@@ -616,18 +726,28 @@ func (g *Generator) checkUnusedFunctions() error {
 	// ... (content remains the same as fetched in Turn 61) ...
 	var unusedFns []string
 	for fnName := range g.declaredFns {
-		if fnName == "main" { continue }
-		if g.isPublicFunction(fnName) { continue }
-		if !g.usedFns[fnName] { unusedFns = append(unusedFns, fnName) }
+		if fnName == "main" {
+			continue
+		}
+		if g.isPublicFunction(fnName) {
+			continue
+		}
+		if !g.usedFns[fnName] {
+			unusedFns = append(unusedFns, fnName)
+		}
 	}
-	if len(unusedFns) > 0 { return GenerationError{Message: fmt.Sprintf("Unused functions found: %s", strings.Join(unusedFns, ", "))} }
+	if len(unusedFns) > 0 {
+		return GenerationError{Message: fmt.Sprintf("Unused functions found: %s", strings.Join(unusedFns, ", "))}
+	}
 	return nil
 }
 
 func (g *Generator) isPublicFunction(fnName string) bool {
 	// ... (content remains the same as fetched in Turn 61) ...
 	if goFuncName, exists := g.declaredFns[fnName]; exists {
-		if len(goFuncName) == 0 { return false }
+		if len(goFuncName) == 0 {
+			return false
+		}
 		return goFuncName[0] >= 'A' && goFuncName[0] <= 'Z'
 	}
 	return false
@@ -636,12 +756,16 @@ func (g *Generator) isPublicFunction(fnName string) bool {
 func (g *Generator) validateImports(functionName string) error {
 	// ... (content remains the same as fetched in Turn 61) ...
 	builtinFunctions := map[string]bool{}
-	if builtinFunctions[functionName] { return nil }
+	if builtinFunctions[functionName] {
+		return nil
+	}
 	for module, functions := range g.standardLibs {
 		if _, exists := functions[functionName]; exists {
 			if importedFuncs, imported := g.imports[module]; imported {
 				for _, importedFunc := range importedFuncs {
-					if importedFunc == functionName { return nil }
+					if importedFunc == functionName {
+						return nil
+					}
 				}
 			}
 			return GenerationError{Message: fmt.Sprintf("Function '%s' is not imported from '%s'", functionName, module)}
@@ -651,7 +775,9 @@ func (g *Generator) validateImports(functionName string) error {
 		if _, exists := functions[functionName]; exists {
 			if importedFuncs, imported := g.imports[module]; imported {
 				for _, importedFunc := range importedFuncs {
-					if importedFunc == functionName { return nil }
+					if importedFunc == functionName {
+						return nil
+					}
 				}
 			}
 			return GenerationError{Message: fmt.Sprintf("Function '%s' is not imported from '%s'", functionName, module)}
@@ -663,28 +789,39 @@ func (g *Generator) validateImports(functionName string) error {
 func (g *Generator) processUserModule(modulePath string, importedFunctions []string) error {
 	// ... (content remains the same as fetched in Turn 61) ...
 	var zenoFilePath string
-	if strings.HasSuffix(modulePath, ".zeno") { zenoFilePath = modulePath
-	} else { zenoFilePath = modulePath + ".zeno" }
+	if strings.HasSuffix(modulePath, ".zeno") {
+		zenoFilePath = modulePath
+	} else {
+		zenoFilePath = modulePath + ".zeno"
+	}
 	if (strings.HasPrefix(zenoFilePath, "./") || strings.HasPrefix(zenoFilePath, "../")) && g.currentDir != "" {
 		baseDir := filepath.Dir(g.currentDir)
 		zenoFilePath = filepath.Join(baseDir, zenoFilePath)
 	}
 	content, err := os.ReadFile(zenoFilePath)
-	if err != nil { return GenerationError{Message: fmt.Sprintf("Failed to read module file '%s': %v", zenoFilePath, err)} }
+	if err != nil {
+		return GenerationError{Message: fmt.Sprintf("Failed to read module file '%s': %v", zenoFilePath, err)}
+	}
 	l := lexer.New(string(content))
 	p := parser.New(l)
 	program := p.ParseProgram()
-	if len(p.Errors()) > 0 { return GenerationError{Message: fmt.Sprintf("Parse errors in module '%s': %v", zenoFilePath, p.Errors())} }
+	if len(p.Errors()) > 0 {
+		return GenerationError{Message: fmt.Sprintf("Parse errors in module '%s': %v", zenoFilePath, p.Errors())}
+	}
 	publicFunctions := make(map[string]string)
 	for _, stmt := range program.Statements {
 		if funcDef, ok := stmt.(*ast.FunctionDefinition); ok && funcDef.IsPublic {
 			goFuncName := funcDef.Name
-			if len(goFuncName) > 0 { goFuncName = strings.ToUpper(string(goFuncName[0])) + goFuncName[1:] }
+			if len(goFuncName) > 0 {
+				goFuncName = strings.ToUpper(string(goFuncName[0])) + goFuncName[1:]
+			}
 			publicFunctions[funcDef.Name] = goFuncName
 		}
 	}
 	for _, importedFunc := range importedFunctions {
-		if _, exists := publicFunctions[importedFunc]; !exists { return GenerationError{Message: fmt.Sprintf("Function '%s' is not exported from module '%s'", importedFunc, modulePath)} }
+		if _, exists := publicFunctions[importedFunc]; !exists {
+			return GenerationError{Message: fmt.Sprintf("Function '%s' is not exported from module '%s'", importedFunc, modulePath)}
+		}
 	}
 	g.userModules[modulePath] = publicFunctions
 	g.moduleASTs[modulePath] = program
@@ -696,21 +833,29 @@ func (g *Generator) processStdModule(modulePath string, importedFunctions []stri
 	moduleShortName := strings.TrimPrefix(modulePath, "std/")
 	zenoFilePath := filepath.Join("std", moduleShortName+".zeno")
 	content, err := os.ReadFile(zenoFilePath)
-	if err != nil { return GenerationError{Message: fmt.Sprintf("Failed to read module file '%s': %v", zenoFilePath, err)} }
+	if err != nil {
+		return GenerationError{Message: fmt.Sprintf("Failed to read module file '%s': %v", zenoFilePath, err)}
+	}
 	l := lexer.New(string(content))
 	p := parser.New(l)
 	program := p.ParseProgram()
-	if len(p.Errors()) > 0 { return GenerationError{Message: fmt.Sprintf("Parse errors in module '%s': %v", zenoFilePath, p.Errors())} }
+	if len(p.Errors()) > 0 {
+		return GenerationError{Message: fmt.Sprintf("Parse errors in module '%s': %v", zenoFilePath, p.Errors())}
+	}
 	publicFunctions := make(map[string]string)
 	for _, stmt := range program.Statements {
 		if funcDef, ok := stmt.(*ast.FunctionDefinition); ok && funcDef.IsPublic {
 			goFuncName := funcDef.Name
-			if len(goFuncName) > 0 { goFuncName = strings.ToUpper(string(goFuncName[0])) + goFuncName[1:] }
+			if len(goFuncName) > 0 {
+				goFuncName = strings.ToUpper(string(goFuncName[0])) + goFuncName[1:]
+			}
 			publicFunctions[funcDef.Name] = goFuncName
 		}
 	}
 	for _, importedFunc := range importedFunctions {
-		if _, exists := publicFunctions[importedFunc]; !exists { return GenerationError{Message: fmt.Sprintf("Function '%s' is not exported from module '%s'", importedFunc, modulePath)} }
+		if _, exists := publicFunctions[importedFunc]; !exists {
+			return GenerationError{Message: fmt.Sprintf("Function '%s' is not exported from module '%s'", importedFunc, modulePath)}
+		}
 	}
 	g.userModules[modulePath] = publicFunctions
 	g.moduleASTs[modulePath] = program
@@ -724,11 +869,11 @@ func (g *Generator) generateNativeFunctionHelpers(builder *strings.Builder) {
 	builder.WriteString("func zenoNativeWriteFile(filename string, content string) bool {\n\terr := os.WriteFile(filename, []byte(content), 0644)\n\tif err != nil {\n\t\tfmt.Printf(\"Error writing file %s: %v\\n\", filename, err)\n\t\treturn false\n\t}\n\treturn true\n}\n\n")
 	builder.WriteString("func zenoNativePrint(args ...interface{}) {\n\tfmt.Print(args...)\n}\n\n")
 	builder.WriteString("func zenoNativePrintln(args ...interface{}) {\n\tfmt.Println(args...)\n}\n\n")
-	
+
 	// Variadic versions that handle slices of any type
 	builder.WriteString("func zenoNativePrintVariadic(args []interface{}) {\n\tfmt.Print(args...)\n}\n\n")
 	builder.WriteString("func zenoNativePrintlnVariadic(args []interface{}) {\n\tfmt.Println(args...)\n}\n\n")
-	
+
 	// Variadic versions that require at least one argument
 	builder.WriteString("func zenoNativePrintVariadicWithFirst(first interface{}, rest []interface{}) {\n\tfmt.Print(first)\n\tfor _, arg := range rest {\n\t\tfmt.Print(\" \", arg)\n\t}\n}\n\n")
 	builder.WriteString("func zenoNativePrintlnVariadicWithFirst(first interface{}, rest []interface{}) {\n\tfmt.Print(first)\n\tfor _, arg := range rest {\n\t\tfmt.Print(\" \", arg)\n\t}\n\tfmt.Println()\n}\n\n")
@@ -740,14 +885,20 @@ func (g *Generator) generateNativeFunctionHelpers(builder *strings.Builder) {
 
 func (g *Generator) inferType(expr ast.Expression) types.Type {
 	switch e := expr.(type) {
-	case *ast.BooleanLiteral: return types.BoolType
-	case *ast.IntegerLiteral: return types.IntType
-	case *ast.StringLiteral: return types.StringType
-	case *ast.FloatLiteral: return types.FloatType
+	case *ast.BooleanLiteral:
+		return types.BoolType
+	case *ast.IntegerLiteral:
+		return types.IntType
+	case *ast.StringLiteral:
+		return types.StringType
+	case *ast.FloatLiteral:
+		return types.FloatType
 	case *ast.ArrayLiteral: // Added
 		return types.AnyType // Placeholder for now
 	case *ast.Identifier:
-		if symbol, ok := g.symbolTable.Resolve(e.Value); ok { return symbol.Type }
+		if symbol, ok := g.symbolTable.Resolve(e.Value); ok {
+			return symbol.Type
+		}
 		return types.IntType
 	case *ast.BinaryExpression:
 		switch e.Operator {
@@ -756,7 +907,9 @@ func (g *Generator) inferType(expr ast.Expression) types.Type {
 		case ast.BinaryOpPlus, ast.BinaryOpMinus, ast.BinaryOpMultiply, ast.BinaryOpDivide, ast.BinaryOpModulo:
 			leftType := g.inferType(e.Left)
 			rightType := g.inferType(e.Right)
-			if leftType == types.FloatType || rightType == types.FloatType { return types.FloatType }
+			if leftType == types.FloatType || rightType == types.FloatType {
+				return types.FloatType
+			}
 			return types.IntType
 		case ast.BinaryOpAnd, ast.BinaryOpOr:
 			return types.BoolType
@@ -776,26 +929,38 @@ func (g *Generator) inferType(expr ast.Expression) types.Type {
 				isImportedFromThisModule := false
 				if importedFuncs, exists := g.imports[modulePath]; exists {
 					for _, importedFnName := range importedFuncs {
-						if importedFnName == e.Name { isImportedFromThisModule = true; break }
+						if importedFnName == e.Name {
+							isImportedFromThisModule = true
+							break
+						}
 					}
 				}
 				if isImportedFromThisModule {
 					for _, stmt := range moduleAST.Statements {
 						if def, ok := stmt.(*ast.FunctionDefinition); ok && def.Name == e.Name {
-							if def.IsPublic { funcDef = def; break }
+							if def.IsPublic {
+								funcDef = def
+								break
+							}
 						}
 					}
 				}
-				if funcDef != nil { break }
+				if funcDef != nil {
+					break
+				}
 			}
 		}
-		if funcDef != nil && funcDef.ReturnType != nil { return g.mapASTTypeToType(*funcDef.ReturnType) }
+		if funcDef != nil && funcDef.ReturnType != nil {
+			return g.mapASTTypeToType(*funcDef.ReturnType)
+		}
 		fmt.Printf("WARN: Could not accurately determine return type for function call '%s'. Defaulting to IntType.\n", e.Name)
 		return types.IntType
 	case *ast.UnaryExpression:
 		switch e.Operator {
-		case ast.UnaryOpBang: return types.BoolType
-		case ast.UnaryOpMinus: return g.inferType(e.Right)
+		case ast.UnaryOpBang:
+			return types.BoolType
+		case ast.UnaryOpMinus:
+			return g.inferType(e.Right)
 		default:
 			fmt.Printf("WARN: Could not determine type for unary operator '%s', defaulting to IntType.\n", e.Operator.String())
 			return types.IntType
@@ -804,7 +969,9 @@ func (g *Generator) inferType(expr ast.Expression) types.Type {
 	return types.IntType
 }
 
-func (g *Generator) registerVariableWithType(name string, varType types.Type) { g.symbolTable.Define(name, varType) }
+func (g *Generator) registerVariableWithType(name string, varType types.Type) {
+	g.symbolTable.Define(name, varType)
+}
 
 func (g *Generator) getVariableType(name string) types.Type {
 	if symbol, ok := g.symbolTable.Resolve(name); ok {
@@ -817,11 +984,16 @@ func (g *Generator) getVariableType(name string) types.Type {
 
 func (g *Generator) mapASTTypeToType(astType string) types.Type {
 	switch astType {
-	case "bool": return types.BoolType
-	case "int": return types.IntType
-	case "string": return types.StringType
-	case "float": return types.FloatType
-	default: return types.IntType
+	case "bool":
+		return types.BoolType
+	case "int":
+		return types.IntType
+	case "string":
+		return types.StringType
+	case "float":
+		return types.FloatType
+	default:
+		return types.IntType
 	}
 }
 
@@ -829,9 +1001,13 @@ func (g *Generator) validateFunctionTypes(program *ast.Program) error {
 	// ... (content remains the same as fetched in Turn 61) ...
 	for _, stmt := range program.Statements {
 		if funcDef, ok := stmt.(*ast.FunctionDefinition); ok {
-			if funcDef.Name == "main" { continue }
+			if funcDef.Name == "main" {
+				continue
+			}
 			for _, param := range funcDef.Parameters {
-				if param.Type == "" { return GenerationError{Message: fmt.Sprintf("Function '%s': parameter '%s' must have an explicit type", funcDef.Name, param.Name)} }
+				if param.Type == "" {
+					return GenerationError{Message: fmt.Sprintf("Function '%s': parameter '%s' must have an explicit type", funcDef.Name, param.Name)}
+				}
 			}
 			if g.hasValueReturnStatement(funcDef.Body) && funcDef.ReturnType == nil {
 				return GenerationError{Message: fmt.Sprintf("Function '%s' contains return statements with values but has no explicit return type", funcDef.Name)}
@@ -844,16 +1020,26 @@ func (g *Generator) validateFunctionTypes(program *ast.Program) error {
 func (g *Generator) hasValueReturnStatement(statements []ast.Statement) bool {
 	// ... (content remains the same as fetched in Turn 61) ...
 	for _, stmt := range statements {
-		if rs, ok := stmt.(*ast.ReturnStatement); ok && rs.Value != nil { return true }
+		if rs, ok := stmt.(*ast.ReturnStatement); ok && rs.Value != nil {
+			return true
+		}
 		if ifStmt, ok := stmt.(*ast.IfStatement); ok {
-			if ifStmt.ThenBlock != nil && g.hasValueReturnStatement(ifStmt.ThenBlock.Statements) { return true }
-			for _, elseIfClause := range ifStmt.ElseIfClauses {
-				if elseIfClause.Block != nil && g.hasValueReturnStatement(elseIfClause.Block.Statements) { return true }
+			if ifStmt.ThenBlock != nil && g.hasValueReturnStatement(ifStmt.ThenBlock.Statements) {
+				return true
 			}
-			if ifStmt.ElseBlock != nil && g.hasValueReturnStatement(ifStmt.ElseBlock.Statements) { return true }
+			for _, elseIfClause := range ifStmt.ElseIfClauses {
+				if elseIfClause.Block != nil && g.hasValueReturnStatement(elseIfClause.Block.Statements) {
+					return true
+				}
+			}
+			if ifStmt.ElseBlock != nil && g.hasValueReturnStatement(ifStmt.ElseBlock.Statements) {
+				return true
+			}
 		}
 		if whileStmt, ok := stmt.(*ast.WhileStatement); ok {
-			if whileStmt.Block != nil && g.hasValueReturnStatement(whileStmt.Block.Statements) { return true }
+			if whileStmt.Block != nil && g.hasValueReturnStatement(whileStmt.Block.Statements) {
+				return true
+			}
 		}
 	}
 	return false

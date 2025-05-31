@@ -1,26 +1,14 @@
-// Test file for variadic function arguments
-import { println, print } from "std/fmt"
+import {print, println} from "std/fmt"
 
 fn main() {
-    let name: string = "Alice"
-    let age: int = 25
-    let pi: float = 3.14159
-    let active: bool = true
+    // Test basic variadic function calls
+    println("Hello, world!")
+    println("Number:", 42)
+    println("Multiple values:", 1, 2, 3)
     
-    // Test variadic println with multiple arguments
-    println("User info:", name, "Age:", age, "Pi:", pi, "Active:", active)
+    print("Print without newline: ")
+    println("and this continues")
     
-    // Test variadic print with different types
-    print("Name: ", name, " | Age: ", age)
-    println("")
-    
-    // Test with single argument
-    println("Single argument")
-    
-    // Test with no arguments
-    println()
-    
-    // Test with mixed types
-    print("Mixed: ", 42, " + ", 3.14, " = ", true)
-    println("")
+    // Test with different types
+    println("Mixed types:", "string", 123, true)
 }

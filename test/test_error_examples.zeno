@@ -1,0 +1,11 @@
+// import {println, print} from "std/fmt"
+
+// fn main() {
+//     // These should show detailed error messages
+//     println()
+//     print()
+    
+//     // These should work fine
+//     println("Hello, world!")
+//     print("Working example")
+// }

@@ -1,0 +1,38 @@
+// import {print, println} from "std/fmt"
+
+// // Test user-defined variadic functions
+// fn sum(...numbers: any): int {
+//     let total = 0
+//     // Note: This is a simplified example
+//     // In a real implementation, we'd need array iteration
+//     return total
+// }
+
+// fn greet(greeting: string, ...names: any) {
+//     print(greeting)
+//     print(" ")
+//     // This would print all names in a real implementation
+//     println("everyone!")
+// }
+
+// fn main() {
+//     println("=== Testing Advanced Variadic Functions ===")
+    
+//     // Test empty variadic calls
+//     println()  // Should work with no arguments
+    
+//     // Test single argument
+//     println("Single argument")
+    
+//     // Test many arguments
+//     println("Arg1", "Arg2", "Arg3", "Arg4", "Arg5", "Arg6", "Arg7", "Arg8", "Arg9", "Arg10")
+    
+//     // Test with different data types mixed
+//     println("String:", "test", "Number:", 42, "Boolean:", true, "Float:", 3.14)
+    
+//     // Test user-defined variadic function calls
+//     greet("Hello", "Alice", "Bob", "Charlie")
+//     greet("Welcome")
+    
+//     println("=== Tests Completed ===")
+// }
