@@ -858,7 +858,12 @@ func (g *Generator) processUserModule(modulePath string, importedFunctions []str
 func (g *Generator) processStdModule(modulePath string, importedFunctions []string) error {
 	// ... (content remains the same as fetched in Turn 61) ...
 	moduleShortName := strings.TrimPrefix(modulePath, "std/")
-	zenoFilePath := filepath.Join("std", moduleShortName+".zeno")
+	var zenoFilePath string
+	if strings.HasSuffix(moduleShortName, ".zeno") {
+		zenoFilePath = filepath.Join("std", moduleShortName)
+	} else {
+		zenoFilePath = filepath.Join("std", moduleShortName+".zeno")
+	}
 	content, err := os.ReadFile(zenoFilePath)
 	if err != nil {
 		return GenerationError{Message: fmt.Sprintf("Failed to read module file '%s': %v", zenoFilePath, err)}
