@@ -382,6 +382,18 @@ func (fc *FunctionCall) String() string {
 	return result
 }
 
+// MemberAccessExpression represents accessing a field of an expression.
+// Example: object.field
+type MemberAccessExpression struct {
+	Expression Expression // The expression being accessed (e.g., an Identifier for an object)
+	Field      *Identifier  // The field being accessed
+}
+
+func (mae *MemberAccessExpression) expressionNode() {}
+func (mae *MemberAccessExpression) String() string {
+	return "(" + mae.Expression.String() + "." + mae.Field.String() + ")"
+}
+
 // Block represents a block of statements
 type Block struct {
 	Statements []Statement

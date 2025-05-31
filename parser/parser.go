@@ -63,6 +63,7 @@ const (
 	PRODUCT     // *, /
 	PREFIX      // -X or !X
 	CALL        // myFunction(X)
+	MEMBER_ACCESS // object.field
 )
 
 // precedences maps tokens to their precedence
@@ -80,6 +81,7 @@ var precedences = map[token.TokenType]int{
 	token.DIVIDE:   PRODUCT,
 	token.MULTIPLY: PRODUCT,
 	token.LPAREN:   CALL,
+	token.DOT:      MEMBER_ACCESS,
 }
 
 // Parser holds the state for parsing tokens into an AST
@@ -185,6 +187,7 @@ func New(l *lexer.Lexer) *Parser {
 		token.AND:      p.parseInfixExpression,
 		token.OR:       p.parseInfixExpression,
 		token.LPAREN:   p.parseFunctionCall,
+		token.DOT:      p.parseMemberAccessExpression,
 	}
 	p.nextToken()
 	p.nextToken()
@@ -678,6 +681,20 @@ func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
 		p.nextToken()
 	}
 	return &ast.ReturnStatement{Value: value}
+}
+
+func (p *Parser) parseMemberAccessExpression(left ast.Expression) ast.Expression {
+	expr := &ast.MemberAccessExpression{Expression: left}
+	// currentToken is DOT. We expect an IDENTIFIER next for the field.
+	if !p.expectPeek(token.IDENT) {
+		// Error: "expected next token to be IDENT, got <actual_token> instead"
+		// Suggestion: "ensure a valid field name follows the dot (.) operator"
+		// Detailed error already added by expectPeek
+		p.addDetailedError("expected field name after '.'", "identifier", string(p.peekToken.Type), "in member access", "ensure a valid field name follows the dot (.) operator")
+		return nil
+	}
+	expr.Field = &ast.Identifier{Value: p.currentToken.Literal}
+	return expr
 }
 
 // parseCommaSeparatedExpressions parses a list of comma-separated expressions until an endToken.

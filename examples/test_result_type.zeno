@@ -1,29 +1,23 @@
 import {println} from "std/fmt"
-
-// Result型の定義（標準ライブラリで提供される想定）
-// type Result<T> = {
-//     ok: bool
-//     value: T?
-//     error: string
-// }
+import { ok, error, Result } from "std/result.zeno"
 
 // 除算関数 - Result型を返す
 fn divide(a: int, b: int): Result<int> {
     if b == 0 {
-        return Result{ok: false, value: null, error: "division by zero"}
+        return error("division by zero")
     }
-    return Result{ok: true, value: a / b, error: ""}
+    return ok(a / b)
 }
 
 // ファイル読み取り関数のシミュレーション
 fn readFile(path: string): Result<string> {
     if path == "" {
-        return Result{ok: false, value: null, error: "empty path"}
+        return error("empty path")
     }
     if path == "notfound.txt" {
-        return Result{ok: false, value: null, error: "file not found"}
+        return error("file not found")
     }
-    return Result{ok: true, value: "file content", error: ""}
+    return ok("file content")
 }
 
 // Result型をチェックするヘルパー関数
