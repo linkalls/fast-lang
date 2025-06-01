@@ -19,7 +19,7 @@ Zeno プログラミング言語から Go への変換を行うコンパイラ�
 
 ```bash
 cd zeno-go
-go build ./cmd/zeno
+o build -o zeno cmd/zeno/main.go 
 ```
 
 ## 使用方法

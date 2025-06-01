@@ -1,0 +1,52 @@
+import {println, panic} from "std/fmt"
+
+// Simple Result-like functions without generic type alias
+
+// Create a success result (using map literal)
+pub fn ok(value: any): any {
+    return {ok: true, value: value, error: ""}
+}
+
+// Create an error result
+pub fn error(message: string): any {
+    return {ok: false, value: null, error: message}
+}
+
+// Check if result is successful
+pub fn isOk(result: any): bool {
+    return result.ok
+}
+
+// Unwrap value (panic on error)
+pub fn unwrap(result: any): any {
+    if result.ok {
+        return result.value
+    }
+    panic("called unwrap on an error Result: " + result.error)
+}
+
+// Unwrap value with default
+pub fn unwrapOr(result: any, defaultValue: any): any {
+    if result.ok {
+        return result.value
+    }
+    return defaultValue
+}
+
+fn main() {
+    println("Testing simple Result functions...")
+    
+    let successResult = ok(42)
+    println("Success result created")
+    
+    let errorResult = error("test error")
+    println("Error result created")
+    
+    if isOk(successResult) {
+        println("Success result is OK")
+    }
+    
+    if !isOk(errorResult) {
+        println("Error result is not OK")
+    }
+}

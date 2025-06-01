@@ -11,3 +11,8 @@ pub fn print(first: any, ...rest: any) {
 pub fn println(first: any, ...rest: any) {
     __native_println_variadic_with_first(first, rest)
 }
+
+// Panic with the given message
+pub fn panic(message: string) {
+    __native_panic(message)
+}

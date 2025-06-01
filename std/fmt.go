@@ -1,9 +1,9 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
-	"encoding/json"
 )
 
 // Native function helpers
@@ -93,12 +93,20 @@ func zenoNativeJsonStringify(value interface{}) string {
 	return string(jsonBytes)
 }
 
+func zenoNativePanic(message string) {
+	panic(message)
+}
+
 func Print(first interface{}, rest ...interface{}) {
 	zenoNativePrintVariadicWithFirst(first, rest)
 }
 
 func Println(first interface{}, rest ...interface{}) {
 	zenoNativePrintlnVariadicWithFirst(first, rest)
+}
+
+func Panic(message string) {
+	zenoNativePanic(message)
 }
 
 func main() {

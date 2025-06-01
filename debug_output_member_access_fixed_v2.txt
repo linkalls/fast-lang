@@ -1,0 +1,219 @@
+=== Zeno Compile Command ===
+DEBUG: collectImportsAndDeclarations: Registered import: module='std/fmt', imports='[println]'
+DEBUG: processStdModule: Final types for module 'std/fmt': map[]
+DEBUG: processStdModule: Final functions for module 'std/fmt': map[panic:Panic print:Print println:Println]
+DEBUG: collectImportsAndDeclarations: Registered import: module='std/result.zeno', imports='[ok error Result]'
+DEBUG: processStdModule: Registered type 'Result' for module 'std/result.zeno'
+DEBUG: processStdModule: Final types for module 'std/result.zeno': map[Result:true]
+DEBUG: processStdModule: Final functions for module 'std/result.zeno': map[error:Error flatMap:FlatMap isError:IsError isOk:IsOk map:Map ok:Ok unwrap:Unwrap unwrapOr:UnwrapOr]
+DEBUG_PSM_RESULT: Validating importedSym 'Result' in module 'std/result.zeno' (processStdModule)
+DEBUG_PSM_RESULT: g.importedTypes[modulePath] (for 'std/result.zeno') exists. Content: map[Result:true]
+DEBUG_PSM_RESULT: Keys in typesInThisModule for 'std/result.zeno':
+DEBUG_PSM_RESULT:   - Key: "Result" (len 6), importedSym: "Result" (len 6), Equal: true
+DEBUG_PSM_RESULT: Lookup typesInThisModule["Result"]: Found=true, Value=true
+DEBUG_ENTRY: validateImports: Entered with functionName='__native_println_variadic_with_first'
+DEBUG: validateImports: Validating '__native_println_variadic_with_first'
+DEBUG: validateImports: Checking imported module 'std/fmt' with symbols [println]
+DEBUG: validateImports: Found types for module 'std/fmt': map[]
+DEBUG: validateImports: Checking imported module 'std/result.zeno' with symbols [ok error Result]
+DEBUG: validateImports: Found types for module 'std/result.zeno': map[Result:true]
+DEBUG: validateImports: '__native_println_variadic_with_first' not found as an imported type. Checking standardLibs and userModules.
+DEBUG_ENTRY: validateImports: Entered with functionName='error'
+DEBUG: validateImports: Validating 'error'
+DEBUG: validateImports: Checking imported module 'std/fmt' with symbols [println]
+DEBUG: validateImports: Found types for module 'std/fmt': map[]
+DEBUG: validateImports: Checking imported module 'std/result.zeno' with symbols [ok error Result]
+DEBUG: validateImports: Found types for module 'std/result.zeno': map[Result:true]
+DEBUG: validateImports: 'error' not found as an imported type. Checking standardLibs and userModules.
+DEBUG_ENTRY: validateImports: Entered with functionName='ok'
+DEBUG: validateImports: Validating 'ok'
+DEBUG: validateImports: Checking imported module 'std/fmt' with symbols [println]
+DEBUG: validateImports: Found types for module 'std/fmt': map[]
+DEBUG: validateImports: Checking imported module 'std/result.zeno' with symbols [ok error Result]
+DEBUG: validateImports: Found types for module 'std/result.zeno': map[Result:true]
+DEBUG: validateImports: 'ok' not found as an imported type. Checking standardLibs and userModules.
+DEBUG_ENTRY: validateImports: Entered with functionName='error'
+DEBUG: validateImports: Validating 'error'
+DEBUG: validateImports: Checking imported module 'std/fmt' with symbols [println]
+DEBUG: validateImports: Found types for module 'std/fmt': map[]
+DEBUG: validateImports: Checking imported module 'std/result.zeno' with symbols [ok error Result]
+DEBUG: validateImports: Found types for module 'std/result.zeno': map[Result:true]
+DEBUG: validateImports: 'error' not found as an imported type. Checking standardLibs and userModules.
+DEBUG_ENTRY: validateImports: Entered with functionName='error'
+DEBUG: validateImports: Validating 'error'
+DEBUG: validateImports: Checking imported module 'std/fmt' with symbols [println]
+DEBUG: validateImports: Found types for module 'std/fmt': map[]
+DEBUG: validateImports: Checking imported module 'std/result.zeno' with symbols [ok error Result]
+DEBUG: validateImports: Found types for module 'std/result.zeno': map[Result:true]
+DEBUG: validateImports: 'error' not found as an imported type. Checking standardLibs and userModules.
+DEBUG_ENTRY: validateImports: Entered with functionName='ok'
+DEBUG: validateImports: Validating 'ok'
+DEBUG: validateImports: Checking imported module 'std/fmt' with symbols [println]
+DEBUG: validateImports: Found types for module 'std/fmt': map[]
+DEBUG: validateImports: Checking imported module 'std/result.zeno' with symbols [ok error Result]
+DEBUG: validateImports: Found types for module 'std/result.zeno': map[Result:true]
+DEBUG: validateImports: 'ok' not found as an imported type. Checking standardLibs and userModules.
+DEBUG_ENTRY: validateImports: Entered with functionName='println'
+DEBUG: validateImports: Validating 'println'
+DEBUG: validateImports: Checking imported module 'std/fmt' with symbols [println]
+DEBUG: validateImports: Found types for module 'std/fmt': map[]
+DEBUG: validateImports: Checking imported module 'std/result.zeno' with symbols [ok error Result]
+DEBUG: validateImports: Found types for module 'std/result.zeno': map[Result:true]
+DEBUG: validateImports: 'println' not found as an imported type. Checking standardLibs and userModules.
+DEBUG_ENTRY: validateImports: Entered with functionName='println'
+DEBUG: validateImports: Validating 'println'
+DEBUG: validateImports: Checking imported module 'std/result.zeno' with symbols [ok error Result]
+DEBUG: validateImports: Found types for module 'std/result.zeno': map[Result:true]
+DEBUG: validateImports: Checking imported module 'std/fmt' with symbols [println]
+DEBUG: validateImports: Found types for module 'std/fmt': map[]
+DEBUG: validateImports: 'println' not found as an imported type. Checking standardLibs and userModules.
+DEBUG_ENTRY: validateImports: Entered with functionName='println'
+DEBUG: validateImports: Validating 'println'
+DEBUG: validateImports: Checking imported module 'std/fmt' with symbols [println]
+DEBUG: validateImports: Found types for module 'std/fmt': map[]
+DEBUG: validateImports: Checking imported module 'std/result.zeno' with symbols [ok error Result]
+DEBUG: validateImports: Found types for module 'std/result.zeno': map[Result:true]
+DEBUG: validateImports: 'println' not found as an imported type. Checking standardLibs and userModules.
+DEBUG_ENTRY: validateImports: Entered with functionName='println'
+DEBUG: validateImports: Validating 'println'
+DEBUG: validateImports: Checking imported module 'std/fmt' with symbols [println]
+DEBUG: validateImports: Found types for module 'std/fmt': map[]
+DEBUG: validateImports: Checking imported module 'std/result.zeno' with symbols [ok error Result]
+DEBUG: validateImports: Found types for module 'std/result.zeno': map[Result:true]
+DEBUG: validateImports: 'println' not found as an imported type. Checking standardLibs and userModules.
+DEBUG_ENTRY: validateImports: Entered with functionName='println'
+DEBUG: validateImports: Validating 'println'
+DEBUG: validateImports: Checking imported module 'std/fmt' with symbols [println]
+DEBUG: validateImports: Found types for module 'std/fmt': map[]
+DEBUG: validateImports: Checking imported module 'std/result.zeno' with symbols [ok error Result]
+DEBUG: validateImports: Found types for module 'std/result.zeno': map[Result:true]
+DEBUG: validateImports: 'println' not found as an imported type. Checking standardLibs and userModules.
+DEBUG_ENTRY: validateImports: Entered with functionName='divide'
+DEBUG: validateImports: Validating 'divide'
+DEBUG: validateImports: Checking imported module 'std/fmt' with symbols [println]
+DEBUG: validateImports: Found types for module 'std/fmt': map[]
+DEBUG: validateImports: Checking imported module 'std/result.zeno' with symbols [ok error Result]
+DEBUG: validateImports: Found types for module 'std/result.zeno': map[Result:true]
+DEBUG: validateImports: 'divide' not found as an imported type. Checking standardLibs and userModules.
+DEBUG_ENTRY: validateImports: Entered with functionName='println'
+DEBUG: validateImports: Validating 'println'
+DEBUG: validateImports: Checking imported module 'std/fmt' with symbols [println]
+DEBUG: validateImports: Found types for module 'std/fmt': map[]
+DEBUG: validateImports: Checking imported module 'std/result.zeno' with symbols [ok error Result]
+DEBUG: validateImports: Found types for module 'std/result.zeno': map[Result:true]
+DEBUG: validateImports: 'println' not found as an imported type. Checking standardLibs and userModules.
+DEBUG_ENTRY: validateImports: Entered with functionName='checkResult'
+DEBUG: validateImports: Validating 'checkResult'
+DEBUG: validateImports: Checking imported module 'std/fmt' with symbols [println]
+DEBUG: validateImports: Found types for module 'std/fmt': map[]
+DEBUG: validateImports: Checking imported module 'std/result.zeno' with symbols [ok error Result]
+DEBUG: validateImports: Found types for module 'std/result.zeno': map[Result:true]
+DEBUG: validateImports: 'checkResult' not found as an imported type. Checking standardLibs and userModules.
+DEBUG_ENTRY: validateImports: Entered with functionName='divide'
+DEBUG: validateImports: Validating 'divide'
+DEBUG: validateImports: Checking imported module 'std/fmt' with symbols [println]
+DEBUG: validateImports: Found types for module 'std/fmt': map[]
+DEBUG: validateImports: Checking imported module 'std/result.zeno' with symbols [ok error Result]
+DEBUG: validateImports: Found types for module 'std/result.zeno': map[Result:true]
+DEBUG: validateImports: 'divide' not found as an imported type. Checking standardLibs and userModules.
+DEBUG_ENTRY: validateImports: Entered with functionName='println'
+DEBUG: validateImports: Validating 'println'
+DEBUG: validateImports: Checking imported module 'std/fmt' with symbols [println]
+DEBUG: validateImports: Found types for module 'std/fmt': map[]
+DEBUG: validateImports: Checking imported module 'std/result.zeno' with symbols [ok error Result]
+DEBUG: validateImports: Found types for module 'std/result.zeno': map[Result:true]
+DEBUG: validateImports: 'println' not found as an imported type. Checking standardLibs and userModules.
+DEBUG_ENTRY: validateImports: Entered with functionName='checkResult'
+DEBUG: validateImports: Validating 'checkResult'
+DEBUG: validateImports: Checking imported module 'std/fmt' with symbols [println]
+DEBUG: validateImports: Found types for module 'std/fmt': map[]
+DEBUG: validateImports: Checking imported module 'std/result.zeno' with symbols [ok error Result]
+DEBUG: validateImports: Found types for module 'std/result.zeno': map[Result:true]
+DEBUG: validateImports: 'checkResult' not found as an imported type. Checking standardLibs and userModules.
+DEBUG_ENTRY: validateImports: Entered with functionName='readFile'
+DEBUG: validateImports: Validating 'readFile'
+DEBUG: validateImports: Checking imported module 'std/fmt' with symbols [println]
+DEBUG: validateImports: Found types for module 'std/fmt': map[]
+DEBUG: validateImports: Checking imported module 'std/result.zeno' with symbols [ok error Result]
+DEBUG: validateImports: Found types for module 'std/result.zeno': map[Result:true]
+DEBUG: validateImports: 'readFile' not found as an imported type. Checking standardLibs and userModules.
+DEBUG_ENTRY: validateImports: Entered with functionName='println'
+DEBUG: validateImports: Validating 'println'
+DEBUG: validateImports: Checking imported module 'std/fmt' with symbols [println]
+DEBUG: validateImports: Found types for module 'std/fmt': map[]
+DEBUG: validateImports: Checking imported module 'std/result.zeno' with symbols [ok error Result]
+DEBUG: validateImports: Found types for module 'std/result.zeno': map[Result:true]
+DEBUG: validateImports: 'println' not found as an imported type. Checking standardLibs and userModules.
+DEBUG_ENTRY: validateImports: Entered with functionName='checkFileResult'
+DEBUG: validateImports: Validating 'checkFileResult'
+DEBUG: validateImports: Checking imported module 'std/result.zeno' with symbols [ok error Result]
+DEBUG: validateImports: Found types for module 'std/result.zeno': map[Result:true]
+DEBUG: validateImports: Checking imported module 'std/fmt' with symbols [println]
+DEBUG: validateImports: Found types for module 'std/fmt': map[]
+DEBUG: validateImports: 'checkFileResult' not found as an imported type. Checking standardLibs and userModules.
+DEBUG_ENTRY: validateImports: Entered with functionName='readFile'
+DEBUG: validateImports: Validating 'readFile'
+DEBUG: validateImports: Checking imported module 'std/fmt' with symbols [println]
+DEBUG: validateImports: Found types for module 'std/fmt': map[]
+DEBUG: validateImports: Checking imported module 'std/result.zeno' with symbols [ok error Result]
+DEBUG: validateImports: Found types for module 'std/result.zeno': map[Result:true]
+DEBUG: validateImports: 'readFile' not found as an imported type. Checking standardLibs and userModules.
+DEBUG_ENTRY: validateImports: Entered with functionName='println'
+DEBUG: validateImports: Validating 'println'
+DEBUG: validateImports: Checking imported module 'std/fmt' with symbols [println]
+DEBUG: validateImports: Found types for module 'std/fmt': map[]
+DEBUG: validateImports: Checking imported module 'std/result.zeno' with symbols [ok error Result]
+DEBUG: validateImports: Found types for module 'std/result.zeno': map[Result:true]
+DEBUG: validateImports: 'println' not found as an imported type. Checking standardLibs and userModules.
+DEBUG_ENTRY: validateImports: Entered with functionName='checkFileResult'
+DEBUG: validateImports: Validating 'checkFileResult'
+DEBUG: validateImports: Checking imported module 'std/fmt' with symbols [println]
+DEBUG: validateImports: Found types for module 'std/fmt': map[]
+DEBUG: validateImports: Checking imported module 'std/result.zeno' with symbols [ok error Result]
+DEBUG: validateImports: Found types for module 'std/result.zeno': map[Result:true]
+DEBUG: validateImports: 'checkFileResult' not found as an imported type. Checking standardLibs and userModules.
+DEBUG_ENTRY: validateImports: Entered with functionName='readFile'
+DEBUG: validateImports: Validating 'readFile'
+DEBUG: validateImports: Checking imported module 'std/fmt' with symbols [println]
+DEBUG: validateImports: Found types for module 'std/fmt': map[]
+DEBUG: validateImports: Checking imported module 'std/result.zeno' with symbols [ok error Result]
+DEBUG: validateImports: Found types for module 'std/result.zeno': map[Result:true]
+DEBUG: validateImports: 'readFile' not found as an imported type. Checking standardLibs and userModules.
+DEBUG_ENTRY: validateImports: Entered with functionName='println'
+DEBUG: validateImports: Validating 'println'
+DEBUG: validateImports: Checking imported module 'std/fmt' with symbols [println]
+DEBUG: validateImports: Found types for module 'std/fmt': map[]
+DEBUG: validateImports: Checking imported module 'std/result.zeno' with symbols [ok error Result]
+DEBUG: validateImports: Found types for module 'std/result.zeno': map[Result:true]
+DEBUG: validateImports: 'println' not found as an imported type. Checking standardLibs and userModules.
+DEBUG_ENTRY: validateImports: Entered with functionName='checkFileResult'
+DEBUG: validateImports: Validating 'checkFileResult'
+DEBUG: validateImports: Checking imported module 'std/fmt' with symbols [println]
+DEBUG: validateImports: Found types for module 'std/fmt': map[]
+DEBUG: validateImports: Checking imported module 'std/result.zeno' with symbols [ok error Result]
+DEBUG: validateImports: Found types for module 'std/result.zeno': map[Result:true]
+DEBUG: validateImports: 'checkFileResult' not found as an imported type. Checking standardLibs and userModules.
+DEBUG_ENTRY: validateImports: Entered with functionName='divide'
+DEBUG: validateImports: Validating 'divide'
+DEBUG: validateImports: Checking imported module 'std/fmt' with symbols [println]
+DEBUG: validateImports: Found types for module 'std/fmt': map[]
+DEBUG: validateImports: Checking imported module 'std/result.zeno' with symbols [ok error Result]
+DEBUG: validateImports: Found types for module 'std/result.zeno': map[Result:true]
+DEBUG: validateImports: 'divide' not found as an imported type. Checking standardLibs and userModules.
+DEBUG_ENTRY: validateImports: Entered with functionName='println'
+DEBUG: validateImports: Validating 'println'
+DEBUG: validateImports: Checking imported module 'std/fmt' with symbols [println]
+DEBUG: validateImports: Found types for module 'std/fmt': map[]
+DEBUG: validateImports: Checking imported module 'std/result.zeno' with symbols [ok error Result]
+DEBUG: validateImports: Found types for module 'std/result.zeno': map[Result:true]
+DEBUG: validateImports: 'println' not found as an imported type. Checking standardLibs and userModules.
+DEBUG_ENTRY: validateImports: Entered with functionName='println'
+DEBUG: validateImports: Validating 'println'
+DEBUG: validateImports: Checking imported module 'std/fmt' with symbols [println]
+DEBUG: validateImports: Found types for module 'std/fmt': map[]
+DEBUG: validateImports: Checking imported module 'std/result.zeno' with symbols [ok error Result]
+DEBUG: validateImports: Found types for module 'std/result.zeno': map[Result:true]
+DEBUG: validateImports: 'println' not found as an imported type. Checking standardLibs and userModules.
+Compilation failed: generation error: Generation Error: Unused variables found: result3
+Zeno compile exit code: 1
+output.go was NOT created.
