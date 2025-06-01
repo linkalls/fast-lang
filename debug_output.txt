@@ -1,0 +1,11 @@
+=== Zeno Compile Command ===
+DEBUG: collectImportsAndDeclarations: Registered import: module='std/fmt', imports='[println]'
+DEBUG: processStdModule: Final types for module 'std/fmt': map[]
+DEBUG: processStdModule: Final functions for module 'std/fmt': map[panic:Panic print:Print println:Println]
+DEBUG: collectImportsAndDeclarations: Registered import: module='std/result.zeno', imports='[ok error Result]'
+DEBUG: processStdModule: Registered type 'Result' for module 'std/result.zeno'
+DEBUG: processStdModule: Final types for module 'std/result.zeno': map[Result:true]
+DEBUG: processStdModule: Final functions for module 'std/result.zeno': map[error:Error flatMap:FlatMap isError:IsError isOk:IsOk map:Map ok:Ok unwrap:Unwrap unwrapOr:UnwrapOr]
+Compilation failed: generation error: Generation Error: Function 'Result' is not exported from module 'std/result.zeno'
+Zeno compile exit code: 1
+output.go was NOT created.

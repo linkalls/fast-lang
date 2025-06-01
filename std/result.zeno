@@ -4,9 +4,9 @@ import {panic} from "std/fmt"
 
 // Result型の定義
 type Result<T> = {
-    ok: bool      // 成功かどうか
-    value: T      // 成功の場合の値（失敗の場合はnull）
-    error: string // エラーメッセージ（成功の場合は空文字列）
+    ok: bool,      // 成功かどうか
+    value: T,      // 成功の場合の値（失敗の場合はnull）
+    error: string, // エラーメッセージ（成功の場合は空文字列）
 }
 
 // 成功のResultを作成

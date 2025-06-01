@@ -523,12 +523,17 @@ func (p *Parser) parseFunctionDefinition() *ast.FunctionDefinition {
 }
 
 func (p *Parser) parsePublicDeclaration() ast.Statement {
-	if p.peekToken.Type != token.FN {
-		p.errors = append(p.errors, "pub can only be used with function definitions")
-		return nil
+	if p.peekToken.Type == token.FN {
+		p.nextToken() // Consume 'pub', currentToken is 'fn'
+		return p.parseFunctionDefinitionWithVisibility(true)
+	} else if p.peekToken.Type == token.TYPE {
+		p.nextToken() // Consume 'pub', currentToken is 'type'
+		return p.parseTypeDeclarationWithVisibility(true)
 	}
-	p.nextToken()
-	return p.parseFunctionDefinitionWithVisibility(true)
+	p.addDetailedError("pub can only be used with function or type definitions",
+		"fn or type", string(p.peekToken.Type),
+		"after pub keyword", "Use 'pub fn ...' or 'pub type ...'")
+	return nil
 }
 
 func (p *Parser) parseFunctionDefinitionWithVisibility(isPublic bool) *ast.FunctionDefinition {
@@ -1085,7 +1090,12 @@ func (p *Parser) parseWhileStatement() *ast.WhileStatement {
 }
 
 // parseTypeDeclaration parses 'type Name<Generics> = { ... }'
+// It is now called by parseTypeDeclarationWithVisibility or directly if not public.
 func (p *Parser) parseTypeDeclaration() *ast.TypeDeclaration {
+	return p.parseTypeDeclarationWithVisibility(false)
+}
+
+func (p *Parser) parseTypeDeclarationWithVisibility(isPublic bool) *ast.TypeDeclaration {
 	// currentToken is TYPE
 	if !p.expectPeek(token.IDENT) {
 		return nil
@@ -1109,18 +1119,66 @@ func (p *Parser) parseTypeDeclaration() *ast.TypeDeclaration {
 		return nil
 	}
 	// expect '{'
-	if !p.expectPeek(token.LBRACE) {
+	if !p.expectPeek(token.LBRACE) { // This consumes LBRACE, p.currentToken is now LBRACE
 		return nil
 	}
-	// skip until matching '}'
-	depth := 1
-	for depth > 0 && p.currentToken.Type != token.EOF {
-		p.nextToken()
-		if p.currentToken.Type == token.LBRACE {
-			depth++
-		} else if p.currentToken.Type == token.RBRACE {
-			depth--
+
+	var fields []ast.TypeField
+	// After expectPeek(token.LBRACE), currentToken is LBRACE ("{").
+	// peekToken is the first potential field name (IDENT) or RBRACE ("}").
+	for p.peekToken.Type != token.RBRACE && p.peekToken.Type != token.EOF {
+		// Expect identifier for field name based on peekToken
+		if p.peekToken.Type != token.IDENT {
+			errMsg := fmt.Sprintf("expected field name (IDENT), got %s (literal: '%s') when currentToken was %s (literal: '%s')", p.peekToken.Type, p.peekToken.Literal, p.currentToken.Type, p.currentToken.Literal)
+			p.addDetailedError(errMsg, string(token.IDENT), string(p.peekToken.Type), "in type field declaration", "Ensure field names are valid identifiers.")
+			return nil
+		}
+		p.nextToken() // Consume LBRACE (currentToken) or COMMA (currentToken), making field name the currentToken.
+		fieldName := p.currentToken.Literal
+
+		// Expect COLON after field name
+		if !p.expectPeek(token.COLON) { // Consumes fieldName (currentToken), making COLON the currentToken.
+			p.addDetailedError("expected ':' after field name", ":", string(p.peekToken.Type), "in type field declaration", "Add ':' between field name and type.")
+			return nil
+		}
+
+		// currentToken is COLON. peekToken is the start of the type annotation.
+		if p.peekToken.Type != token.IDENT && p.peekToken.Type != token.FN {
+			p.addDetailedError("expected type identifier or 'fn' for field type", "identifier or fn", string(p.peekToken.Type), "parsing field type", "")
+			return nil
+		}
+		p.nextToken() // Consumes COLON (currentToken), making type annotation start the currentToken.
+
+		fieldType, ok := p.parseTypeAnnotationString() // Consumes tokens for the type. currentToken is last token of type.
+		if !ok {
+			return nil
+		}
+		fields = append(fields, ast.TypeField{Name: fieldName, TypeAnn: fieldType})
+
+		// After parsing a field, currentToken is the last token of the field's type.
+		// peekToken should be COMMA or RBRACE.
+		if p.peekToken.Type == token.COMMA {
+			p.nextToken() // Consumes currentToken (last of type), makes COMMA the currentToken.
+			// If peekToken is RBRACE now, it's a trailing comma. Loop condition will handle it.
+			if p.peekToken.Type == token.RBRACE {
+                 // Trailing comma case, next iteration loop condition p.peekToken.Type != token.RBRACE will be false.
+			} else if p.peekToken.Type != token.IDENT {
+                // If not a trailing comma, next token must be an identifier for the next field
+				p.addDetailedError("expected field name (identifier) after comma", "identifier", string(p.peekToken.Type), "in type declaration", "Ensure a valid field definition follows the comma.")
+				return nil
+            }
+		} else if p.peekToken.Type != token.RBRACE {
+			p.addDetailedError("expected ',' or '}' after field definition", "',' or '}'", string(p.peekToken.Type), "in type declaration", "Separate fields with commas or close the type with '}'.")
+			return nil
 		}
 	}
-	return &ast.TypeDeclaration{Name: name, Generics: generics, Fields: nil}
+
+	// currentToken is LBRACE if no fields, or the COMMA before a trailing RBRACE, or the last token of the last field type.
+	// peekToken is RBRACE.
+	if !p.expectPeek(token.RBRACE) { // Consumes currentToken, expects peekToken to be RBRACE, then makes RBRACE currentToken.
+		p.addDetailedError("expected '}' to close type declaration", "}", string(p.peekToken.Type), "at end of type declaration", "Ensure the type declaration is correctly closed with '}'.")
+		return nil
+	}
+
+	return &ast.TypeDeclaration{Name: name, Generics: generics, Fields: fields, IsPublic: isPublic}
 }

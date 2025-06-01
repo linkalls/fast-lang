@@ -472,6 +472,7 @@ type TypeDeclaration struct {
 	Name     string
 	Generics []string
 	Fields   []TypeField
+	IsPublic bool // Whether the type is public (pub type)
 }
 
 func (td *TypeDeclaration) statementNode() {}
