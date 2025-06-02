@@ -1,0 +1,9 @@
+import {ok, error} from "std/result"
+
+pub fn main() {
+    let success = ok("Function only import test")
+    let failure = error("Error test")
+    
+    println("Success:", success)
+    println("Failure:", failure)
+}

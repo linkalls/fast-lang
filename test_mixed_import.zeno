@@ -1,0 +1,6 @@
+import {type Result, ok} from "std/result"
+
+pub fn main() {
+    let result = ok("42")
+    println("Result:", result)
+}

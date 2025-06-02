@@ -495,14 +495,9 @@ func (g *Generator) generateExpression(expr ast.Expression, builder *strings.Bui
 		}
 		builder.WriteString(")")
 	case *ast.FunctionCall:
-		if err := g.validateImports(e.Name); err != nil {
-			return err
-		}
-		if strings.HasPrefix(e.Name, "__native_") {
-			baseName := strings.TrimPrefix(e.Name, "__native_")
-			goFuncName := "zenoNative" + snakeToCamel(baseName)
-			builder.WriteString(goFuncName)
-			builder.WriteString("(")
+		// Special-case Zeno print and println
+		if e.Name == "println" {
+			builder.WriteString("fmt.Println(")
 			for i, arg := range e.Arguments {
 				if i > 0 {
 					builder.WriteString(", ")
@@ -514,84 +509,38 @@ func (g *Generator) generateExpression(expr ast.Expression, builder *strings.Bui
 			builder.WriteString(")")
 			return nil
 		}
-		functionName := e.Name
-		if goFuncName, exists := g.declaredFns[functionName]; exists {
-			functionName = goFuncName
-		} else {
-			for module, functions := range g.userModules {
-				if goFuncName, exists := functions[functionName]; exists {
-					if importedFuncs, imported := g.imports[module]; imported {
-						for _, importedFunc := range importedFuncs {
-							if importedFunc == functionName {
-								functionName = goFuncName
-								break
-							}
-						}
-					}
-					break
+		if e.Name == "print" {
+			builder.WriteString("fmt.Print(")
+			for i, arg := range e.Arguments {
+				if i > 0 {
+					builder.WriteString(", ")
+				}
+				if err := g.generateExpression(arg, builder); err != nil {
+					return err
 				}
 			}
-			for module, functions := range g.standardLibs {
-				if goFuncName, exists := functions[functionName]; exists {
-					if importedFuncs, imported := g.imports[module]; imported {
-						for _, importedFunc := range importedFuncs {
-							if importedFunc == functionName {
-								functionName = goFuncName
-								break
-							}
-						}
-					}
-					break
-				}
-			}
+			builder.WriteString(")")
+			return nil
 		}
-
-		// Check if this is a variadic function call (print or println)
-		isVariadicFunc := functionName == "print" || functionName == "println" ||
-			functionName == "zenoNativePrintVariadic" || functionName == "zenoNativePrintlnVariadic"
-
-		isVariadicWithFirstFunc := functionName == "zenoNativePrintVariadicWithFirst" || functionName == "zenoNativePrintlnVariadicWithFirst"
-
+		if err := g.validateImports(e.Name); err != nil {
+			return err
+		}
+		// Resolve function name to Go identifier
+		var functionName string
+		if goName, exists := g.declaredFns[e.Name]; exists {
+			functionName = goName
+		} else {
+			functionName = e.Name
+		}
 		builder.WriteString(functionName)
 		builder.WriteString("(")
-
-		if isVariadicWithFirstFunc && len(e.Arguments) > 0 {
-			// For variadic functions that require at least one argument
-			// Pass first argument directly, then wrap rest in a slice
-			if err := g.generateExpression(e.Arguments[0], builder); err != nil {
+		// generate arguments
+		for i, arg := range e.Arguments {
+			if i > 0 {
+				builder.WriteString(", ")
+			}
+			if err := g.generateExpression(arg, builder); err != nil {
 				return err
-			}
-			builder.WriteString(", []interface{}{")
-			for i := 1; i < len(e.Arguments); i++ {
-				if i > 1 {
-					builder.WriteString(", ")
-				}
-				if err := g.generateExpression(e.Arguments[i], builder); err != nil {
-					return err
-				}
-			}
-			builder.WriteString("}")
-		} else if isVariadicFunc && len(e.Arguments) > 0 {
-			// For variadic functions, wrap arguments in a slice
-			builder.WriteString("[]interface{}{")
-			for i, arg := range e.Arguments {
-				if i > 0 {
-					builder.WriteString(", ")
-				}
-				if err := g.generateExpression(arg, builder); err != nil {
-					return err
-				}
-			}
-			builder.WriteString("}")
-		} else {
-			// For regular functions, pass arguments normally
-			for i, arg := range e.Arguments {
-				if i > 0 {
-					builder.WriteString(", ")
-				}
-				if err := g.generateExpression(arg, builder); err != nil {
-					return err
-				}
 			}
 		}
 		builder.WriteString(")")
@@ -908,6 +857,8 @@ func (g *Generator) processUserModule(modulePath string, importedFunctions []str
 		if _, exists := publicFunctions[importedFunc]; !exists {
 			return GenerationError{Message: fmt.Sprintf("Function '%s' is not exported from module '%s'", importedFunc, modulePath)}
 		}
+		// Add imported function to declaredFns for proper name resolution
+		g.declaredFns[importedFunc] = publicFunctions[importedFunc]
 	}
 	g.userModules[modulePath] = publicFunctions
 	g.moduleASTs[modulePath] = program
@@ -948,6 +899,27 @@ func (g *Generator) processStdModule(modulePath string, importedFunctions []stri
 		if _, exists := publicFunctions[importedFunc]; !exists {
 			return GenerationError{Message: fmt.Sprintf("Function '%s' is not exported from module '%s'", importedFunc, modulePath)}
 		}
+		// Add imported function to declaredFns for proper name resolution
+		g.declaredFns[importedFunc] = publicFunctions[importedFunc]
+	}
+	
+	// Auto-import dependent types for std/result functions
+	if modulePath == "std/result" && len(importedFunctions) > 0 {
+		// If importing functions from std/result, auto-import Result type
+		resultTypeAlreadyImported := false
+		for _, typeName := range importedTypes {
+			if typeName == "Result" {
+				resultTypeAlreadyImported = true
+				break
+			}
+		}
+		if !resultTypeAlreadyImported {
+			// Auto-add Result type to importTypes
+			if g.importTypes[modulePath] == nil {
+				g.importTypes[modulePath] = []string{}
+			}
+			g.importTypes[modulePath] = append(g.importTypes[modulePath], "Result")
+		}
 	}
 	
 	for _, importedType := range importedTypes {
@@ -955,7 +927,7 @@ func (g *Generator) processStdModule(modulePath string, importedFunctions []stri
 			return GenerationError{Message: fmt.Sprintf("Type '%s' is not exported from module '%s'", importedType, modulePath)}
 		}
 	}
-	g.userModules[modulePath] = publicFunctions
+	g.standardLibs[modulePath] = publicFunctions
 	g.moduleASTs[modulePath] = program
 	return nil
 }
