@@ -1,0 +1,5 @@
+import {ok} from "std/result"
+
+fn main() {
+    println("Function import test")
+}

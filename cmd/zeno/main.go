@@ -306,11 +306,9 @@ func runFile(filename string) error {
 	}
 
 	tempDir := os.TempDir()
-	baseName := strings.TrimSuffix(filepath.Base(filename), ".zeno")
-	if strings.HasSuffix(filepath.Base(filename), ".zn") {
-		baseName = strings.TrimSuffix(filepath.Base(filename), ".zn")
-	}
-	tempGoFile := filepath.Join(tempDir, baseName+".go")
+	// Ensure generated Go file does not end with _test.go to allow go run
+	baseName := strings.TrimSuffix(filepath.Base(filename), filepath.Ext(filename))
+	tempGoFile := filepath.Join(tempDir, baseName+"_zeno_run.go")
 
 	err = os.WriteFile(tempGoFile, []byte(goCode), 0644)
 	if err != nil {

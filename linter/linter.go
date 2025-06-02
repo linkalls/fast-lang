@@ -107,12 +107,9 @@ func (v *linterVisitor) VisitProgram(node *ast.Program) error {
 
 func (v *linterVisitor) VisitImportStatement(node *ast.ImportStatement) error {
 	if v.importedSymbols != nil {
-		for _, importedName := range node.Imports {
-			// For `import {a, b as c} from "mod"`, ast.ImportStatement.Imports
-			// currently stores the final name used in the file (e.g. "a", "c").
-			// If ast.ImportIdentifier included original name and alias separately,
-			// this would need adjustment. Assuming Imports is []string of effective names.
-			v.importedSymbols[importedName] = node
+		for _, imp := range node.Imports {
+			// ImportItem.Nameにインポートされた識別子名が入る
+			v.importedSymbols[imp.Name] = node
 		}
 	}
 	return v.applyRules(node)
@@ -217,6 +214,15 @@ func (v *linterVisitor) VisitUnaryExpression(node *ast.UnaryExpression) error {
 func (v *linterVisitor) VisitArrayLiteral(node *ast.ArrayLiteral) error {
 	for _, elem := range node.Elements {
 		if err := Walk(elem, v); err != nil {
+			return err
+		}
+	}
+	return v.applyRules(node)
+}
+
+func (v *linterVisitor) VisitStructLiteral(node *ast.StructLiteral) error {
+	for _, valueExpr := range node.Fields {
+		if err := Walk(valueExpr, v); err != nil {
 			return err
 		}
 	}

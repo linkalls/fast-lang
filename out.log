@@ -1,0 +1,239 @@
+=== Zeno Run Command ===
+Parser errors in examples/test_result_practical.zeno:
+
+error: expected next token to be }, got IDENT instead
+  --> line 1, column 5
+   | near 'Result'
+   = expected }, but got IDENT
+
+error: no prefix parse function for , found
+  --> line 1, column 2
+   | at ','
+   = expected expression, but got ,
+
+error: no prefix parse function for , found
+  --> line 1, column 2
+   | at ','
+   = expected expression, but got ,
+
+error: no prefix parse function for , found
+  --> line 1, column 2
+   | at ','
+   = expected expression, but got ,
+
+error: no prefix parse function for , found
+  --> line 1, column 2
+   | at ','
+   = expected expression, but got ,
+
+error: no prefix parse function for , found
+  --> line 1, column 2
+   | at ','
+   = expected expression, but got ,
+
+error: no prefix parse function for } found
+  --> line 1, column 2
+   | at '}'
+   = expected expression, but got }
+
+error: no prefix parse function for FROM found
+  --> line 1, column 5
+   | at 'from'
+   = expected expression, but got FROM
+
+error: expected next token to be ), got : instead
+  --> line 1, column 2
+   | near ':'
+   = expected ), but got :
+
+error: no prefix parse function for : found
+  --> line 1, column 2
+   | at ':'
+   = expected expression, but got :
+
+error: no prefix parse function for ) found
+  --> line 1, column 2
+   | at ')'
+   = expected expression, but got )
+help: unexpected ')' - check for empty function call like 'println()'
+
+error: no prefix parse function for : found
+  --> line 1, column 2
+   | at ':'
+   = expected expression, but got :
+
+error: no prefix parse function for IF found
+  --> line 1, column 3
+   | at 'if'
+   = expected expression, but got IF
+
+error: no prefix parse function for RETURN found
+  --> line 1, column 7
+   | at 'return'
+   = expected expression, but got RETURN
+
+error: no prefix parse function for } found
+  --> line 1, column 2
+   | at '}'
+   = expected expression, but got }
+
+error: no prefix parse function for } found
+  --> line 1, column 2
+   | at '}'
+   = expected expression, but got }
+
+error: expected next token to be ), got : instead
+  --> line 1, column 4
+   | near ':'
+   = expected ), but got :
+
+error: no prefix parse function for : found
+  --> line 1, column 2
+   | at ':'
+   = expected expression, but got :
+
+error: no prefix parse function for , found
+  --> line 1, column 2
+   | at ','
+   = expected expression, but got ,
+
+error: no prefix parse function for : found
+  --> line 1, column 2
+   | at ':'
+   = expected expression, but got :
+
+error: no prefix parse function for ) found
+  --> line 1, column 2
+   | at ')'
+   = expected expression, but got )
+help: unexpected ')' - check for empty function call like 'println()'
+
+error: no prefix parse function for : found
+  --> line 1, column 2
+   | at ':'
+   = expected expression, but got :
+
+error: no prefix parse function for IF found
+  --> line 1, column 3
+   | at 'if'
+   = expected expression, but got IF
+
+error: no prefix parse function for RETURN found
+  --> line 1, column 7
+   | at 'return'
+   = expected expression, but got RETURN
+
+error: no prefix parse function for } found
+  --> line 1, column 2
+   | at '}'
+   = expected expression, but got }
+
+error: no prefix parse function for } found
+  --> line 1, column 2
+   | at '}'
+   = expected expression, but got }
+
+error: expected next token to be ), got : instead
+  --> line 1, column 2
+   | near ':'
+   = expected ), but got :
+
+error: no prefix parse function for : found
+  --> line 1, column 2
+   | at ':'
+   = expected expression, but got :
+
+error: no prefix parse function for ) found
+  --> line 1, column 2
+   | at ')'
+   = expected expression, but got )
+help: unexpected ')' - check for empty function call like 'println()'
+
+error: no prefix parse function for : found
+  --> line 1, column 2
+   | at ':'
+   = expected expression, but got :
+
+error: no prefix parse function for LET found
+  --> line 1, column 4
+   | at 'let'
+   = expected expression, but got LET
+
+error: no prefix parse function for } found
+  --> line 1, column 2
+   | at '}'
+   = expected expression, but got }
+
+error: expected next token to be ), got . instead
+  --> line 1, column 7
+   | near '.'
+   = expected ), but got .
+
+error: function 'println' requires at least one argument
+  --> line 1, column 7
+   | in function call
+   = expected at least one argument, but got empty call
+help: add an argument like println("Hello")
+
+error: no prefix parse function for . found
+  --> line 1, column 2
+   | at '.'
+   = expected expression, but got .
+
+error: no prefix parse function for ) found
+  --> line 1, column 2
+   | at ')'
+   = expected expression, but got )
+help: unexpected ')' - check for empty function call like 'println()'
+
+error: expected next token to be ), got . instead
+  --> line 1, column 7
+   | near '.'
+   = expected ), but got .
+
+error: function 'println' requires at least one argument
+  --> line 1, column 7
+   | in function call
+   = expected at least one argument, but got empty call
+help: add an argument like println("Hello")
+
+error: no prefix parse function for . found
+  --> line 1, column 2
+   | at '.'
+   = expected expression, but got .
+
+error: no prefix parse function for ) found
+  --> line 1, column 2
+   | at ')'
+   = expected expression, but got )
+help: unexpected ')' - check for empty function call like 'println()'
+
+error: expected next token to be ), got . instead
+  --> line 1, column 7
+   | near '.'
+   = expected ), but got .
+
+error: function 'println' requires at least one argument
+  --> line 1, column 7
+   | in function call
+   = expected at least one argument, but got empty call
+help: add an argument like println("Hello")
+
+error: no prefix parse function for . found
+  --> line 1, column 2
+   | at '.'
+   = expected expression, but got .
+
+error: no prefix parse function for ) found
+  --> line 1, column 2
+   | at ')'
+   = expected expression, but got )
+help: unexpected ')' - check for empty function call like 'println()'
+
+error: no prefix parse function for } found
+  --> line 1, column 2
+   | at '}'
+   = expected expression, but got }
+
+Run failed: parser errors found
+exit status 1

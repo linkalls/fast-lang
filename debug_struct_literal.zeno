@@ -1,0 +1,9 @@
+type Result<T> = {
+    ok: bool,
+    value: T,
+    error: string
+}
+
+pub fn ok<T>(value: T) -> Result<T> {
+    return Result{ok: true, value: value, error: ""}
+}

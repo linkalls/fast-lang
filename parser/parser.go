@@ -80,6 +80,7 @@ var precedences = map[token.TokenType]int{
 	token.DIVIDE:   PRODUCT,
 	token.MULTIPLY: PRODUCT,
 	token.LPAREN:   CALL,
+	token.LBRACE:   CALL, // For struct literals
 }
 
 // Parser holds the state for parsing tokens into an AST
@@ -185,6 +186,7 @@ func New(l *lexer.Lexer) *Parser {
 		token.AND:      p.parseInfixExpression,
 		token.OR:       p.parseInfixExpression,
 		token.LPAREN:   p.parseFunctionCall,
+		token.LBRACE:   p.parseStructLiteral, // Added for struct literals
 	}
 	p.nextToken()
 	p.nextToken()
@@ -294,6 +296,8 @@ func (p *Parser) ParseProgram() *ast.Program {
 func (p *Parser) parseStatement() ast.Statement {
 	var stmt ast.Statement
 	switch p.currentToken.Type {
+	case token.FOR:
+		stmt = p.parseForStatement()
 	case token.TYPE:
 		return p.parseTypeDeclaration()
 	case token.IMPORT:
@@ -487,20 +491,53 @@ func (p *Parser) parseImportStatement() *ast.ImportStatement {
 	if !p.expectPeek(token.LBRACE) {
 		return nil
 	}
-	var imports []string
+	
+	var items []ast.ImportItem
+	
+	// 最初の項目をパース
 	p.nextToken()
-	if !p.isValidImportIdentifier() {
-		return nil
+	if p.currentToken.Type == token.RBRACE {
+		// 空のインポート
+		if !p.expectPeek(token.FROM) {
+			return nil
+		}
+		if !p.expectPeek(token.STRING) {
+			return nil
+		}
+		module := p.currentToken.Literal
+		if len(module) >= 2 && module[0] == '"' && module[len(module)-1] == '"' {
+			module = module[1 : len(module)-1]
+		}
+		return &ast.ImportStatement{Imports: items, Module: module}
 	}
-	imports = append(imports, p.currentToken.Literal)
-	for p.peekToken.Type == token.COMMA {
-		p.nextToken()
-		p.nextToken()
+	
+	for {
+		isType := false
+		if p.currentToken.Type == token.TYPE {
+			isType = true
+			if !p.expectPeek(token.IDENT) {
+				return nil
+			}
+		}
+		
 		if !p.isValidImportIdentifier() {
 			return nil
 		}
-		imports = append(imports, p.currentToken.Literal)
+		
+		items = append(items, ast.ImportItem{Name: p.currentToken.Literal, IsType: isType})
+		
+		// 次のトークンをチェック
+		if p.peekToken.Type == token.COMMA {
+			p.nextToken() // COMMAを消費
+			p.nextToken() // 次の項目へ移動
+		} else if p.peekToken.Type == token.RBRACE {
+			break
+		} else {
+			p.errors = append(p.errors, fmt.Sprintf("expected ',' or '}' in import statement, got %s", p.peekToken.Type))
+			return nil
+		}
 	}
+	
 	if !p.expectPeek(token.RBRACE) {
 		return nil
 	}
@@ -510,11 +547,12 @@ func (p *Parser) parseImportStatement() *ast.ImportStatement {
 	if !p.expectPeek(token.STRING) {
 		return nil
 	}
+	
 	module := p.currentToken.Literal
 	if len(module) >= 2 && module[0] == '"' && module[len(module)-1] == '"' {
 		module = module[1 : len(module)-1]
 	}
-	return &ast.ImportStatement{Imports: imports, Module: module}
+	return &ast.ImportStatement{Imports: items, Module: module}
 }
 
 func (p *Parser) isValidImportIdentifier() bool { return p.currentToken.Type == token.IDENT }
@@ -586,12 +624,12 @@ func (p *Parser) parseFunctionDefinitionWithVisibility(isPublic bool) *ast.Funct
 			}
 			// Parse parameter type (may include generics like Result<T>)
 			paramType := p.currentToken.Literal
-			
+
 			// Check if this is a generic type
 			if p.peekToken.Type == token.LT {
 				p.nextToken() // consume '<'
 				paramType += p.currentToken.Literal
-				
+
 				// Parse everything until we find the matching '>'
 				depth := 1
 				for depth > 0 && p.peekToken.Type != token.EOF {
@@ -604,7 +642,7 @@ func (p *Parser) parseFunctionDefinitionWithVisibility(isPublic bool) *ast.Funct
 					}
 				}
 			}
-			
+
 			parameters = append(parameters, ast.Parameter{Name: paramName, Type: paramType, Variadic: variadic})
 
 			// Variadic parameter must be the last one
@@ -636,12 +674,12 @@ func (p *Parser) parseFunctionDefinitionWithVisibility(isPublic bool) *ast.Funct
 		}
 		// Start with the identifier (e.g., "Result" or "int")
 		typeStr := p.currentToken.Literal
-		
+
 		// Check if this is a generic type (e.g., Result<T>)
 		if p.peekToken.Type == token.LT {
 			p.nextToken() // consume '<'
 			typeStr += p.currentToken.Literal
-			
+
 			// Parse everything until we find the matching '>'
 			depth := 1
 			for depth > 0 && p.peekToken.Type != token.EOF {
@@ -654,7 +692,7 @@ func (p *Parser) parseFunctionDefinitionWithVisibility(isPublic bool) *ast.Funct
 				}
 			}
 		}
-		
+
 		retType := typeStr
 		returnType = &retType
 	}
@@ -872,6 +910,97 @@ func (p *Parser) parseMapLiteral() ast.Expression {
 	return mapLiteral
 }
 
+func (p *Parser) parseStructLiteral(typeExpr ast.Expression) ast.Expression {
+	// currentToken is LBRACE when this (infixParseFn) is called.
+	// typeExpr should be an Identifier representing the struct type name
+	
+	var typeName string
+	if ident, ok := typeExpr.(*ast.Identifier); ok {
+		typeName = ident.Value
+	} else {
+		message := "struct literal requires a type name"
+		p.addDetailedError(message, "identifier", "expression", "", "use a type name like Result{...}")
+		return nil
+	}
+
+	structLiteral := &ast.StructLiteral{
+		TypeName: typeName,
+		Fields:   make(map[string]ast.Expression),
+	}
+
+	// Handle empty struct literal TypeName{}
+	if p.peekToken.Type == token.RBRACE {
+		p.nextToken() // Consume LBRACE
+		p.nextToken() // Consume RBRACE
+		return structLiteral
+	}
+
+	p.nextToken() // Consume LBRACE, currentToken is now the first token of the first field name.
+
+	for p.currentToken.Type != token.RBRACE && p.currentToken.Type != token.EOF {
+		// Parse Field Name - must be an identifier
+		if p.currentToken.Type != token.IDENT {
+			msg := fmt.Sprintf("struct field name must be identifier, got %s", p.currentToken.Type)
+			p.errors = append(p.errors, msg)
+			return nil
+		}
+		
+		fieldName := p.currentToken.Literal
+
+		if !p.expectPeek(token.COLON) {
+			return nil
+		}
+		p.nextToken() // Consume COLON, currentToken is now the first token of the field value.
+
+		// Parse Field Value
+		value := p.parseExpression(LOWEST)
+		if value == nil {
+			return nil
+		}
+		structLiteral.Fields[fieldName] = value
+
+		// After parsing a value, p.currentToken is the last token of the value expression.
+		// p.peekToken is what comes AFTER the value expression (e.g., COMMA or RBRACE).
+		if p.peekToken.Type == token.COMMA {
+			p.nextToken() // Advances p.currentToken to be the COMMA
+			
+			// Check for trailing comma: e.g. Result{ok: true,}
+			if p.peekToken.Type == token.RBRACE {
+				p.nextToken() // Consume COMMA, p.currentToken is now RBRACE.
+				break         // Exit loop, RBRACE is currentToken.
+			}
+			p.nextToken() // Consume COMMA, p.currentToken is now the first token of the next field.
+		} else if p.peekToken.Type == token.RBRACE {
+			p.nextToken() // Advances p.currentToken to be the RBRACE.
+			break         // Exit loop, RBRACE is currentToken.
+		} else if p.peekToken.Type == token.EOF {
+			msg := "expected ',' or '}' after struct field value, got EOF"
+			p.errors = append(p.errors, msg)
+			return nil
+		} else {
+			msg := fmt.Sprintf("expected ',' or '}' after struct field value, got %s instead", p.peekToken.Type)
+			p.errors = append(p.errors, msg)
+			return nil
+		}
+	}
+
+	if p.currentToken.Type != token.RBRACE {
+		if len(p.detailedErrors) == 0 {
+			message := "expected '}' to close struct literal"
+			expected := "}"
+			got := string(p.currentToken.Type)
+			context := ""
+			if p.currentToken.Literal != "" {
+				context = "found '" + p.currentToken.Literal + "'"
+			}
+			suggestion := "add missing '}' to close struct literal"
+			p.addDetailedError(message, expected, got, context, suggestion)
+		}
+		return nil
+	}
+	return structLiteral
+}
+
 func (p *Parser) parseFunctionCall(functionExpression ast.Expression) ast.Expression {
 	// currentToken is LPAREN when this (infixParseFn) is called.
 	var functionName string
@@ -996,6 +1125,31 @@ func (p *Parser) parseWhileStatement() *ast.WhileStatement {
 		return nil
 	}
 	return &ast.WhileStatement{Condition: condition, Block: block}
+}
+
+// parseForStatement parses 'for <ident> in <expression> { ... }'
+func (p *Parser) parseForStatement() *ast.ForStatement {
+	// currentToken is FOR
+	if !p.expectPeek(token.IDENT) {
+		return nil
+	}
+	varName := p.currentToken.Literal
+	if !p.expectPeek(token.IN) {
+		return nil
+	}
+	p.nextToken() // move to iterable expression
+	iterable := p.parseExpressionUntil(LOWEST, token.LBRACE)
+	if iterable == nil {
+		return nil
+	}
+	if !p.expectPeek(token.LBRACE) {
+		return nil
+	}
+	body := p.parseBlockStatement()
+	if body == nil {
+		return nil
+	}
+	return &ast.ForStatement{VarName: varName, Iterable: iterable, Body: body}
 }
 
 // parseTypeDeclaration parses 'type Name<Generics> = { ... }'

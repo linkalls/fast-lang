@@ -20,7 +20,7 @@ var (
 	BoolType   = &BasicType{Name: "bool"}
 	StringType = &BasicType{Name: "string"}
 	FloatType  = &BasicType{Name: "float"}
-	AnyType    = &BasicType{Name: "any"}   // Represents any type, similar to interface{}
+	AnyType    = &BasicType{Name: "any"} // Represents any type, similar to interface{}
 )
 
 // ArrayType represents an array type.

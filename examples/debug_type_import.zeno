@@ -1,0 +1,5 @@
+import {type Result} from "std/result"
+
+fn main() {
+    println("Test")
+}

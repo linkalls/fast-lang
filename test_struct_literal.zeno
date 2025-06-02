@@ -1,0 +1,4 @@
+// Test struct literal syntax
+let result = Result{ok: true, value: 42, error: ""}
+let user = User{name: "Alice", age: 30}
+let empty = Empty{}
