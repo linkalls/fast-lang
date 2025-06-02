@@ -495,42 +495,42 @@ func (g *Generator) generateExpression(expr ast.Expression, builder *strings.Bui
 		}
 		builder.WriteString(")")
 	case *ast.FunctionCall:
-		// Special-case Zeno print and println
-		if e.Name == "println" {
-			builder.WriteString("fmt.Println(")
-			for i, arg := range e.Arguments {
-				if i > 0 {
-					builder.WriteString(", ")
-				}
-				if err := g.generateExpression(arg, builder); err != nil {
-					return err
-				}
-			}
-			builder.WriteString(")")
-			return nil
-		}
-		if e.Name == "print" {
-			builder.WriteString("fmt.Print(")
-			for i, arg := range e.Arguments {
-				if i > 0 {
-					builder.WriteString(", ")
-				}
-				if err := g.generateExpression(arg, builder); err != nil {
-					return err
-				}
-			}
-			builder.WriteString(")")
-			return nil
-		}
-		if err := g.validateImports(e.Name); err != nil {
-			return err
-		}
-		// Resolve function name to Go identifier
+		// Check if function is imported first, before special-casing
 		var functionName string
 		if goName, exists := g.declaredFns[e.Name]; exists {
 			functionName = goName
 		} else {
+			// Special-case Zeno print and println only if not imported
+			if e.Name == "println" {
+				builder.WriteString("fmt.Println(")
+				for i, arg := range e.Arguments {
+					if i > 0 {
+						builder.WriteString(", ")
+					}
+					if err := g.generateExpression(arg, builder); err != nil {
+						return err
+					}
+				}
+				builder.WriteString(")")
+				return nil
+			}
+			if e.Name == "print" {
+				builder.WriteString("fmt.Print(")
+				for i, arg := range e.Arguments {
+					if i > 0 {
+						builder.WriteString(", ")
+					}
+					if err := g.generateExpression(arg, builder); err != nil {
+						return err
+					}
+				}
+				builder.WriteString(")")
+				return nil
+			}
 			functionName = e.Name
+		}
+		if err := g.validateImports(e.Name); err != nil {
+			return err
 		}
 		builder.WriteString(functionName)
 		builder.WriteString("(")

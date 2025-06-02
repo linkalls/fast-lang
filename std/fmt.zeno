@@ -3,13 +3,13 @@
 // Prints the given values to the console without a new line.
 // At least one argument is required.
 pub fn print(first: any, ...rest: any) {
-    __native_print_variadic_with_first(first, rest)
+    zenoNativePrintVariadicWithFirst(first, rest)
 }
 
 // Prints the given values to the console followed by a new line.
 // At least one argument is required.
 pub fn println(first: any, ...rest: any) {
-    __native_println_variadic_with_first(first, rest)
+    zenoNativePrintlnVariadicWithFirst(first, rest)
 }
 
 // Panic with the given message

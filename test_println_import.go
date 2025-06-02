@@ -1,12 +1,10 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"encoding/json"
+	"fmt"
 )
-
-type Result map[string]interface{}
 
 // Native function helpers
 func zenoNativeReadFile(filename string) string {
@@ -95,17 +93,10 @@ func zenoNativeJsonStringify(value interface{}) string {
 	return string(jsonBytes)
 }
 
-func Ok(value string) Result {
-	return map[string]interface{}{"error": "", "ok": true, "value": value}
-}
-
-func Error(message string) Result {
-	return map[string]interface{}{"ok": false, "value": "", "error": message}
+func Println(first interface{}, rest ...interface{}) {
+	zenoNativePrintlnVariadicWithFirst(first, rest)
 }
 
 func main() {
-	var success = Ok("Function only import test")
-	var failure = Error("Error test")
-	fmt.Println("Success:", success)
-	fmt.Println("Failure:", failure)
+	Println("Hello from imported println!")
 }
