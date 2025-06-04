@@ -63,7 +63,6 @@ const (
 	PRODUCT     // *, /
 	PREFIX      // -X or !X
 	CALL        // myFunction(X)
-	MEMBER_ACCESS // object.field
 )
 
 // precedences maps tokens to their precedence
@@ -81,7 +80,9 @@ var precedences = map[token.TokenType]int{
 	token.DIVIDE:   PRODUCT,
 	token.MULTIPLY: PRODUCT,
 	token.LPAREN:   CALL,
-	token.DOT:      MEMBER_ACCESS,
+	token.LBRACE:   CALL, // For struct literals
+	// Add dot operator for property access with call-level precedence
+	token.DOT: CALL,
 }
 
 // Parser holds the state for parsing tokens into an AST
@@ -172,7 +173,6 @@ func New(l *lexer.Lexer) *Parser {
 		token.FLOAT:    p.parseFloatLiteral,
 		token.LBRACKET: p.parseArrayLiteral, // Added for array literals
 		token.LBRACE:   p.parseMapLiteral,   // Added for map literals
-		token.LPAREN:   p.parseGroupedExpression,
 	}
 	p.infixParseFns = map[token.TokenType]infixParseFn{
 		token.PLUS:     p.parseInfixExpression,
@@ -188,7 +188,9 @@ func New(l *lexer.Lexer) *Parser {
 		token.AND:      p.parseInfixExpression,
 		token.OR:       p.parseInfixExpression,
 		token.LPAREN:   p.parseFunctionCall,
-		token.DOT:      p.parseMemberAccessExpression,
+		token.LBRACE:   p.parseStructLiteral, // Added for struct literals
+		// Add member access operator
+		token.DOT: p.parseMemberExpression,
 	}
 	p.nextToken()
 	p.nextToken()
@@ -298,6 +300,8 @@ func (p *Parser) ParseProgram() *ast.Program {
 func (p *Parser) parseStatement() ast.Statement {
 	var stmt ast.Statement
 	switch p.currentToken.Type {
+	case token.FOR:
+		stmt = p.parseForStatement()
 	case token.TYPE:
 		return p.parseTypeDeclaration()
 	case token.IMPORT:
@@ -333,18 +337,23 @@ func (p *Parser) parseLetStatement() *ast.LetDeclaration {
 	name := p.currentToken.Literal
 	var typeAnn *string
 	if p.peekToken.Type == token.COLON {
-		p.nextToken() // Consume COLON, currentToken is COLON
-		// MODIFICATION START
-		if p.peekToken.Type != token.IDENT && p.peekToken.Type != token.FN {
-			p.addDetailedError("expected type identifier or 'fn' for variable type annotation",
-				"identifier or fn", string(p.peekToken.Type), "parsing variable type", "")
+		p.nextToken()
+		if !p.expectPeek(token.IDENT) {
 			return nil
 		}
-		p.nextToken() // Consume IDENT or FN, currentToken is now start of type
-		typeAnnStr, ok := p.parseTypeAnnotationString()
-		if !ok { return nil }
-		typeAnn = &typeAnnStr
-		// MODIFICATION END
+		// parse basic and generic type annotations (e.g., Result<int>)
+		typeStr := p.currentToken.Literal
+		if p.peekToken.Type == token.LT {
+			for p.peekToken.Type != token.GT {
+				p.nextToken()
+				typeStr += p.currentToken.Literal
+			}
+			// consume '>'
+			p.nextToken()
+			typeStr += p.currentToken.Literal
+		}
+		annotation := typeStr
+		typeAnn = &annotation
 	}
 	if !p.expectPeek(token.ASSIGN) {
 		return nil
@@ -486,20 +495,53 @@ func (p *Parser) parseImportStatement() *ast.ImportStatement {
 	if !p.expectPeek(token.LBRACE) {
 		return nil
 	}
-	var imports []string
+
+	var items []ast.ImportItem
+
+	// 最初の項目をパース
 	p.nextToken()
-	if !p.isValidImportIdentifier() {
-		return nil
+	if p.currentToken.Type == token.RBRACE {
+		// 空のインポート
+		if !p.expectPeek(token.FROM) {
+			return nil
+		}
+		if !p.expectPeek(token.STRING) {
+			return nil
+		}
+		module := p.currentToken.Literal
+		if len(module) >= 2 && module[0] == '"' && module[len(module)-1] == '"' {
+			module = module[1 : len(module)-1]
+		}
+		return &ast.ImportStatement{Imports: items, Module: module}
 	}
-	imports = append(imports, p.currentToken.Literal)
-	for p.peekToken.Type == token.COMMA {
-		p.nextToken()
-		p.nextToken()
+
+	for {
+		isType := false
+		if p.currentToken.Type == token.TYPE {
+			isType = true
+			if !p.expectPeek(token.IDENT) {
+				return nil
+			}
+		}
+
 		if !p.isValidImportIdentifier() {
 			return nil
 		}
-		imports = append(imports, p.currentToken.Literal)
+
+		items = append(items, ast.ImportItem{Name: p.currentToken.Literal, IsType: isType})
+
+		// 次のトークンをチェック
+		if p.peekToken.Type == token.COMMA {
+			p.nextToken() // COMMAを消費
+			p.nextToken() // 次の項目へ移動
+		} else if p.peekToken.Type == token.RBRACE {
+			break
+		} else {
+			p.errors = append(p.errors, fmt.Sprintf("expected ',' or '}' in import statement, got %s", p.peekToken.Type))
+			return nil
+		}
 	}
+
 	if !p.expectPeek(token.RBRACE) {
 		return nil
 	}
@@ -509,11 +551,12 @@ func (p *Parser) parseImportStatement() *ast.ImportStatement {
 	if !p.expectPeek(token.STRING) {
 		return nil
 	}
+
 	module := p.currentToken.Literal
 	if len(module) >= 2 && module[0] == '"' && module[len(module)-1] == '"' {
 		module = module[1 : len(module)-1]
 	}
-	return &ast.ImportStatement{Imports: imports, Module: module}
+	return &ast.ImportStatement{Imports: items, Module: module}
 }
 
 func (p *Parser) isValidImportIdentifier() bool { return p.currentToken.Type == token.IDENT }
@@ -523,17 +566,12 @@ func (p *Parser) parseFunctionDefinition() *ast.FunctionDefinition {
 }
 
 func (p *Parser) parsePublicDeclaration() ast.Statement {
-	if p.peekToken.Type == token.FN {
-		p.nextToken() // Consume 'pub', currentToken is 'fn'
-		return p.parseFunctionDefinitionWithVisibility(true)
-	} else if p.peekToken.Type == token.TYPE {
-		p.nextToken() // Consume 'pub', currentToken is 'type'
-		return p.parseTypeDeclarationWithVisibility(true)
+	if p.peekToken.Type != token.FN {
+		p.errors = append(p.errors, "pub can only be used with function definitions")
+		return nil
 	}
-	p.addDetailedError("pub can only be used with function or type definitions",
-		"fn or type", string(p.peekToken.Type),
-		"after pub keyword", "Use 'pub fn ...' or 'pub type ...'")
-	return nil
+	p.nextToken()
+	return p.parseFunctionDefinitionWithVisibility(true)
 }
 
 func (p *Parser) parseFunctionDefinitionWithVisibility(isPublic bool) *ast.FunctionDefinition {
@@ -585,16 +623,30 @@ func (p *Parser) parseFunctionDefinitionWithVisibility(isPublic bool) *ast.Funct
 			if !p.expectPeek(token.COLON) {
 				return nil
 			}
-			// MODIFICATION START
-			if p.peekToken.Type != token.IDENT && p.peekToken.Type != token.FN {
-				p.addDetailedError("expected type identifier or 'fn' for parameter type",
-					"identifier or fn", string(p.peekToken.Type), "parsing parameter type", "")
+			if !p.expectPeek(token.IDENT) {
 				return nil
 			}
-			p.nextToken() // Consume the IDENT or FN, currentToken is now start of type
-			paramType, ok := p.parseTypeAnnotationString()
-			if !ok { return nil }
-			// MODIFICATION END
+			// Parse parameter type (may include generics like Result<T>)
+			paramType := p.currentToken.Literal
+
+			// Check if this is a generic type
+			if p.peekToken.Type == token.LT {
+				p.nextToken() // consume '<'
+				paramType += p.currentToken.Literal
+
+				// Parse everything until we find the matching '>'
+				depth := 1
+				for depth > 0 && p.peekToken.Type != token.EOF {
+					p.nextToken()
+					paramType += p.currentToken.Literal
+					if p.currentToken.Type == token.LT {
+						depth++
+					} else if p.currentToken.Type == token.GT {
+						depth--
+					}
+				}
+			}
+
 			parameters = append(parameters, ast.Parameter{Name: paramName, Type: paramType, Variadic: variadic})
 
 			// Variadic parameter must be the last one
@@ -620,18 +672,33 @@ func (p *Parser) parseFunctionDefinitionWithVisibility(isPublic bool) *ast.Funct
 	}
 	var returnType *string
 	if p.peekToken.Type == token.COLON {
-		p.nextToken() // Consume COLON, currentToken is COLON
-		// MODIFICATION START
-		if p.peekToken.Type != token.IDENT && p.peekToken.Type != token.FN {
-			p.addDetailedError("expected type identifier or 'fn' for return type",
-				"identifier or fn", string(p.peekToken.Type), "parsing return type", "")
+		p.nextToken()
+		if !p.expectPeek(token.IDENT) {
 			return nil
 		}
-		p.nextToken() // Consume IDENT or FN, currentToken is now start of type
-		retTypeStr, ok := p.parseTypeAnnotationString()
-		if !ok { return nil }
-		returnType = &retTypeStr
-		// MODIFICATION END
+		// Start with the identifier (e.g., "Result" or "int")
+		typeStr := p.currentToken.Literal
+
+		// Check if this is a generic type (e.g., Result<T>)
+		if p.peekToken.Type == token.LT {
+			p.nextToken() // consume '<'
+			typeStr += p.currentToken.Literal
+
+			// Parse everything until we find the matching '>'
+			depth := 1
+			for depth > 0 && p.peekToken.Type != token.EOF {
+				p.nextToken()
+				typeStr += p.currentToken.Literal
+				if p.currentToken.Type == token.LT {
+					depth++
+				} else if p.currentToken.Type == token.GT {
+					depth--
+				}
+			}
+		}
+
+		retType := typeStr
+		returnType = &retType
 	}
 	if !p.expectPeek(token.LBRACE) {
 		return nil
@@ -653,122 +720,6 @@ func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
 		p.nextToken()
 	}
 	return &ast.ReturnStatement{Value: value}
-}
-
-// parseTypeAnnotationString attempts to parse a type annotation.
-// It handles simple identifiers, identifiers with generics (e.g., Result<T>),
-// and function types (e.g., fn(A): B).
-// currentToken is expected to be the first token of the type (IDENT or FN) when called.
-func (p *Parser) parseTypeAnnotationString() (string, bool) {
-	if p.currentToken.Type == token.IDENT {
-		typeStr := p.currentToken.Literal
-		if p.peekToken.Type == token.LT { // Handle generics like <T, U>
-			p.nextToken() // Consume '<'
-			typeStr += p.currentToken.Literal // Append '<'
-
-			depth := 1
-			for depth > 0 && p.peekToken.Type != token.EOF {
-				p.nextToken() // Consumes next token in generic part
-				typeStr += p.currentToken.Literal
-				if p.currentToken.Type == token.LT {
-					depth++
-				} else if p.currentToken.Type == token.GT {
-					depth--
-				}
-			}
-			// currentToken should be the final '>'
-			if p.currentToken.Type != token.GT {
-				 p.addDetailedError("expected '>' to close generic type parameters", ">", string(p.currentToken.Type), "in generic type", "")
-				return "", false
-			}
-		}
-		return typeStr, true
-	} else if p.currentToken.Type == token.FN {
-		return p.parseFunctionSignatureForType()
-	}
-	p.addDetailedError("expected type identifier or 'fn' for type annotation",
-		"identifier or fn", string(p.currentToken.Type),
-		"in type annotation", "Provide a valid type (e.g. int, MyType<T>, or fn(A):B)")
-	return "", false
-}
-
-// parseFunctionSignatureForType parses the 'fn(...):...' part of a function type annotation.
-// currentToken is expected to be FN when called.
-func (p *Parser) parseFunctionSignatureForType() (string, bool) {
-	sigStr := p.currentToken.Literal // Should be "fn"
-
-	if !p.expectPeek(token.LPAREN) { return "", false } // Consumes '(', currentToken is '('
-	sigStr += p.currentToken.Literal // Add "("
-
-	// Simplified parsing for params within fn type:
-	// Consume tokens until matching RPAREN, being mindful of nested items.
-	// This part just string-builds the parameters, not fully parsing them.
-	depth := 1
-	for depth > 0 && p.peekToken.Type != token.EOF {
-		p.nextToken()
-		// Append commas and spaces carefully if present to make string readable
-		if p.currentToken.Type == token.COMMA && (len(sigStr) > 0 && sigStr[len(sigStr)-1] != ' ') {
-			 sigStr += " " // Ensure space before comma if not already there
-		}
-		sigStr += p.currentToken.Literal
-		if p.currentToken.Type == token.LPAREN || p.currentToken.Type == token.LT {
-			depth++
-		} else if p.currentToken.Type == token.RPAREN || p.currentToken.Type == token.GT {
-			depth--
-			if (p.currentToken.Type == token.RPAREN) && depth == 0 { // Matched the main function type's RPAREN
-				break
-			}
-		}
-		 if p.peekToken.Type == token.COMMA && p.currentToken.Type != token.COMMA {
-			 sigStr += " " // Ensure space after token if comma follows
-		 }
-	}
-	if p.currentToken.Type != token.RPAREN {
-		p.addDetailedError("expected ')' to close function type parameter list", ")", string(p.currentToken.Type), "in function type", "")
-		return "", false
-	}
-
-	if !p.expectPeek(token.COLON) { return "", false } // Consumes ':', currentToken is ':'
-	sigStr += p.currentToken.Literal // Add ":"
-
-	// Expect the return type (IDENT, IDENT<T>, or another FN)
-	// Advance to the start of the return type token.
-	if p.peekToken.Type != token.IDENT && p.peekToken.Type != token.FN {
-		p.addDetailedError("expected type or 'fn' for function type return value",
-			"identifier or fn", string(p.peekToken.Type), "in function type return", "")
-		return "", false
-	}
-	p.nextToken() // Consume IDENT or FN (currentToken is now start of return type)
-
-	retTypeStr, ok := p.parseTypeAnnotationString() // Recursive call
-	if !ok { return "", false }
-	sigStr += retTypeStr
-
-	return sigStr, true
-}
-
-func (p *Parser) parseGroupedExpression() ast.Expression {
-	p.nextToken() // Consume '('
-	exp := p.parseExpression(LOWEST) // Parse the expression within the parentheses
-	if !p.expectPeek(token.RPAREN) { // Expect and consume ')'
-		// expectPeek already adds a detailed error if ')' is not found
-		return nil
-	}
-	return exp
-}
-
-func (p *Parser) parseMemberAccessExpression(left ast.Expression) ast.Expression {
-	expr := &ast.MemberAccessExpression{Expression: left}
-	// currentToken is DOT. We expect an IDENTIFIER next for the field.
-	if !p.expectPeek(token.IDENT) {
-		// Error: "expected next token to be IDENT, got <actual_token> instead"
-		// Suggestion: "ensure a valid field name follows the dot (.) operator"
-		// Detailed error already added by expectPeek
-		p.addDetailedError("expected field name after '.'", "identifier", string(p.peekToken.Type), "in member access", "ensure a valid field name follows the dot (.) operator")
-		return nil
-	}
-	expr.Field = &ast.Identifier{Value: p.currentToken.Literal}
-	return expr
 }
 
 // parseCommaSeparatedExpressions parses a list of comma-separated expressions until an endToken.
@@ -963,6 +914,97 @@ func (p *Parser) parseMapLiteral() ast.Expression {
 	return mapLiteral
 }
 
+func (p *Parser) parseStructLiteral(typeExpr ast.Expression) ast.Expression {
+	// currentToken is LBRACE when this (infixParseFn) is called.
+	// typeExpr should be an Identifier representing the struct type name
+
+	var typeName string
+	if ident, ok := typeExpr.(*ast.Identifier); ok {
+		typeName = ident.Value
+	} else {
+		message := "struct literal requires a type name"
+		p.addDetailedError(message, "identifier", "expression", "", "use a type name like Result{...}")
+		return nil
+	}
+
+	structLiteral := &ast.StructLiteral{
+		TypeName: typeName,
+		Fields:   make(map[string]ast.Expression),
+	}
+
+	// Handle empty struct literal TypeName{}
+	if p.peekToken.Type == token.RBRACE {
+		p.nextToken() // Consume LBRACE
+		p.nextToken() // Consume RBRACE
+		return structLiteral
+	}
+
+	p.nextToken() // Consume LBRACE, currentToken is now the first token of the first field name.
+
+	for p.currentToken.Type != token.RBRACE && p.currentToken.Type != token.EOF {
+		// Parse Field Name - must be an identifier
+		if p.currentToken.Type != token.IDENT {
+			msg := fmt.Sprintf("struct field name must be identifier, got %s", p.currentToken.Type)
+			p.errors = append(p.errors, msg)
+			return nil
+		}
+
+		fieldName := p.currentToken.Literal
+
+		if !p.expectPeek(token.COLON) {
+			return nil
+		}
+		p.nextToken() // Consume COLON, currentToken is now the first token of the field value.
+
+		// Parse Field Value
+		value := p.parseExpression(LOWEST)
+		if value == nil {
+			return nil
+		}
+		structLiteral.Fields[fieldName] = value
+
+		// After parsing a value, p.currentToken is the last token of the value expression.
+		// p.peekToken is what comes AFTER the value expression (e.g., COMMA or RBRACE).
+		if p.peekToken.Type == token.COMMA {
+			p.nextToken() // Advances p.currentToken to be the COMMA
+
+			// Check for trailing comma: e.g. Result{ok: true,}
+			if p.peekToken.Type == token.RBRACE {
+				p.nextToken() // Consume COMMA, p.currentToken is now RBRACE.
+				break         // Exit loop, RBRACE is currentToken.
+			}
+			p.nextToken() // Consume COMMA, p.currentToken is now the first token of the next field.
+		} else if p.peekToken.Type == token.RBRACE {
+			p.nextToken() // Advances p.currentToken to be the RBRACE.
+			break         // Exit loop, RBRACE is currentToken.
+		} else if p.peekToken.Type == token.EOF {
+			msg := "expected ',' or '}' after struct field value, got EOF"
+			p.errors = append(p.errors, msg)
+			return nil
+		} else {
+			msg := fmt.Sprintf("expected ',' or '}' after struct field value, got %s instead", p.peekToken.Type)
+			p.errors = append(p.errors, msg)
+			return nil
+		}
+	}
+
+	if p.currentToken.Type != token.RBRACE {
+		if len(p.detailedErrors) == 0 {
+			message := "expected '}' to close struct literal"
+			expected := "}"
+			got := string(p.currentToken.Type)
+			context := ""
+			if p.currentToken.Literal != "" {
+				context = "found '" + p.currentToken.Literal + "'"
+			}
+			suggestion := "add missing '}' to close struct literal"
+			p.addDetailedError(message, expected, got, context, suggestion)
+		}
+		return nil
+	}
+	return structLiteral
+}
+
 func (p *Parser) parseFunctionCall(functionExpression ast.Expression) ast.Expression {
 	// currentToken is LPAREN when this (infixParseFn) is called.
 	var functionName string
@@ -1089,13 +1131,33 @@ func (p *Parser) parseWhileStatement() *ast.WhileStatement {
 	return &ast.WhileStatement{Condition: condition, Block: block}
 }
 
-// parseTypeDeclaration parses 'type Name<Generics> = { ... }'
-// It is now called by parseTypeDeclarationWithVisibility or directly if not public.
-func (p *Parser) parseTypeDeclaration() *ast.TypeDeclaration {
-	return p.parseTypeDeclarationWithVisibility(false)
+// parseForStatement parses 'for <ident> in <expression> { ... }'
+func (p *Parser) parseForStatement() *ast.ForStatement {
+	// currentToken is FOR
+	if !p.expectPeek(token.IDENT) {
+		return nil
+	}
+	varName := p.currentToken.Literal
+	if !p.expectPeek(token.IN) {
+		return nil
+	}
+	p.nextToken() // move to iterable expression
+	iterable := p.parseExpressionUntil(LOWEST, token.LBRACE)
+	if iterable == nil {
+		return nil
+	}
+	if !p.expectPeek(token.LBRACE) {
+		return nil
+	}
+	body := p.parseBlockStatement()
+	if body == nil {
+		return nil
+	}
+	return &ast.ForStatement{VarName: varName, Iterable: iterable, Body: body}
 }
 
-func (p *Parser) parseTypeDeclarationWithVisibility(isPublic bool) *ast.TypeDeclaration {
+// parseTypeDeclaration parses 'type Name<Generics> = { ... }'
+func (p *Parser) parseTypeDeclaration() *ast.TypeDeclaration {
 	// currentToken is TYPE
 	if !p.expectPeek(token.IDENT) {
 		return nil
@@ -1119,66 +1181,32 @@ func (p *Parser) parseTypeDeclarationWithVisibility(isPublic bool) *ast.TypeDecl
 		return nil
 	}
 	// expect '{'
-	if !p.expectPeek(token.LBRACE) { // This consumes LBRACE, p.currentToken is now LBRACE
+	if !p.expectPeek(token.LBRACE) {
 		return nil
 	}
-
-	var fields []ast.TypeField
-	// After expectPeek(token.LBRACE), currentToken is LBRACE ("{").
-	// peekToken is the first potential field name (IDENT) or RBRACE ("}").
-	for p.peekToken.Type != token.RBRACE && p.peekToken.Type != token.EOF {
-		// Expect identifier for field name based on peekToken
-		if p.peekToken.Type != token.IDENT {
-			errMsg := fmt.Sprintf("expected field name (IDENT), got %s (literal: '%s') when currentToken was %s (literal: '%s')", p.peekToken.Type, p.peekToken.Literal, p.currentToken.Type, p.currentToken.Literal)
-			p.addDetailedError(errMsg, string(token.IDENT), string(p.peekToken.Type), "in type field declaration", "Ensure field names are valid identifiers.")
-			return nil
-		}
-		p.nextToken() // Consume LBRACE (currentToken) or COMMA (currentToken), making field name the currentToken.
-		fieldName := p.currentToken.Literal
-
-		// Expect COLON after field name
-		if !p.expectPeek(token.COLON) { // Consumes fieldName (currentToken), making COLON the currentToken.
-			p.addDetailedError("expected ':' after field name", ":", string(p.peekToken.Type), "in type field declaration", "Add ':' between field name and type.")
-			return nil
-		}
-
-		// currentToken is COLON. peekToken is the start of the type annotation.
-		if p.peekToken.Type != token.IDENT && p.peekToken.Type != token.FN {
-			p.addDetailedError("expected type identifier or 'fn' for field type", "identifier or fn", string(p.peekToken.Type), "parsing field type", "")
-			return nil
-		}
-		p.nextToken() // Consumes COLON (currentToken), making type annotation start the currentToken.
-
-		fieldType, ok := p.parseTypeAnnotationString() // Consumes tokens for the type. currentToken is last token of type.
-		if !ok {
-			return nil
-		}
-		fields = append(fields, ast.TypeField{Name: fieldName, TypeAnn: fieldType})
-
-		// After parsing a field, currentToken is the last token of the field's type.
-		// peekToken should be COMMA or RBRACE.
-		if p.peekToken.Type == token.COMMA {
-			p.nextToken() // Consumes currentToken (last of type), makes COMMA the currentToken.
-			// If peekToken is RBRACE now, it's a trailing comma. Loop condition will handle it.
-			if p.peekToken.Type == token.RBRACE {
-                 // Trailing comma case, next iteration loop condition p.peekToken.Type != token.RBRACE will be false.
-			} else if p.peekToken.Type != token.IDENT {
-                // If not a trailing comma, next token must be an identifier for the next field
-				p.addDetailedError("expected field name (identifier) after comma", "identifier", string(p.peekToken.Type), "in type declaration", "Ensure a valid field definition follows the comma.")
-				return nil
-            }
-		} else if p.peekToken.Type != token.RBRACE {
-			p.addDetailedError("expected ',' or '}' after field definition", "',' or '}'", string(p.peekToken.Type), "in type declaration", "Separate fields with commas or close the type with '}'.")
-			return nil
+	// skip until matching '}'
+	depth := 1
+	for depth > 0 && p.currentToken.Type != token.EOF {
+		p.nextToken()
+		if p.currentToken.Type == token.LBRACE {
+			depth++
+		} else if p.currentToken.Type == token.RBRACE {
+			depth--
 		}
 	}
+	return &ast.TypeDeclaration{Name: name, Generics: generics, Fields: nil}
+}
 
-	// currentToken is LBRACE if no fields, or the COMMA before a trailing RBRACE, or the last token of the last field type.
-	// peekToken is RBRACE.
-	if !p.expectPeek(token.RBRACE) { // Consumes currentToken, expects peekToken to be RBRACE, then makes RBRACE currentToken.
-		p.addDetailedError("expected '}' to close type declaration", "}", string(p.peekToken.Type), "at end of type declaration", "Ensure the type declaration is correctly closed with '}'.")
+// parseMemberExpression parses property access expressions e.g., obj.field
+func (p *Parser) parseMemberExpression(left ast.Expression) ast.Expression {
+	expr := &ast.MemberExpression{Object: left}
+	// current token is DOT, advance to next (property name)
+	p.nextToken()
+	if p.currentToken.Type != token.IDENT {
+		// Unexpected token, record error and return nil
+		p.addDetailedError("expected property name after '.'", ">IDENT<", p.currentToken.Literal, p.input, "ensure valid identifier follows '.'")
 		return nil
 	}
-
-	return &ast.TypeDeclaration{Name: name, Generics: generics, Fields: fields, IsPublic: isPublic}
+	expr.Property = p.currentToken.Literal
+	return expr
 }

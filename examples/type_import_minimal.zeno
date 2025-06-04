@@ -1,0 +1,6 @@
+import {type Result, ok} from "std/result"
+
+fn main() {
+    let result: Result<int> = ok(42)
+    println("Success!")
+}

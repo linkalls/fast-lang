@@ -109,7 +109,7 @@ func (op UnaryOperator) String() string {
 // LetDeclaration represents let declarations
 type LetDeclaration struct {
 	Name            string
-	TypeAnn         *string  // allow generic type annotations
+	TypeAnn         *string // allow generic type annotations
 	ValueExpression Expression
 }
 
@@ -226,9 +226,9 @@ func (ml *MapLiteral) String() string {
 // ResultLiteral represents a Result literal expression
 // Example: Result{ok: true, value: 42, error: ""}
 type ResultLiteral struct {
-	Ok    bool        // Whether this is a success or error result
-	Value Expression  // The value (for success) or nil (for error)
-	Error string      // The error message (for error) or empty (for success)
+	Ok    bool       // Whether this is a success or error result
+	Value Expression // The value (for success) or nil (for error)
+	Error string     // The error message (for error) or empty (for success)
 }
 
 func (rl *ResultLiteral) expressionNode() {}
@@ -275,10 +275,16 @@ func (ue *UnaryExpression) String() string {
 	return "(" + ue.Operator.String() + ue.Right.String() + ")"
 }
 
+// ImportItem represents a single import item with type information
+type ImportItem struct {
+	Name   string // The name of the imported item
+	IsType bool   // Whether this is a type import
+}
+
 // ImportStatement represents import statements
 type ImportStatement struct {
-	Imports []string // List of imported identifiers
-	Module  string   // Module name to import from
+	Imports []ImportItem // List of imported items
+	Module  string       // Module name to import from
 }
 
 func (is *ImportStatement) statementNode() {}
@@ -288,7 +294,10 @@ func (is *ImportStatement) String() string {
 		if i > 0 {
 			result += ", "
 		}
-		result += imp
+		if imp.IsType {
+			result += "type "
+		}
+		result += imp.Name
 	}
 	result += "} from \"" + is.Module + "\""
 	return result
@@ -335,9 +344,9 @@ func (p *Parameter) String() string {
 // FunctionDefinition represents function definitions
 type FunctionDefinition struct {
 	Name       string
-	Generics   []string  // generic type parameters
+	Generics   []string // generic type parameters
 	Parameters []Parameter
-	ReturnType *string  // allow generic type annotations
+	ReturnType *string // allow generic type annotations
 	Body       []Statement
 	IsPublic   bool // Whether the function is public (pub fn)
 }
@@ -461,6 +470,20 @@ func (ws *WhileStatement) String() string {
 	return "while " + ws.Condition.String() + " " + ws.Block.String()
 }
 
+// ForStatement represents for-in loops
+// Example: for i in [1, 2, 3] { ... }
+type ForStatement struct {
+	VarName  string     // loop variable name
+	Iterable Expression // expression to iterate over (array)
+	Body     *Block     // loop body
+}
+
+func (fs *ForStatement) statementNode() {}
+func (fs *ForStatement) String() string {
+	result := "for " + fs.VarName + " in " + fs.Iterable.String() + " " + fs.Body.String()
+	return result
+}
+
 // TypeField represents a field in a type declaration
 type TypeField struct {
 	Name    string
@@ -487,4 +510,33 @@ func (td *TypeDeclaration) String() string {
 	}
 	result += "}"
 	return result
+}
+
+// StructLiteral represents a typed struct literal expression
+// Example: Result{ok: true, value: 42, error: ""}
+type StructLiteral struct {
+	TypeName string                // The name of the struct type
+	Fields   map[string]Expression // Field name to value mapping
+}
+
+func (sl *StructLiteral) expressionNode() {}
+func (sl *StructLiteral) String() string {
+	var fields []string
+	for name, value := range sl.Fields {
+		if value != nil {
+			fields = append(fields, name+": "+value.String())
+		}
+	}
+	return sl.TypeName + "{" + strings.Join(fields, ", ") + "}"
+}
+
+// MemberExpression represents property access (e.g., obj.field)
+type MemberExpression struct {
+	Object   Expression
+	Property string
+}
+
+func (me *MemberExpression) expressionNode() {}
+func (me *MemberExpression) String() string {
+	return fmt.Sprintf("%s.%s", me.Object.String(), me.Property)
 }

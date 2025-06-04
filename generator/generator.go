@@ -40,10 +40,10 @@ type Generator struct {
 	usedVars     map[string]bool
 	declaredFns  map[string]string
 	usedFns      map[string]bool
+	importTypes  map[string][]string // 型インポートの追跡
 	userModules  map[string]map[string]string
 	moduleASTs   map[string]*ast.Program
 	standardLibs map[string]map[string]string
-	importedTypes map[string]map[string]bool
 	currentDir   string
 	symbolTable  *types.SymbolTable
 	program      *ast.Program
@@ -59,8 +59,8 @@ func NewGenerator() *Generator {
 		userModules:  make(map[string]map[string]string),
 		moduleASTs:   make(map[string]*ast.Program),
 		standardLibs: make(map[string]map[string]string),
-		importedTypes: make(map[string]map[string]bool),
 		symbolTable:  types.NewSymbolTable(nil),
+		importTypes:  make(map[string][]string),
 	}
 	return g
 }
@@ -119,6 +119,22 @@ func (g *Generator) generateProgram(program *ast.Program) (string, error) {
 			builder.WriteString("\tError string\n")
 			builder.WriteString("}\n\n")
 			break
+		}
+	}
+
+	// Generate type definitions for imported types
+	for modulePath, typeNames := range g.importTypes {
+		if moduleAST, exists := g.moduleASTs[modulePath]; exists {
+			for _, stmt := range moduleAST.Statements {
+				if typeDecl, ok := stmt.(*ast.TypeDeclaration); ok {
+					for _, typeName := range typeNames {
+						if typeDecl.Name == typeName {
+							// Generate a simple type alias for now
+							builder.WriteString(fmt.Sprintf("type %s map[string]interface{}\n\n", typeName))
+						}
+					}
+				}
+			}
 		}
 	}
 	g.generateNativeFunctionHelpers(&builder)
@@ -370,6 +386,19 @@ func (g *Generator) generateStatement(stmt ast.Statement, builder *strings.Build
 			return err
 		}
 		builder.WriteString("\n")
+	case *ast.ForStatement:
+		// s は *ast.ForStatement 型としてバインドされるので、そのまま利用
+		builder.WriteString(indent(indentLevel))
+		// Zeno の for-in を Go の range ループに変換
+		builder.WriteString("for _, " + s.VarName + " := range ")
+		if err := g.generateExpression(s.Iterable, builder); err != nil {
+			return err
+		}
+		builder.WriteString(" ")
+		if err := g.generateBlock(s.Body, builder, indentLevel); err != nil {
+			return err
+		}
+		builder.WriteString("\n")
 	default:
 		return GenerationError{Message: fmt.Sprintf("Unsupported statement type: %T", stmt)}
 	}
@@ -393,6 +422,16 @@ func (g *Generator) generateExpression(expr ast.Expression, builder *strings.Bui
 		}
 	case *ast.Identifier:
 		builder.WriteString(e.Value)
+
+	case *ast.MemberExpression:
+		// Generate map or struct field access as index into map
+		if err := g.generateExpression(e.Object, builder); err != nil {
+			return err
+		}
+		builder.WriteString("[")
+		builder.WriteString(strconv.Quote(e.Property))
+		builder.WriteString("]")
+
 	case *ast.ArrayLiteral:
 		if len(e.Elements) == 0 {
 			builder.WriteString("[]interface{}{}") // Default for empty array
@@ -466,129 +505,70 @@ func (g *Generator) generateExpression(expr ast.Expression, builder *strings.Bui
 		}
 		builder.WriteString(")")
 	case *ast.FunctionCall:
+		// Check if function is imported first, before special-casing
+		var functionName string
+		if goName, exists := g.declaredFns[e.Name]; exists {
+			functionName = goName
+		} else {
+			// Special-case Zeno print and println only if not imported
+			if e.Name == "println" {
+				builder.WriteString("fmt.Println(")
+				for i, arg := range e.Arguments {
+					if i > 0 {
+						builder.WriteString(", ")
+					}
+					if err := g.generateExpression(arg, builder); err != nil {
+						return err
+					}
+				}
+				builder.WriteString(")")
+				return nil
+			}
+			if e.Name == "print" {
+				builder.WriteString("fmt.Print(")
+				for i, arg := range e.Arguments {
+					if i > 0 {
+						builder.WriteString(", ")
+					}
+					if err := g.generateExpression(arg, builder); err != nil {
+						return err
+					}
+				}
+				builder.WriteString(")")
+				return nil
+			}
+			functionName = e.Name
+		}
 		if err := g.validateImports(e.Name); err != nil {
 			return err
 		}
-		if strings.HasPrefix(e.Name, "__native_") {
-			baseName := strings.TrimPrefix(e.Name, "__native_")
-			goFuncName := "zenoNative" + snakeToCamel(baseName)
-			builder.WriteString(goFuncName)
-			builder.WriteString("(")
-			for i, arg := range e.Arguments {
-				if i > 0 {
-					builder.WriteString(", ")
-				}
-				if err := g.generateExpression(arg, builder); err != nil {
-					return err
-				}
-			}
-			builder.WriteString(")")
-			return nil
-		}
-		functionName := e.Name
-		if goFuncName, exists := g.declaredFns[functionName]; exists {
-			functionName = goFuncName
-		} else {
-			for module, functions := range g.userModules {
-				if goFuncName, exists := functions[functionName]; exists {
-					if importedFuncs, imported := g.imports[module]; imported {
-						for _, importedFunc := range importedFuncs {
-							if importedFunc == functionName {
-								functionName = goFuncName
-								break
-							}
-						}
-					}
-					break
-				}
-			}
-			for module, functions := range g.standardLibs {
-				if goFuncName, exists := functions[functionName]; exists {
-					if importedFuncs, imported := g.imports[module]; imported {
-						for _, importedFunc := range importedFuncs {
-							if importedFunc == functionName {
-								functionName = goFuncName
-								break
-							}
-						}
-					}
-					break
-				}
-			}
-		}
-
-		// Check if this is a variadic function call (print or println)
-		isVariadicFunc := functionName == "print" || functionName == "println" ||
-			functionName == "zenoNativePrintVariadic" || functionName == "zenoNativePrintlnVariadic"
-
-		isVariadicWithFirstFunc := functionName == "zenoNativePrintVariadicWithFirst" || functionName == "zenoNativePrintlnVariadicWithFirst"
-
 		builder.WriteString(functionName)
 		builder.WriteString("(")
-
-		if isVariadicWithFirstFunc && len(e.Arguments) > 0 {
-			// For variadic functions that require at least one argument
-			// Pass first argument directly, then wrap rest in a slice
-			if err := g.generateExpression(e.Arguments[0], builder); err != nil {
+		// generate arguments
+		for i, arg := range e.Arguments {
+			if i > 0 {
+				builder.WriteString(", ")
+			}
+			if err := g.generateExpression(arg, builder); err != nil {
 				return err
-			}
-			builder.WriteString(", []interface{}{")
-			for i := 1; i < len(e.Arguments); i++ {
-				if i > 1 {
-					builder.WriteString(", ")
-				}
-				if err := g.generateExpression(e.Arguments[i], builder); err != nil {
-					return err
-				}
-			}
-			builder.WriteString("}")
-		} else if isVariadicFunc && len(e.Arguments) > 0 {
-			// For variadic functions, wrap arguments in a slice
-			builder.WriteString("[]interface{}{")
-			for i, arg := range e.Arguments {
-				if i > 0 {
-					builder.WriteString(", ")
-				}
-				if err := g.generateExpression(arg, builder); err != nil {
-					return err
-				}
-			}
-			builder.WriteString("}")
-		} else {
-			// For regular functions, pass arguments normally
-			for i, arg := range e.Arguments {
-				if i > 0 {
-					builder.WriteString(", ")
-				}
-				if err := g.generateExpression(arg, builder); err != nil {
-					return err
-				}
 			}
 		}
 		builder.WriteString(")")
-	case *ast.MemberAccessExpression:
-		if err := g.generateExpression(e.Expression, builder); err != nil { // Corrected: e.Object to e.Expression
-			return err
+	case *ast.StructLiteral:
+		// Generate struct literal as map[string]interface{}
+		builder.WriteString("map[string]interface{}{")
+		count := 0
+		for fieldName, valueExpr := range e.Fields {
+			if count > 0 {
+				builder.WriteString(", ")
+			}
+			builder.WriteString(fmt.Sprintf("\"%s\": ", fieldName))
+			if err := g.generateExpression(valueExpr, builder); err != nil {
+				return err
+			}
+			count++
 		}
-		builder.WriteString(".")
-
-		// e.Field is already of type *ast.Identifier as per ast/ast.go
-		zenoFieldName := e.Field.Value
-
-		// Convert Zeno field name (typically camelCase or snake_case) to Go's exported field name (UpperCamelCase)
-		// For now, a simple capitalization of the first letter.
-		// This covers 'ok' -> 'Ok', 'value' -> 'Value', 'error' -> 'Error' for the Result type.
-		// It also provides a general convention for other struct field accesses.
-		goFieldName := ""
-		if len(zenoFieldName) > 0 {
-			goFieldName = strings.ToUpper(string(zenoFieldName[0])) + zenoFieldName[1:]
-		} else {
-			// Should not happen for valid identifiers (parser should ensure Field is a valid Identifier)
-			return GenerationError{Message: "Empty member identifier in MemberAccessExpression"}
-		}
-		builder.WriteString(goFieldName)
-		// No else needed because the parser ensures e.Field is *ast.Identifier.
-		// If it could be something else, the AST definition would be different.
+		builder.WriteString("}")
 	default:
 		return GenerationError{Message: fmt.Sprintf("Unsupported expression type: %T", expr)}
 	}
@@ -611,7 +591,7 @@ func (g *Generator) generateCondition(expr ast.Expression, builder *strings.Buil
 		return nil
 	case *ast.Identifier:
 		varType := g.getVariableType(e.Value)
-		fmt.Printf("DEBUG: Variable %s has type %v\n", e.Value, varType)
+		// fmt.Printf("DEBUG: Variable %s has type %v\n", e.Value, varType)
 		switch varType {
 		case types.BoolType:
 			return g.generateExpression(expr, builder)
@@ -665,14 +645,26 @@ func (g *Generator) collectImportsAndDeclarations(stmt ast.Statement) error {
 	// ... (content remains the same as fetched in Turn 61) ...
 	switch s := stmt.(type) {
 	case *ast.ImportStatement:
-		g.imports[s.Module] = s.Imports
-		fmt.Printf("DEBUG: collectImportsAndDeclarations: Registered import: module='%s', imports='%v'\n", s.Module, s.Imports)
+		// 関数インポートと型インポートを分離
+		var names []string
+		var typeNames []string
+		for _, imp := range s.Imports {
+			if imp.IsType {
+				typeNames = append(typeNames, imp.Name)
+			} else {
+				names = append(names, imp.Name)
+			}
+		}
+		g.imports[s.Module] = names
+		if len(typeNames) > 0 {
+			g.importTypes[s.Module] = typeNames
+		}
 		if strings.HasPrefix(s.Module, "std/") {
-			if err := g.processStdModule(s.Module, s.Imports); err != nil {
+			if err := g.processStdModule(s.Module, names, typeNames); err != nil {
 				return err
 			}
 		} else if strings.HasPrefix(s.Module, "./") || strings.HasPrefix(s.Module, "../") {
-			if err := g.processUserModule(s.Module, s.Imports); err != nil {
+			if err := g.processUserModule(s.Module, names); err != nil {
 				return err
 			}
 		}
@@ -744,28 +736,13 @@ func (g *Generator) markVariableUsage(expr ast.Expression) {
 	case *ast.UnaryExpression:
 		g.markVariableUsage(e.Right)
 	case *ast.FunctionCall:
-		// Check if this is an imported type before marking as used function
-		isImportedType := false
-		for modulePath, importedSymbols := range g.imports {
-			if typesInModule, ok := g.importedTypes[modulePath]; ok {
-				for _, importedSymbol := range importedSymbols {
-					if importedSymbol == e.Name && typesInModule[e.Name] {
-						isImportedType = true
-						break
-					}
-				}
-			}
-			if isImportedType {
-				break
-			}
-		}
-		if !isImportedType {
-			g.usedFns[e.Name] = true
-		}
-
+		g.usedFns[e.Name] = true
 		for _, arg := range e.Arguments {
 			g.markVariableUsage(arg)
 		}
+	case *ast.MemberExpression:
+		// Mark the object variable as used
+		g.markVariableUsage(e.Object)
 	}
 }
 
@@ -825,38 +802,11 @@ func (g *Generator) isPublicFunction(fnName string) bool {
 }
 
 func (g *Generator) validateImports(functionName string) error {
-	fmt.Printf("DEBUG_ENTRY: validateImports: Entered with functionName='%s'\n", functionName) // ABSOLUTE FIRST LINE
 	// ... (content remains the same as fetched in Turn 61) ...
-	fmt.Printf("DEBUG: validateImports: Validating '%s'\n", functionName) // Existing print
 	builtinFunctions := map[string]bool{}
 	if builtinFunctions[functionName] {
 		return nil
 	}
-
-	// Debug state before the main loops for "Result"
-	if functionName == "Result" {
-		fmt.Printf("DEBUG_STATE: validateImports: Current g.imports for functionName 'Result': %v\n", g.imports)
-		fmt.Printf("DEBUG_STATE: validateImports: Current g.importedTypes for functionName 'Result': %v\n", g.importedTypes)
-	}
-
-	// Check if the name refers to an imported type
-	for modulePath, importedSymbols := range g.imports {
-		fmt.Printf("DEBUG: validateImports: Checking imported module '%s' with symbols %v\n", modulePath, importedSymbols)
-		if typesInModule, ok := g.importedTypes[modulePath]; ok {
-			fmt.Printf("DEBUG: validateImports: Found types for module '%s': %v\n", modulePath, typesInModule)
-			for _, importedSymbol := range importedSymbols {
-				if importedSymbol == functionName && typesInModule[functionName] {
-					fmt.Printf("DEBUG: validateImports: '%s' IS an imported type from '%s'. Returning nil.\n", functionName, modulePath)
-					return nil // It's a valid imported type
-				}
-			}
-		} else {
-			fmt.Printf("DEBUG: validateImports: No types found in g.importedTypes for module '%s'\n", modulePath)
-		}
-	}
-
-	fmt.Printf("DEBUG: validateImports: '%s' not found as an imported type. Checking standardLibs and userModules.\n", functionName)
-	// If not an imported type, check standard and user modules for functions
 	for module, functions := range g.standardLibs {
 		if _, exists := functions[functionName]; exists {
 			if importedFuncs, imported := g.imports[module]; imported {
@@ -866,7 +816,6 @@ func (g *Generator) validateImports(functionName string) error {
 					}
 				}
 			}
-			fmt.Printf("DEBUG: validateImports: Error: Function '%s' is not imported from '%s' (standardLibs).\n", functionName, module)
 			return GenerationError{Message: fmt.Sprintf("Function '%s' is not imported from '%s'", functionName, module)}
 		}
 	}
@@ -879,7 +828,6 @@ func (g *Generator) validateImports(functionName string) error {
 					}
 				}
 			}
-			fmt.Printf("DEBUG: validateImports: Error: Function '%s' is not imported from '%s' (userModules).\n", functionName, module)
 			return GenerationError{Message: fmt.Sprintf("Function '%s' is not imported from '%s'", functionName, module)}
 		}
 	}
@@ -909,9 +857,6 @@ func (g *Generator) processUserModule(modulePath string, importedFunctions []str
 		return GenerationError{Message: fmt.Sprintf("Parse errors in module '%s': %v", zenoFilePath, p.Errors())}
 	}
 	publicFunctions := make(map[string]string)
-	if _, ok := g.importedTypes[modulePath]; !ok {
-		g.importedTypes[modulePath] = make(map[string]bool)
-	}
 	for _, stmt := range program.Statements {
 		if funcDef, ok := stmt.(*ast.FunctionDefinition); ok && funcDef.IsPublic {
 			goFuncName := funcDef.Name
@@ -919,94 +864,27 @@ func (g *Generator) processUserModule(modulePath string, importedFunctions []str
 				goFuncName = strings.ToUpper(string(goFuncName[0])) + goFuncName[1:]
 			}
 			publicFunctions[funcDef.Name] = goFuncName
-		} else if typeDecl, ok := stmt.(*ast.TypeDeclaration); ok { // Removed typeDecl.IsPublic check
-			g.importedTypes[modulePath][typeDecl.Name] = true
-			fmt.Printf("DEBUG: processUserModule: Registered type '%s' for module '%s'\n", typeDecl.Name, modulePath)
 		}
 	}
-	fmt.Printf("DEBUG: processUserModule: Final types for module '%s': %v\n", modulePath, g.importedTypes[modulePath])
-	fmt.Printf("DEBUG: processUserModule: Final functions for module '%s': %v\n", modulePath, publicFunctions)
-	for _, importedSym := range importedFunctions { // Renamed for clarity from importedFunc
-		if importedSym == "Result" { // Specific debug for "Result"
-			fmt.Printf("DEBUG_PSM_RESULT: Validating importedSym 'Result' in module '%s' (processUserModule)\n", modulePath)
-			if typesInThisModule, ok := g.importedTypes[modulePath]; ok {
-				fmt.Printf("DEBUG_PSM_RESULT: g.importedTypes[modulePath] (for '%s') exists. Content: %v\n", modulePath, typesInThisModule)
-				fmt.Printf("DEBUG_PSM_RESULT: Keys in typesInThisModule for '%s':\n", modulePath)
-				for typeKey := range typesInThisModule {
-					fmt.Printf("DEBUG_PSM_RESULT:   - Key: \"%s\" (len %d), importedSym: \"%s\" (len %d), Equal: %t\n",
-						typeKey, len(typeKey), importedSym, len(importedSym), typeKey == importedSym)
-				}
-				lookupResult, found := typesInThisModule[importedSym]
-				fmt.Printf("DEBUG_PSM_RESULT: Lookup typesInThisModule[\"%s\"]: Found=%t, Value=%t\n", importedSym, found, lookupResult)
-			} else {
-				fmt.Printf("DEBUG_PSM_RESULT: g.importedTypes[modulePath] (for '%s') does NOT exist.\n", modulePath)
-			}
+	for _, importedFunc := range importedFunctions {
+		if _, exists := publicFunctions[importedFunc]; !exists {
+			return GenerationError{Message: fmt.Sprintf("Function '%s' is not exported from module '%s'", importedFunc, modulePath)}
 		}
-
-		isType := false
-		if typesInThisModule, ok := g.importedTypes[modulePath]; ok {
-			if typesInThisModule[importedSym] {
-				isType = true
-			}
-		}
-		if isType {
-			continue
-		}
-
-		if _, exists := publicFunctions[importedSym]; !exists { // Check if it's a public function
-			return GenerationError{Message: fmt.Sprintf("Function '%s' is not exported from module '%s'", importedSym, modulePath)}
-		}
+		// Add imported function to declaredFns for proper name resolution
+		g.declaredFns[importedFunc] = publicFunctions[importedFunc]
 	}
 	g.userModules[modulePath] = publicFunctions
 	g.moduleASTs[modulePath] = program
 	return nil
 }
 
-func (g *Generator) findStdLibPath(moduleFileName string) (string, error) {
-    exePath, err := os.Executable()
-    if err != nil {
-        return "", fmt.Errorf("failed to get executable path: %w", err)
-    }
-    currentDir := filepath.Dir(exePath)
-    for i := 0; i < 5; i++ { // Check current dir and up to 4 parent levels
-        potentialStdDir := filepath.Join(currentDir, "std")
-        if info, errStat := os.Stat(potentialStdDir); errStat == nil && info.IsDir() {
-            moduleFullPath := filepath.Join(potentialStdDir, moduleFileName)
-            if _, errStatFile := os.Stat(moduleFullPath); errStatFile == nil {
-                return moduleFullPath, nil
-            }
-        }
-        parentDir := filepath.Dir(currentDir)
-        if parentDir == currentDir { // Reached top or error
-            break
-        }
-        currentDir = parentDir
-    }
-    return "", fmt.Errorf("std library module '%s' not found relative to executable path", moduleFileName)
-}
-
-func (g *Generator) processStdModule(modulePath string, importedFunctions []string) error {
+func (g *Generator) processStdModule(modulePath string, importedFunctions []string, importedTypes []string) error {
+	// ... (content remains the same as fetched in Turn 61) ...
 	moduleShortName := strings.TrimPrefix(modulePath, "std/")
-	if !strings.HasSuffix(moduleShortName, ".zeno") {
-		moduleShortName += ".zeno"
-	}
-
-	zenoFilePath, err := g.findStdLibPath(moduleShortName)
-	if err != nil {
-		// Fallback to direct relative path (e.g., "std/module.zeno")
-		fallbackPath := filepath.Join("std", moduleShortName)
-		if _, statErr := os.Stat(fallbackPath); statErr == nil {
-			zenoFilePath = fallbackPath
-			err = nil // Clear previous error from findStdLibPath
-		} else {
-			// Both findStdLibPath and fallback failed
-			return GenerationError{Message: fmt.Sprintf("Failed to find std module '%s': using exe-relative search failed (%v), and fallback search failed (%v)", modulePath, err, statErr)}
-		}
-	}
-
+	zenoFilePath := filepath.Join("std", moduleShortName+".zeno")
 	content, err := os.ReadFile(zenoFilePath)
 	if err != nil {
-		return GenerationError{Message: fmt.Sprintf("Failed to read module file '%s' (path: %s): %v", modulePath, zenoFilePath, err)}
+		return GenerationError{Message: fmt.Sprintf("Failed to read module file '%s': %v", zenoFilePath, err)}
 	}
 	l := lexer.New(string(content))
 	p := parser.New(l)
@@ -1015,9 +893,8 @@ func (g *Generator) processStdModule(modulePath string, importedFunctions []stri
 		return GenerationError{Message: fmt.Sprintf("Parse errors in module '%s': %v", zenoFilePath, p.Errors())}
 	}
 	publicFunctions := make(map[string]string)
-	if _, ok := g.importedTypes[modulePath]; !ok {
-		g.importedTypes[modulePath] = make(map[string]bool)
-	}
+	publicTypes := make(map[string]string)
+
 	for _, stmt := range program.Statements {
 		if funcDef, ok := stmt.(*ast.FunctionDefinition); ok && funcDef.IsPublic {
 			goFuncName := funcDef.Name
@@ -1025,45 +902,45 @@ func (g *Generator) processStdModule(modulePath string, importedFunctions []stri
 				goFuncName = strings.ToUpper(string(goFuncName[0])) + goFuncName[1:]
 			}
 			publicFunctions[funcDef.Name] = goFuncName
-		} else if typeDecl, ok := stmt.(*ast.TypeDeclaration); ok { // Removed typeDecl.IsPublic check
-			g.importedTypes[modulePath][typeDecl.Name] = true
-			fmt.Printf("DEBUG: processStdModule: Registered type '%s' for module '%s'\n", typeDecl.Name, modulePath)
+		} else if typeDef, ok := stmt.(*ast.TypeDeclaration); ok {
+			// Handle type declarations - assume all types in std modules are public
+			publicTypes[typeDef.Name] = typeDef.Name
 		}
 	}
-	fmt.Printf("DEBUG: processStdModule: Final types for module '%s': %v\n", modulePath, g.importedTypes[modulePath])
-	fmt.Printf("DEBUG: processStdModule: Final functions for module '%s': %v\n", modulePath, publicFunctions)
-	for _, importedSym := range importedFunctions { // Renamed for clarity from importedFunc
-		if importedSym == "Result" { // Specific debug for "Result"
-			fmt.Printf("DEBUG_PSM_RESULT: Validating importedSym 'Result' in module '%s' (processStdModule)\n", modulePath)
-			if typesInThisModule, ok := g.importedTypes[modulePath]; ok {
-				fmt.Printf("DEBUG_PSM_RESULT: g.importedTypes[modulePath] (for '%s') exists. Content: %v\n", modulePath, typesInThisModule)
-				fmt.Printf("DEBUG_PSM_RESULT: Keys in typesInThisModule for '%s':\n", modulePath)
-				for typeKey := range typesInThisModule {
-					fmt.Printf("DEBUG_PSM_RESULT:   - Key: \"%s\" (len %d), importedSym: \"%s\" (len %d), Equal: %t\n",
-						typeKey, len(typeKey), importedSym, len(importedSym), typeKey == importedSym)
-				}
-				lookupResult, found := typesInThisModule[importedSym]
-				fmt.Printf("DEBUG_PSM_RESULT: Lookup typesInThisModule[\"%s\"]: Found=%t, Value=%t\n", importedSym, found, lookupResult)
-			} else {
-				fmt.Printf("DEBUG_PSM_RESULT: g.importedTypes[modulePath] (for '%s') does NOT exist.\n", modulePath)
+
+	for _, importedFunc := range importedFunctions {
+		if _, exists := publicFunctions[importedFunc]; !exists {
+			return GenerationError{Message: fmt.Sprintf("Function '%s' is not exported from module '%s'", importedFunc, modulePath)}
+		}
+		// Add imported function to declaredFns for proper name resolution
+		g.declaredFns[importedFunc] = publicFunctions[importedFunc]
+	}
+
+	// Auto-import dependent types for std/result functions
+	if modulePath == "std/result" && len(importedFunctions) > 0 {
+		// If importing functions from std/result, auto-import Result type
+		resultTypeAlreadyImported := false
+		for _, typeName := range importedTypes {
+			if typeName == "Result" {
+				resultTypeAlreadyImported = true
+				break
 			}
 		}
-
-		isType := false
-		if typesInThisModule, ok := g.importedTypes[modulePath]; ok {
-			if typesInThisModule[importedSym] {
-				isType = true
+		if !resultTypeAlreadyImported {
+			// Auto-add Result type to importTypes
+			if g.importTypes[modulePath] == nil {
+				g.importTypes[modulePath] = []string{}
 			}
-		}
-		if isType {
-			continue
-		}
-
-		if _, exists := publicFunctions[importedSym]; !exists { // Check if it's a public function
-			return GenerationError{Message: fmt.Sprintf("Function '%s' is not exported from module '%s'", importedSym, modulePath)}
+			g.importTypes[modulePath] = append(g.importTypes[modulePath], "Result")
 		}
 	}
-	g.userModules[modulePath] = publicFunctions
+
+	for _, importedType := range importedTypes {
+		if _, exists := publicTypes[importedType]; !exists {
+			return GenerationError{Message: fmt.Sprintf("Type '%s' is not exported from module '%s'", importedType, modulePath)}
+		}
+	}
+	g.standardLibs[modulePath] = publicFunctions
 	g.moduleASTs[modulePath] = program
 	return nil
 }
@@ -1159,7 +1036,7 @@ func (g *Generator) inferType(expr ast.Expression) types.Type {
 		if funcDef != nil && funcDef.ReturnType != nil {
 			return g.mapASTTypeToType(*funcDef.ReturnType)
 		}
-		fmt.Printf("WARN: Could not accurately determine return type for function call '%s'. Defaulting to IntType.\n", e.Name)
+		// fmt.Printf("WARN: Could not accurately determine return type for function call '%s'. Defaulting to IntType.\n", e.Name)
 		return types.IntType
 	case *ast.UnaryExpression:
 		switch e.Operator {
@@ -1168,7 +1045,7 @@ func (g *Generator) inferType(expr ast.Expression) types.Type {
 		case ast.UnaryOpMinus:
 			return g.inferType(e.Right)
 		default:
-			fmt.Printf("WARN: Could not determine type for unary operator '%s', defaulting to IntType.\n", e.Operator.String())
+			// warning: suppressed inference fallback log
 			return types.IntType
 		}
 	}
@@ -1181,10 +1058,10 @@ func (g *Generator) registerVariableWithType(name string, varType types.Type) {
 
 func (g *Generator) getVariableType(name string) types.Type {
 	if symbol, ok := g.symbolTable.Resolve(name); ok {
-		fmt.Printf("DEBUG: Found variable %s with type %v in symbol table\n", name, symbol.Type)
+		// debug: suppress output
 		return symbol.Type
 	}
-	fmt.Printf("DEBUG: Variable %s not found in symbol table, defaulting to IntType\n", name)
+	// debug: suppress output
 	return types.IntType
 }
 

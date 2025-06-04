@@ -40,6 +40,7 @@ const (
 	BREAK    TokenType = "BREAK"
 	CONTINUE TokenType = "CONTINUE"
 	TYPE     TokenType = "TYPE"
+	IN       TokenType = "IN"
 
 	// Operators
 	ASSIGN   TokenType = "="
@@ -75,18 +76,23 @@ const (
 
 // keywords maps string literals to their token types
 var keywords = map[string]TokenType{
-	"let":    LET,
-	"pub":    PUB,
-	"import": IMPORT,
-	"from":   FROM,
-	"if":     IF,
-	"else":   ELSE,
-	"loop":   LOOP,
-	"while":  WHILE,
-	"for":    FOR,
-	"fn":     FN,
-	"return": RETURN,
-	"type":   TYPE,
+	"let":      LET,
+	"pub":      PUB,
+	"import":   IMPORT,
+	"from":     FROM,
+	"if":       IF,
+	"else":     ELSE,
+	"loop":     LOOP,
+	"while":    WHILE,
+	"for":      FOR,
+	"return":   RETURN,
+	"in":       IN,
+	"fn":       FN,
+	"true":     TRUE,
+	"false":    FALSE,
+	"break":    BREAK,
+	"continue": CONTINUE,
+	"type":     TYPE,
 }
 
 // LookupIdent checks if the identifier is a keyword

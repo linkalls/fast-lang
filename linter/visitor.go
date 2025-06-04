@@ -2,6 +2,7 @@ package linter
 
 import (
 	"fmt" // For potential error formatting in Walk later if needed
+
 	"github.com/linkalls/zeno-lang/ast"
 )
 
@@ -27,7 +28,8 @@ type Visitor interface {
 	VisitBinaryExpression(node *ast.BinaryExpression) error
 	VisitUnaryExpression(node *ast.UnaryExpression) error
 	VisitArrayLiteral(node *ast.ArrayLiteral) error   // Added
-	VisitMapLiteral(node *ast.MapLiteral) error     // Added
+	VisitMapLiteral(node *ast.MapLiteral) error       // Added
+	VisitStructLiteral(node *ast.StructLiteral) error // Added
 	// Note: ast.Parameter is not typically visited standalone by this kind of walker,
 	// it's part of FunctionDefinition. Similarly for ElseIfClause.
 }
@@ -192,6 +194,16 @@ func Walk(node ast.Node, visitor Visitor) error {
 		// The visitor's VisitMapLiteral method is responsible for walking children (keys/values)
 		// and applying rules.
 		err = visitor.VisitMapLiteral(n)
+	case *ast.StructLiteral:
+		if err = visitor.VisitStructLiteral(n); err != nil {
+			return err
+		}
+		// Walk through struct literal field values
+		for _, fieldValue := range n.Fields {
+			if err = Walk(fieldValue, visitor); err != nil {
+				return fmt.Errorf("in struct literal field value: %w", err)
+			}
+		}
 	default:
 		// This case should ideally not be hit if all ast.Node types are covered.
 		// It implies a new AST node was added but not handled in Walk.
