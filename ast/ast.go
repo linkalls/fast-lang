@@ -516,3 +516,14 @@ func (sl *StructLiteral) String() string {
 	}
 	return sl.TypeName + "{" + strings.Join(fields, ", ") + "}"
 }
+
+// MemberExpression represents property access (e.g., obj.field)
+type MemberExpression struct {
+	Object   Expression
+	Property string
+}
+
+func (me *MemberExpression) expressionNode() {}
+func (me *MemberExpression) String() string {
+	return fmt.Sprintf("%s.%s", me.Object.String(), me.Property)
+}

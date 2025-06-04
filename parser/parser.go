@@ -81,6 +81,8 @@ var precedences = map[token.TokenType]int{
 	token.MULTIPLY: PRODUCT,
 	token.LPAREN:   CALL,
 	token.LBRACE:   CALL, // For struct literals
+	// Add dot operator for property access with call-level precedence
+	token.DOT:      CALL,
 }
 
 // Parser holds the state for parsing tokens into an AST
@@ -187,6 +189,8 @@ func New(l *lexer.Lexer) *Parser {
 		token.OR:       p.parseInfixExpression,
 		token.LPAREN:   p.parseFunctionCall,
 		token.LBRACE:   p.parseStructLiteral, // Added for struct literals
+		// Add member access operator
+		token.DOT:      p.parseMemberExpression,
 	}
 	p.nextToken()
 	p.nextToken()
@@ -1191,4 +1195,18 @@ func (p *Parser) parseTypeDeclaration() *ast.TypeDeclaration {
 		}
 	}
 	return &ast.TypeDeclaration{Name: name, Generics: generics, Fields: nil}
+}
+
+// parseMemberExpression parses property access expressions e.g., obj.field
+func (p *Parser) parseMemberExpression(left ast.Expression) ast.Expression {
+	expr := &ast.MemberExpression{Object: left}
+	// current token is DOT, advance to next (property name)
+	p.nextToken()
+	if p.currentToken.Type != token.IDENT {
+		// Unexpected token, record error and return nil
+		p.addDetailedError("expected property name after '.'", ">IDENT<", p.currentToken.Literal, p.input, "ensure valid identifier follows '.'")
+		return nil
+	}
+	expr.Property = p.currentToken.Literal
+	return expr
 }

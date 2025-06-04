@@ -422,6 +422,16 @@ func (g *Generator) generateExpression(expr ast.Expression, builder *strings.Bui
 		}
 	case *ast.Identifier:
 		builder.WriteString(e.Value)
+
+	case *ast.MemberExpression:
+		// Generate map or struct field access as index into map
+		if err := g.generateExpression(e.Object, builder); err != nil {
+			return err
+		}
+		builder.WriteString("[")
+		builder.WriteString(strconv.Quote(e.Property))
+		builder.WriteString("]")
+
 	case *ast.ArrayLiteral:
 		if len(e.Elements) == 0 {
 			builder.WriteString("[]interface{}{}") // Default for empty array
@@ -730,6 +740,9 @@ func (g *Generator) markVariableUsage(expr ast.Expression) {
 		for _, arg := range e.Arguments {
 			g.markVariableUsage(arg)
 		}
+	case *ast.MemberExpression:
+		// Mark the object variable as used
+		g.markVariableUsage(e.Object)
 	}
 }
 

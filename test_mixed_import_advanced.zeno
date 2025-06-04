@@ -4,6 +4,6 @@ pub fn main() {
     let success_result = ok("Success!")
     let error_result = error("Something went wrong")
     
-    println("Success:", success_result)
-    println("Error:", error_result)
+    println("Success:", success_result.ok)
+    println("Error:", error_result.error)
 }
