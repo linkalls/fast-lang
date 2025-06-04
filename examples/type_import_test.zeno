@@ -1,0 +1,7 @@
+import {type Result, ok} from "std/result"
+
+fn main() {
+    let r: Result = ok("test value")
+    println("Type import test successful")
+    println(r)
+}
