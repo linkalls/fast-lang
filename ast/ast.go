@@ -502,8 +502,8 @@ func (td *TypeDeclaration) String() string {
 // StructLiteral represents a typed struct literal expression
 // Example: Result{ok: true, value: 42, error: ""}
 type StructLiteral struct {
-	TypeName string                          // The name of the struct type
-	Fields   map[string]Expression           // Field name to value mapping
+	TypeName string                // The name of the struct type
+	Fields   map[string]Expression // Field name to value mapping
 }
 
 func (sl *StructLiteral) expressionNode() {}

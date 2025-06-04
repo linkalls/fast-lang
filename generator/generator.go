@@ -40,7 +40,7 @@ type Generator struct {
 	usedVars     map[string]bool
 	declaredFns  map[string]string
 	usedFns      map[string]bool
-	importTypes  map[string][]string  // 型インポートの追跡
+	importTypes  map[string][]string // 型インポートの追跡
 	userModules  map[string]map[string]string
 	moduleASTs   map[string]*ast.Program
 	standardLibs map[string]map[string]string
@@ -121,7 +121,7 @@ func (g *Generator) generateProgram(program *ast.Program) (string, error) {
 			break
 		}
 	}
-	
+
 	// Generate type definitions for imported types
 	for modulePath, typeNames := range g.importTypes {
 		if moduleAST, exists := g.moduleASTs[modulePath]; exists {
@@ -894,7 +894,7 @@ func (g *Generator) processStdModule(modulePath string, importedFunctions []stri
 	}
 	publicFunctions := make(map[string]string)
 	publicTypes := make(map[string]string)
-	
+
 	for _, stmt := range program.Statements {
 		if funcDef, ok := stmt.(*ast.FunctionDefinition); ok && funcDef.IsPublic {
 			goFuncName := funcDef.Name
@@ -907,7 +907,7 @@ func (g *Generator) processStdModule(modulePath string, importedFunctions []stri
 			publicTypes[typeDef.Name] = typeDef.Name
 		}
 	}
-	
+
 	for _, importedFunc := range importedFunctions {
 		if _, exists := publicFunctions[importedFunc]; !exists {
 			return GenerationError{Message: fmt.Sprintf("Function '%s' is not exported from module '%s'", importedFunc, modulePath)}
@@ -915,7 +915,7 @@ func (g *Generator) processStdModule(modulePath string, importedFunctions []stri
 		// Add imported function to declaredFns for proper name resolution
 		g.declaredFns[importedFunc] = publicFunctions[importedFunc]
 	}
-	
+
 	// Auto-import dependent types for std/result functions
 	if modulePath == "std/result" && len(importedFunctions) > 0 {
 		// If importing functions from std/result, auto-import Result type
@@ -934,7 +934,7 @@ func (g *Generator) processStdModule(modulePath string, importedFunctions []stri
 			g.importTypes[modulePath] = append(g.importTypes[modulePath], "Result")
 		}
 	}
-	
+
 	for _, importedType := range importedTypes {
 		if _, exists := publicTypes[importedType]; !exists {
 			return GenerationError{Message: fmt.Sprintf("Type '%s' is not exported from module '%s'", importedType, modulePath)}

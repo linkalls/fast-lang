@@ -1,8 +1,9 @@
 package linter
 
 import (
-	"fmt" // For potential error formatting
+	"fmt"     // For potential error formatting
 	"strings" // Added for strings.HasPrefix
+
 	"github.com/linkalls/zeno-lang/ast"
 )
 
@@ -22,8 +23,8 @@ func (l *Linter) Lint(program *ast.Program, filepath string) ([]Issue, error) {
 	l.issues = []Issue{} // Reset issues for this run
 
 	visitor := &linterVisitor{
-		linter:         l,
-		filepath:       filepath,
+		linter:              l,
+		filepath:            filepath,
 		program:             program,
 		declaredVars:        make(map[string]ast.Node),
 		usedVars:            make(map[string]bool),
@@ -74,15 +75,15 @@ func (l *Linter) RegisterRule(rule Rule) {
 // --- linterVisitor Implementation ---
 
 type linterVisitor struct {
-	linter         *Linter
-	filepath       string
-	program        *ast.Program
-	declaredVars        map[string]ast.Node // var name -> declaration node (for position)
-	usedVars            map[string]bool     // var name -> true if used
+	linter              *Linter
+	filepath            string
+	program             *ast.Program
+	declaredVars        map[string]ast.Node                // var name -> declaration node (for position)
+	usedVars            map[string]bool                    // var name -> true if used
 	declaredFns         map[string]*ast.FunctionDefinition // Zeno fn name -> AST Node
-	calledFns           map[string]bool     // Zeno fn name -> true if called
+	calledFns           map[string]bool                    // Zeno fn name -> true if called
 	importedSymbols     map[string]*ast.ImportStatement    // Imported symbol name -> its ast.ImportStatement node
-	usedImportedSymbols map[string]bool     // Imported symbol name -> true if used
+	usedImportedSymbols map[string]bool                    // Imported symbol name -> true if used
 }
 
 func (v *linterVisitor) applyRules(node ast.Node) error {

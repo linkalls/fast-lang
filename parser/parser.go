@@ -82,7 +82,7 @@ var precedences = map[token.TokenType]int{
 	token.LPAREN:   CALL,
 	token.LBRACE:   CALL, // For struct literals
 	// Add dot operator for property access with call-level precedence
-	token.DOT:      CALL,
+	token.DOT: CALL,
 }
 
 // Parser holds the state for parsing tokens into an AST
@@ -190,7 +190,7 @@ func New(l *lexer.Lexer) *Parser {
 		token.LPAREN:   p.parseFunctionCall,
 		token.LBRACE:   p.parseStructLiteral, // Added for struct literals
 		// Add member access operator
-		token.DOT:      p.parseMemberExpression,
+		token.DOT: p.parseMemberExpression,
 	}
 	p.nextToken()
 	p.nextToken()
@@ -495,9 +495,9 @@ func (p *Parser) parseImportStatement() *ast.ImportStatement {
 	if !p.expectPeek(token.LBRACE) {
 		return nil
 	}
-	
+
 	var items []ast.ImportItem
-	
+
 	// 最初の項目をパース
 	p.nextToken()
 	if p.currentToken.Type == token.RBRACE {
@@ -514,7 +514,7 @@ func (p *Parser) parseImportStatement() *ast.ImportStatement {
 		}
 		return &ast.ImportStatement{Imports: items, Module: module}
 	}
-	
+
 	for {
 		isType := false
 		if p.currentToken.Type == token.TYPE {
@@ -523,13 +523,13 @@ func (p *Parser) parseImportStatement() *ast.ImportStatement {
 				return nil
 			}
 		}
-		
+
 		if !p.isValidImportIdentifier() {
 			return nil
 		}
-		
+
 		items = append(items, ast.ImportItem{Name: p.currentToken.Literal, IsType: isType})
-		
+
 		// 次のトークンをチェック
 		if p.peekToken.Type == token.COMMA {
 			p.nextToken() // COMMAを消費
@@ -541,7 +541,7 @@ func (p *Parser) parseImportStatement() *ast.ImportStatement {
 			return nil
 		}
 	}
-	
+
 	if !p.expectPeek(token.RBRACE) {
 		return nil
 	}
@@ -551,7 +551,7 @@ func (p *Parser) parseImportStatement() *ast.ImportStatement {
 	if !p.expectPeek(token.STRING) {
 		return nil
 	}
-	
+
 	module := p.currentToken.Literal
 	if len(module) >= 2 && module[0] == '"' && module[len(module)-1] == '"' {
 		module = module[1 : len(module)-1]
@@ -917,7 +917,7 @@ func (p *Parser) parseMapLiteral() ast.Expression {
 func (p *Parser) parseStructLiteral(typeExpr ast.Expression) ast.Expression {
 	// currentToken is LBRACE when this (infixParseFn) is called.
 	// typeExpr should be an Identifier representing the struct type name
-	
+
 	var typeName string
 	if ident, ok := typeExpr.(*ast.Identifier); ok {
 		typeName = ident.Value
@@ -948,7 +948,7 @@ func (p *Parser) parseStructLiteral(typeExpr ast.Expression) ast.Expression {
 			p.errors = append(p.errors, msg)
 			return nil
 		}
-		
+
 		fieldName := p.currentToken.Literal
 
 		if !p.expectPeek(token.COLON) {
@@ -967,7 +967,7 @@ func (p *Parser) parseStructLiteral(typeExpr ast.Expression) ast.Expression {
 		// p.peekToken is what comes AFTER the value expression (e.g., COMMA or RBRACE).
 		if p.peekToken.Type == token.COMMA {
 			p.nextToken() // Advances p.currentToken to be the COMMA
-			
+
 			// Check for trailing comma: e.g. Result{ok: true,}
 			if p.peekToken.Type == token.RBRACE {
 				p.nextToken() // Consume COMMA, p.currentToken is now RBRACE.

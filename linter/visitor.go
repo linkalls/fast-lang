@@ -2,6 +2,7 @@ package linter
 
 import (
 	"fmt" // For potential error formatting in Walk later if needed
+
 	"github.com/linkalls/zeno-lang/ast"
 )
 
@@ -27,7 +28,7 @@ type Visitor interface {
 	VisitBinaryExpression(node *ast.BinaryExpression) error
 	VisitUnaryExpression(node *ast.UnaryExpression) error
 	VisitArrayLiteral(node *ast.ArrayLiteral) error   // Added
-	VisitMapLiteral(node *ast.MapLiteral) error     // Added
+	VisitMapLiteral(node *ast.MapLiteral) error       // Added
 	VisitStructLiteral(node *ast.StructLiteral) error // Added
 	// Note: ast.Parameter is not typically visited standalone by this kind of walker,
 	// it's part of FunctionDefinition. Similarly for ElseIfClause.
